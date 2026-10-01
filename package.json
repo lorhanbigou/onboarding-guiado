@@ -1,0 +1,11 @@
+{
+  "name": "onboarding-guiado",
+  "version": "1.0.0",
+  "description": "Treinamento Financeiro — onboarding guiado para parceiros",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js",
+    "dev": "node serve.js"
+  },
+  "private": true
+}
