@@ -123,33 +123,57 @@
     };
     app.innerHTML = `
       <div class="tv tv-home">
-        <header class="t-top"><div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>${vozToggle('bar')}</header>
+        <header class="t-top">
+          <div class="t-logo">
+            <img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32">
+            <span>Treinamento Financeiro</span>
+          </div>
+          ${vozToggle('bar')}
+        </header>
         <main class="h-main">
           <section class="h-hero">
-            ${storePill()}
-            <h1>Vamos entender suas vendas?</h1>
-            <p class="t-lead">Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.</p>
-            <ul class="h-meta">
-              <li>${ICON.clock}Cerca de 15 minutos</li>
-              <li>${ICON.grid}${A.mods.length} módulos curtos</li>
-              <li>${ICON.som}Narração opcional</li>
-            </ul>
-            <aside class="h-aviso" role="note">
-              <span class="h-aviso-ic">${ICON.info}</span>
-              <div><b>Treinamento ilustrativo</b><p>${AVISO}</p></div>
-            </aside>
-            ${started ? progressBlock() : ''}
-            <div class="h-cta">
-              <a class="t-btn primary lg" href="#/comecar">${ICON.play}${started ? 'Continuar treinamento' : 'Começar treinamento'}</a>
-              <a class="t-btn ghost lg" href="#/modulos">${ICON.grid}Ver módulos</a>
+            <div class="h-hero-card">
+              <div class="h-hero-content">
+                <div class="h-hero-top">
+                  ${storePill()}
+                  <ul class="h-meta">
+                    <li>${ICON.clock}Cerca de 15 min</li>
+                    <li>${ICON.grid}${A.mods.length} módulos</li>
+                  </ul>
+                </div>
+                <h1>Vamos entender suas vendas?</h1>
+                <p class="t-lead">Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.</p>
+                <div class="h-cta">
+                  <a class="t-btn primary lg" href="#/comecar">${ICON.play}${started ? 'Continuar treinamento' : 'Começar treinamento'}</a>
+                  <a class="t-btn ghost lg" href="#/modulos">${ICON.grid}Ver módulos</a>
+                </div>
+                <div class="h-hero-voz">
+                  ${vozToggle('home')}
+                </div>
+              </div>
+              <div class="h-hero-side">
+                ${started ? progressBlock() : `
+                  <div class="h-quick-card">
+                    <div class="h-quick-ic">${ICON.grid}</div>
+                    <div>
+                      <b>100% Interativo</b>
+                      <p>Aprenda com telas reais e explicações simples passo a passo.</p>
+                    </div>
+                  </div>
+                `}
+                <aside class="h-aviso" role="note">
+                  <span class="h-aviso-ic">${ICON.info}</span>
+                  <div><b>Treinamento ilustrativo</b><p>${AVISO}</p></div>
+                </aside>
+              </div>
             </div>
-            ${vozToggle('home')}
           </section>
 
-
           <section class="h-sec h-trilha" aria-labelledby="h-trilha-t">
-            <h2 id="h-trilha-t">Sua trilha</h2>
-            <p class="h-sub">Do mais simples ao mais completo. Você pode começar por qualquer módulo.</p>
+            <div class="h-sec-head">
+              <h2 id="h-trilha-t">Sua trilha de aprendizado</h2>
+              <p class="h-sub">Do mais simples ao mais completo. Você pode começar por qualquer módulo.</p>
+            </div>
             <div class="h-fases">
               ${FASES.map((fz, i) => `
                 <div class="h-fase">
@@ -160,8 +184,10 @@
           </section>
 
           <section class="h-sec h-dicas" aria-labelledby="h-dicas-t">
-            <h2 id="h-dicas-t">Dicas importantes</h2>
-            <p class="h-sub">Toque em um assunto para ler.</p>
+            <div class="h-sec-head">
+              <h2 id="h-dicas-t">Dicas importantes</h2>
+              <p class="h-sub">Toque em um assunto para expandir as orientações.</p>
+            </div>
             <div class="h-dicas-list">
               ${(TREINO.dicas || []).map((dc, i) => `
                 <details class="h-dica">
