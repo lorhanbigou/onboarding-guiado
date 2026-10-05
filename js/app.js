@@ -1,13 +1,15 @@
 /* =========================================================================
    APLICAÇÃO — telas do treinamento, navegação e progresso
-   Rotas: #/  #/modulos  #/modulo/N  #/explorar  #/revisao  #/comecar
+   Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/explorar  #/revisao  #/comecar
    Cenário: ?cenario=1|2|3 na URL (definido para cada parceiro)
    ========================================================================= */
 (function () {
   const F = TREINO.fmt;
   const KEY = 'bigou-treino-financeiro-v2';
   const app = document.getElementById('app');
-  const A = { sc: 1, d: null, mods: [], saved: {} };
+  const A = { sc: 1, d: null, mods: [], saved: {}, destino: null, ativo: null };
+  const An = TREINO.Analytics;
+  const ev = (tipo, d) => { try { An && An.registrar(tipo, d); } catch (e) { /* analytics nunca trava o treino */ } };
 
   /* ------------------------------ Progresso ------------------------------ */
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
@@ -78,12 +80,110 @@
       const b = e.target.closest('[data-voz]');
       if (!b || b.disabled) return;
       Voz.ligar(!Voz.ligada);
+      ev('voz', { detalhe: { ligada: Voz.ligada } });
       if (Voz.ligada) {
         TREINO.toast('Narração ligada.');
         if (TREINO.Tour.current()) TREINO.Tour.falarAtual();
         else Voz.falar(['Narração ligada. Durante o treinamento, eu leio cada explicação para você.']);
       } else TREINO.toast('Narração desligada.');
     });
+  }
+
+  /* ------------------------------ Cadastro da loja ------------------------------ */
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const semAcento = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  function lojaLinha() {
+    const p = An && An.participante();
+    if (!p) return '';
+    return `<p class="h-loja">Loja: <b>${esc(p.loja)}</b> · ${esc(p.cidade)} <a href="#/cadastro" class="h-loja-trocar">trocar</a></p>`;
+  }
+
+  function viewCadastro() {
+    const p = (An && An.participante()) || {};
+    app.innerHTML = `
+      <div class="tv tv-cad">
+        <header class="t-top">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="cad">
+          <form class="cad-card" id="cad-form" novalidate>
+            <span class="cad-kicker">Antes de começar</span>
+            <h1>Conte qual é a sua loja</h1>
+            <p class="t-lead sm">Assim conseguimos acompanhar o treinamento e melhorar as explicações. Os valores do treinamento continuam fictícios.</p>
+            <label class="cad-f">
+              <span>Nome da loja</span>
+              <input id="cad-loja" name="loja" type="text" maxlength="60" autocomplete="organization" placeholder="Ex.: Lanchonete da Ana" value="${esc(p.loja || '')}" required>
+              <small class="cad-err" id="cad-loja-err"></small>
+            </label>
+            <div class="cad-f cad-combo">
+              <label for="cad-cidade">Cidade</label>
+              <input id="cad-cidade" type="text" role="combobox" aria-expanded="false" aria-controls="cad-lista" aria-autocomplete="list" autocomplete="off" placeholder="Digite para buscar a cidade" value="${esc(p.cidade || '')}">
+              <ul id="cad-lista" role="listbox" class="cad-lista" hidden></ul>
+              <small class="cad-err" id="cad-cidade-err"></small>
+            </div>
+            <button type="submit" class="t-btn primary lg cad-ok">${ICON.play}Continuar</button>
+          </form>
+        </main>
+      </div>`;
+
+    const form = document.getElementById('cad-form');
+    const iLoja = document.getElementById('cad-loja');
+    const iCid = document.getElementById('cad-cidade');
+    const lista = document.getElementById('cad-lista');
+    let ativo = -1, opcoes = [];
+
+    function abrir(filtro) {
+      const f = semAcento(filtro.trim());
+      // Primeiro as cidades que começam com o texto digitado, depois as que contêm
+      opcoes = TREINO.cidades
+        .filter((c) => !f || semAcento(c).includes(f))
+        .sort((a, b) => (f ? (semAcento(a).startsWith(f) ? 0 : 1) - (semAcento(b).startsWith(f) ? 0 : 1) : 0))
+        .slice(0, 60);
+      lista.innerHTML = opcoes.length
+        ? opcoes.map((c, i) => `<li role="option" id="cad-op-${i}" data-c="${esc(c)}" aria-selected="${i === ativo}">${esc(c)}</li>`).join('')
+        : '<li class="cad-vazio">Nenhuma cidade encontrada</li>';
+      lista.hidden = false;
+      iCid.setAttribute('aria-expanded', 'true');
+    }
+    function fechar() { lista.hidden = true; ativo = -1; iCid.setAttribute('aria-expanded', 'false'); iCid.removeAttribute('aria-activedescendant'); }
+    function escolher(c) { iCid.value = c; fechar(); document.getElementById('cad-cidade-err').textContent = ''; }
+    function marcar() {
+      lista.querySelectorAll('[role=option]').forEach((li, i) => li.setAttribute('aria-selected', i === ativo));
+      const el = document.getElementById('cad-op-' + ativo);
+      if (el) { el.scrollIntoView({ block: 'nearest' }); iCid.setAttribute('aria-activedescendant', el.id); }
+    }
+
+    iCid.addEventListener('focus', () => abrir(TREINO.cidades.includes(iCid.value) ? '' : iCid.value));
+    iCid.addEventListener('input', () => { ativo = -1; abrir(iCid.value); });
+    iCid.addEventListener('keydown', (e) => {
+      if (lista.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) abrir(iCid.value);
+      if (e.key === 'ArrowDown') { e.preventDefault(); ativo = Math.min(opcoes.length - 1, ativo + 1); marcar(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); ativo = Math.max(0, ativo - 1); marcar(); }
+      else if (e.key === 'Enter' && !lista.hidden && ativo >= 0) { e.preventDefault(); escolher(opcoes[ativo]); }
+      else if (e.key === 'Escape') fechar();
+    });
+    lista.addEventListener('mousedown', (e) => { const li = e.target.closest('[data-c]'); if (li) { e.preventDefault(); escolher(li.dataset.c); } });
+    iCid.addEventListener('blur', () => setTimeout(fechar, 120));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const loja = iLoja.value.trim().replace(/\s+/g, ' ');
+      // Aceita a cidade digitada sem acento/maiúscula, desde que seja da lista
+      const cidade = TREINO.cidades.find((c) => semAcento(c) === semAcento(iCid.value.trim())) || '';
+      const eL = document.getElementById('cad-loja-err'), eC = document.getElementById('cad-cidade-err');
+      eL.textContent = loja.length < 2 ? 'Digite o nome da sua loja.' : '';
+      eC.textContent = cidade ? '' : 'Escolha uma cidade da lista.';
+      if (loja.length < 2) { iLoja.focus(); return; }
+      if (!cidade) { iCid.focus(); return; }
+      if (An) An.cadastrar(loja, cidade, A.sc);
+      const destino = A.destino || '#/comecar';
+      A.destino = null;
+      location.replace(destino);
+    });
+    if (!p.loja) iLoja.focus({ preventScroll: true });
   }
 
   const storePill = () => `<div class="t-store"><span class="t-dot"></span>Loja de Treinamento - Rio Pomba - MG</div>`;
@@ -141,6 +241,7 @@
                     <li>${ICON.grid}${A.mods.length} módulos</li>
                   </ul>
                 </div>
+                ${lojaLinha()}
                 <h1>Vamos entender suas vendas?</h1>
                 <p class="t-lead">Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.</p>
                 <div class="h-cta">
@@ -285,6 +386,8 @@
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
     setStatus(n, 'prog');
     refreshDots(n);
+    A.ativo = { n, inicio: Date.now(), passo: 0, tPasso: Date.now(), concluido: false };
+    ev('modulo_inicio', { modulo: n });
 
     // Cada passo herda o estado do anterior quando não define um
     let st = m.steps[0].state;
@@ -339,8 +442,30 @@
       onStep: (i, all, item) => {
         const line = document.getElementById('pb-line');
         if (line) line.style.width = (i / (all.length - 1)) * 100 + '%';
-        if (item.kind === 'summary') { setStatus(n, 'done'); refreshDots(n); }
+        const at = A.ativo, agora = Date.now();
+        if (at && item.kind === 'step') {
+          // "anterior"/"ms": quanto tempo a pessoa ficou no passo de antes
+          ev('passo', { modulo: n, passo: i, alvo: item.target, detalhe: { titulo: item.title, anterior: at.passo, ms: agora - at.tPasso } });
+          at.passo = i;
+          at.tPasso = agora;
+        }
+        if (item.kind === 'summary') {
+          setStatus(n, 'done');
+          refreshDots(n);
+          if (at && !at.concluido) {
+            at.concluido = true;
+            ev('modulo_fim', { modulo: n, detalhe: { ms: agora - at.inicio, ultimo_passo_ms: agora - at.tPasso, ultimo_passo: at.passo } });
+            if (doneCount() === A.mods.length) {
+              const k = 'bigou-treino-concluido-' + (An ? An.id() : '') + '-' + A.sc;
+              let ja = false;
+              try { ja = localStorage.getItem(k) === '1'; localStorage.setItem(k, '1'); } catch (e) { /* sem armazenamento */ }
+              if (!ja) ev('treino_concluido', { detalhe: { cenario: A.sc } });
+            }
+          }
+        }
       },
+      onSkip: (i, item) => ev('passo_pulado', { modulo: n, passo: i, alvo: item.target, detalhe: { titulo: item.title } }),
+      onQuiz: (i, item, r) => ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao } }),
       onAction: (a) => {
         if (a === 'continue') location.hash = next ? '#/modulo/' + next.n : '#/revisao';
         else if (a === 'repeat') route();
@@ -361,12 +486,14 @@
     app.innerHTML = playerBar('Explore à vontade', 'Modo livre', 0) + '<div id="clone"></div>';
     TREINO.Clone.reset();
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
+    ev('explorar');
     TREINO.toast('Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro.');
   }
 
   /* ------------------------------ Revisão ------------------------------ */
   function viewReview() {
     const items = TREINO.buildReview(A.d);
+    ev('revisao');
     app.innerHTML = `
       <div class="tv tv-review">
         <header class="t-top">
@@ -391,12 +518,29 @@
   }
 
   /* ------------------------------ Rotas ------------------------------ */
+  // Saiu de um módulo sem chegar ao resumo: registra onde parou
+  function registrarSaida(motivo) {
+    const at = A.ativo;
+    if (at && !at.concluido) ev('modulo_saida', { modulo: at.n, passo: at.passo, detalhe: { motivo, ms: Date.now() - at.inicio, ms_no_passo: Date.now() - at.tPasso } });
+    A.ativo = null;
+  }
+  window.addEventListener('pagehide', () => { registrarSaida('fechou'); if (An) An.enviar(true); });
+
   function route() {
+    registrarSaida('navegou');
     TREINO.Tour.stop();
     document.body.classList.remove('in-player');
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const view = parts[0];
-    if (view === 'modulos') viewModules();
+    // Pede o cadastro da loja antes de começar
+    if (['comecar', 'modulo', 'modulos'].includes(view) && An && !An.participante()) {
+      A.destino = location.hash;
+      location.replace('#/cadastro');
+      return;
+    }
+    if (An) An.enviar();
+    if (view === 'cadastro') viewCadastro();
+    else if (view === 'modulos') viewModules();
     else if (view === 'modulo') viewPlayer(parseInt(parts[1], 10) || 1);
     else if (view === 'explorar') viewExplore();
     else if (view === 'revisao') viewReview();
@@ -411,6 +555,12 @@
   setScenario(urlScen || A.saved.sc || 1);
   TREINO.Tour.init();
   syncVoz();
+  ev('acesso', { detalhe: { cenario: A.sc } });
+  // Dica aberta na tela inicial ("toggle" não borbulha: escuta na captura)
+  document.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (d.classList && d.classList.contains('h-dica') && d.open) ev('dica', { detalhe: { dica: d.querySelector('summary b').textContent } });
+  }, true);
   window.addEventListener('hashchange', route);
   route();
 })();

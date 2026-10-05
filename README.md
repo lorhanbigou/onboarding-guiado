@@ -39,6 +39,37 @@ O parceiro não vê nem escolhe o cenário: ele vem do link. A sequência dos m�
 
 Só aparecem telas que existem no sistema: Relatório, Total Bruto, Financeiro, fatura, Comissão, Taxa de Pagamento Online, Taxa de Serviço, Antecipação, Boletos e Repasses.
 
+## Cadastro da loja e painel admin (analytics)
+
+Antes de começar, o parceiro digita o **nome da loja** e escolhe a **cidade** (lista fixa em `js/cidades.js`). Isso identifica o parceiro no painel; a tela do treinamento continua com "Loja de Treinamento". O link "trocar" na tela inicial permite cadastrar outra loja no mesmo aparelho.
+
+O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas do exercício, narração, dicas abertas). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.
+
+**Painel:** `admin.html` (ex.: <http://localhost:5178/admin.html>). Mostra:
+- KPIs (cadastradas, começaram, concluíram, taxa de conclusão, em andamento, não começaram, tempo para concluir, acessos, ativas em 7 dias);
+- destaques automáticos;
+- funil por módulo com a maior queda;
+- passos onde as lojas param, passos mais demorados e etapas puladas;
+- acerto do exercício por pergunta;
+- cidades (ranking, top 10, cidades sem cadastro);
+- acessos por dia e mapa de calor por dia/hora;
+- perfil de uso;
+- tabela de lojas com busca e exportação em CSV.
+
+Tudo responde aos filtros de período, cidade e cenário.
+
+Enquanto o Supabase não estiver configurado, o painel abre com **dados de demonstração** (ou force com `admin.html?demo=1`).
+
+### Como ligar o Supabase (uma vez)
+
+1. Crie um projeto em <https://supabase.com> (plano grátis).
+2. Em **SQL Editor → New query**, cole o conteúdo de `supabase/schema.sql`. Antes de rodar, troque `admin@bigou.app` (no fim do arquivo) pelo e-mail do admin. Depois, clique em **Run**.
+3. Em **Authentication → Users → Add user**, crie esse usuário com e-mail e senha e marque "Auto Confirm User". Essa é a senha única do painel.
+4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para `js/analytics-config.js`, junto com o e-mail do admin.
+5. Publique o site. No painel, entre com a senha.
+
+Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
+
 ## Narração por voz (opcional)
 
 O parceiro liga a narração pelo botão **Narração por voz** na tela inicial ou pelo botão **Narração** na barra do módulo. A escolha fica salva no navegador. Com a narração ligada:
@@ -68,6 +99,11 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/clone.js` | Tela clonada: Relatório, Financeiro, fatura e modais |
 | `js/modules.js` | Conteúdo dos 8 módulos (textos, passos, perguntas) |
 | `js/dicas.js` | Dicas importantes da tela inicial |
+| `js/cidades.js` | Lista de cidades do cadastro |
+| `js/analytics-config.js` | URL/chave do Supabase e e-mail do admin |
+| `js/analytics.js` | Fila e envio dos eventos do treinamento |
+| `admin.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
+| `supabase/schema.sql` | Tabelas e regras de segurança do banco |
 | `js/voz.js` | Narração: escolhe a voz pt-BR, transforma valores e datas em fala e lê o balão |
 | `js/tour.js` | Motor do spotlight / balões / passos de clique / quiz |
 | `js/app.js` | Tela inicial, lista de módulos, modo livre, revisão e progresso |

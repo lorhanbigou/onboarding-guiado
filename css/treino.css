@@ -421,3 +421,28 @@ body.voz-falando .tr-voz { background: var(--t-g); color: #fff; animation: vozPu
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- Cadastro da loja (mobile first) ---------- */
+.cad { max-width: 520px; margin: 0 auto; padding: 24px 16px 56px; }
+.cad-card { display: grid; gap: 16px; animation: rise .4s ease both; }
+.cad-kicker { font-size: 12px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--t-g); }
+.cad-card h1 { font-size: 28px; line-height: 1.15; letter-spacing: -.6px; margin: -8px 0 0; }
+.cad-f { display: grid; gap: 6px; position: relative; }
+.cad-f > span, .cad-f > label { font-size: 14px; font-weight: 600; }
+.cad-f input { font: inherit; font-size: 16px; padding: 13px 14px; border: 1.5px solid #d1d5db; border-radius: 12px; background: #fff; color: var(--t-ink); transition: border-color .15s, box-shadow .15s; width: 100%; }
+.cad-f input:focus { outline: none; border-color: var(--t-g); box-shadow: 0 0 0 3px var(--t-gsoft); }
+.cad-err { color: #b42318; font-size: 13px; min-height: 0; }
+.cad-err:empty { display: none; }
+.cad-lista { list-style: none; margin: 4px 0 0; padding: 6px; position: absolute; top: 100%; left: 0; right: 0; z-index: 20; max-height: 260px; overflow: auto; background: #fff; border: 1px solid var(--t-line); border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(15,23,42,.25); }
+.cad-lista li { padding: 10px 12px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+.cad-lista li[aria-selected="true"], .cad-lista li[role=option]:hover { background: var(--t-gsoft); color: var(--t-g2); }
+.cad-lista .cad-vazio { color: var(--t-ink3); cursor: default; }
+.cad-ok { width: 100%; margin-top: 4px; }
+.h-loja { margin: 4px 0 0; font-size: 13.5px; color: var(--t-ink3); }
+.h-loja b { color: var(--t-ink2); font-weight: 600; }
+.h-loja-trocar { color: var(--t-g2); text-decoration: underline; margin-left: 4px; }
+@media (min-width: 640px) {
+  .cad { padding-top: 56px; }
+  .cad-card { border: 1px solid var(--t-line); border-radius: 20px; padding: 32px; box-shadow: 0 24px 60px -30px rgba(15,23,42,.25); }
+  .cad-card h1 { font-size: 32px; }
+}

@@ -11,7 +11,7 @@
   const Tour = {};
   let layer, spot, tip, blk = [];
   let seq = [], idx = 0, cur = null, target = null, rafId = 0, last = '', opts = {}, advancing = false, token = 0;
-  let answered = false;
+  let answered = false, tentativas = 0;
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // requestAnimationFrame com reserva: abas em segundo plano não disparam quadros
@@ -93,6 +93,7 @@
     cur = seq[i];
     advancing = false;
     answered = false;
+    tentativas = 0;
     clearFocus();
     tip.classList.remove('in');
     if (TREINO.Voz) TREINO.Voz.parar();
@@ -290,7 +291,11 @@
     const b = e.target.closest('[data-tr]');
     if (!b || !cur) return;
     const a = b.dataset.tr;
-    if (a === 'next') { if (!b.disabled) Tour.next(); }
+    if (a === 'next') {
+      if (b.disabled) return;
+      if (b.classList.contains('tr-skip') && opts.onSkip) opts.onSkip(idx, cur);
+      Tour.next();
+    }
     else if (a === 'back') Tour.back();
     else if (a === 'opt') answer(+b.dataset.i, b);
     else if (a === 'voz') falarPasso(true);
@@ -301,6 +306,8 @@
     if (answered) return;
     const o = cur.options[i];
     const fb = tip.querySelector('.tr-fb');
+    tentativas++;
+    if (opts.onQuiz) opts.onQuiz(idx, cur, { opcao: i, acertou: !!o.ok, tentativa: tentativas });
     tip.querySelectorAll('.tr-opt').forEach((x) => x.classList.remove('wrong'));
     if (o.ok) {
       answered = true;
