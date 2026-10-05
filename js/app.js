@@ -1,41 +1,58 @@
 /* =========================================================================
    APLICAÇÃO — telas do treinamento, navegação e progresso
-   Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/explorar  #/revisao  #/comecar
-   Cenário: ?cenario=1|2|3 na URL (definido para cada parceiro)
+   Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/modulo/N/inicio (recomeçar)
+          #/explorar  #/revisao  #/certificado  #/comecar
    ========================================================================= */
 (function () {
   const F = TREINO.fmt;
-  const KEY = 'bigou-treino-financeiro-v2';
+  const KEY = 'bigou-treino-financeiro-v3';
   const app = document.getElementById('app');
-  const A = { sc: 1, d: null, mods: [], saved: {}, destino: null, ativo: null };
+  const A = { d: null, mods: [], saved: {}, destino: null, ativo: null };
   const An = TREINO.Analytics;
   const ev = (tipo, d) => { try { An && An.registrar(tipo, d); } catch (e) { /* analytics nunca trava o treino */ } };
 
   /* ------------------------------ Progresso ------------------------------ */
   function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(A.saved)); } catch (e) { /* sem armazenamento */ } }
-  function prog() { A.saved.p = A.saved.p || {}; return (A.saved.p[A.sc] = A.saved.p[A.sc] || {}); }
+  function prog() { return (A.saved.p = A.saved.p || {}); }
+  // Último passo visto em cada módulo (para retomar de onde parou)
+  function passos() { return (A.saved.passo = A.saved.passo || {}); }
   const status = (n) => prog()[n] || 'novo';
   function setStatus(n, s) { const p = prog(); if (p[n] === 'done' && s === 'prog') return; p[n] = s; save(); }
   const doneCount = () => A.mods.filter((m) => status(m.n) === 'done').length;
   const firstPending = () => (A.mods.find((m) => status(m.n) !== 'done') || A.mods[0]).n;
 
-  function setScenario(id) {
-    A.sc = TREINO.cenarios[id] ? id : 1;
-    A.saved.sc = A.sc;
-    save();
-    A.d = TREINO.calc(TREINO.cenarios[A.sc]);
-    A.mods = TREINO.buildModules(A.d);
+  /* ------------------------------ Tempo estimado ------------------------------ */
+  // Cerca de 12 s por passo de leitura e 25 s por passo de clique ou pergunta, mais a abertura
+  function segundosModulo(m, aPartirDe) {
+    return m.steps.slice(aPartirDe || 0).reduce((t, st) => t + (st.mode === 'click' || st.mode === 'quiz' ? 25 : 12), aPartirDe ? 0 : 20);
   }
+  const minutos = (seg) => Math.max(1, Math.round(seg / 60));
+  const tempoMod = (m) => `≈ ${minutos(segundosModulo(m))} min`;
+  function minutosRestantes() {
+    return minutos(A.mods.filter((m) => status(m.n) !== 'done').reduce((t, m) => t + segundosModulo(m, Math.max(0, (passos()[m.n] || 1) - 1)), 0));
+  }
+  function retomada() {
+    const m = A.mods.find((x) => status(x.n) === 'prog' && passos()[x.n] > 1) || null;
+    return m ? { n: m.n, passo: passos()[m.n] } : null;
+  }
+  const lojaNome = () => { const p = An && An.participante(); return p ? p.loja : ''; };
 
   /* ------------------------------ Utilidades ------------------------------ */
   let toastTimer = 0;
-  TREINO.toast = function (msg) {
+  TREINO.toast = function (msg, acao) {
     const t = document.getElementById('toast');
     t.textContent = msg;
+    if (acao) {
+      const a = document.createElement('a');
+      a.href = acao.href;
+      a.textContent = acao.label;
+      a.className = 'toast-acao';
+      t.appendChild(a);
+    }
     t.classList.add('on');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('on'), 2800);
+    toastTimer = setTimeout(() => t.classList.remove('on'), acao ? 6000 : 2800);
   };
 
   const ICON = {
@@ -50,6 +67,19 @@
     mudo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
     clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.2"/></svg>',
+    // Ícones dos módulos (linha, 24px)
+    relatorio: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 11h5M10 14.5h5M10 18h3"/></svg>',
+    celular: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M10 9.5l1.6 1.6L14.5 8"/></svg>',
+    dinheiro: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6.5" width="18" height="11" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v5M17.5 9.5v5"/></svg>',
+    painel: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M7.5 15.5v-3M11 15.5V9M14.5 15.5v-5M18 15.5V8"/></svg>',
+    faturaEntra: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M12 7v6M9.5 10.5L12 13l2.5-2.5"/></svg>',
+    faturaSai: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M12 13V7M9.5 9.5L12 7l2.5 2.5"/></svg>',
+    moedas: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="9" cy="7" rx="5.5" ry="2.5"/><path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5M3.5 11v4c0 1.4 2.5 2.5 5.5 2.5"/><ellipse cx="15.5" cy="13" rx="5" ry="2.3"/><path d="M10.5 13v4c0 1.3 2.2 2.3 5 2.3s5-1 5-2.3v-4"/></svg>',
+    foguete: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4.5c3-1.5 5.5-1.5 5.5-1.5s0 2.5-1.5 5.5l-6 6-4-4z"/><path d="M8.5 10.5l-3 .5-2 2 4 1M13.5 15.5l-.5 3-2 2-1-4"/><circle cx="15.5" cy="8.5" r="1.3"/><path d="M6 18c-1 .3-2 1.5-2.5 2.5 1-.5 2.2-1.5 2.5-2.5z"/></svg>',
+    trofeu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.5a3 3 0 0 0 3 4M16.5 6h3a3 3 0 0 1-3 4M12 13.5V17M8.5 20.5h7M9.5 17h5v3.5h-5z"/></svg>',
+    medalha: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3l2.5 6M16 3l-2.5 6"/><circle cx="12" cy="14.5" r="5.5"/><path d="M12 11.8l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z"/></svg>',
+    certificado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 8.5h10M7 11.5h6"/><circle cx="16.5" cy="17" r="2.5"/><path d="M15.2 19.2L14.5 22l2-1 2 1-.7-2.8"/></svg>',
+    impressora: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17.5H4.5v-7a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v7H17"/><rect x="7" y="14" width="10" height="7"/></svg>',
     grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
   };
 
@@ -178,7 +208,7 @@
       eC.textContent = cidade ? '' : 'Escolha uma cidade da lista.';
       if (loja.length < 2) { iLoja.focus(); return; }
       if (!cidade) { iCid.focus(); return; }
-      if (An) An.cadastrar(loja, cidade, A.sc);
+      if (An) An.cadastrar(loja, cidade);
       const destino = A.destino || '#/comecar';
       A.destino = null;
       location.replace(destino);
@@ -194,7 +224,7 @@
       <div class="t-progress" aria-label="Progresso do treinamento">
         <div class="t-progress-top"><span>Seu treinamento</span><b>${p}%</b></div>
         <div class="t-bar"><i style="width:${p}%"></i></div>
-        <small>${done} de ${total} módulos concluídos</small>
+        <small>${done} de ${total} módulos concluídos${done < total ? ` · faltam ≈ ${minutosRestantes()} min` : ' · treinamento completo!'}</small>
       </div>`;
   }
 
@@ -205,20 +235,29 @@
   const FASES = [
     { t: 'Vendas e pagamentos', s: 'Relatório e as 3 formas de pagamento', m: [1, 2, 3] },
     { t: 'Tela Financeiro', s: 'Resultado e repasses', m: [4] },
-    { t: 'A fatura', s: 'O que entrou e o que saiu', m: [5, 6] },
-    { t: 'Repasse e prática', s: 'Antecipação e exercício', m: [7, 8] },
+    { t: 'A fatura', s: 'O que entrou e o que saiu', m: [5, 6, 7] },
+    { t: 'Repasse e prática', s: 'Antecipação e exercício final', m: [8, 9] },
   ];
   const AVISO = 'Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.';
 
   function viewHome() {
     const started = doneCount() > 0 || A.mods.some((m) => status(m.n) === 'prog');
+    const tudo = doneCount() === A.mods.length;
+    const ret = retomada();
+    const loja = lojaNome();
+    const total = minutos(A.mods.reduce((t, m) => t + segundosModulo(m), 0));
+    const cta = tudo
+      ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}Ver meu certificado</a>`
+      : ret
+        ? `<a class="t-btn primary lg" href="#/modulo/${ret.n}">${ICON.play}Continuar · Módulo ${ret.n}, passo ${ret.passo}</a>`
+        : `<a class="t-btn primary lg" href="#/comecar">${ICON.play}${started ? 'Continuar treinamento' : 'Começar treinamento'}</a>`;
     const mod = (n) => {
       const m = A.mods.find((x) => x.n === n), st = status(n);
       return `
         <li><a class="h-mod s-${st}" href="#/modulo/${n}">
-          <span class="h-mod-n">${st === 'done' ? ICON.check : n}</span>
-          <span class="h-mod-t"><b>${m.titulo}</b><small>${m.desc}</small></span>
-          <span class="h-mod-st">${statusLabel[st]}</span>
+          <span class="h-mod-n">${st === 'done' ? ICON.check : ICON[m.icone] || n}</span>
+          <span class="h-mod-t"><b><em>${n}.</em> ${m.titulo}</b><small>${m.desc}</small></span>
+          <span class="h-mod-st">${statusLabel[st]} · ${tempoMod(m)}</span>
         </a></li>`;
     };
     app.innerHTML = `
@@ -237,17 +276,18 @@
                 <div class="h-hero-top">
                   ${storePill()}
                   <ul class="h-meta">
-                    <li>${ICON.clock}Cerca de 15 min</li>
+                    <li>${ICON.clock}≈ ${total} min no total</li>
                     <li>${ICON.grid}${A.mods.length} módulos</li>
                   </ul>
                 </div>
-                ${lojaLinha()}
-                <h1>Vamos entender suas vendas?</h1>
-                <p class="t-lead">Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.</p>
+                ${loja ? `<p class="h-ola">${tudo ? 'Parabéns' : started ? 'Que bom te ver de novo' : 'Olá'}, <b>${esc(loja)}</b>!</p>` : ''}
+                <h1>${tudo ? 'Você concluiu o treinamento!' : 'Vamos entender suas vendas?'}</h1>
+                <p class="t-lead">${tudo ? 'Seu certificado está pronto. Você pode rever qualquer módulo quando quiser.' : 'Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.'}</p>
                 <div class="h-cta">
-                  <a class="t-btn primary lg" href="#/comecar">${ICON.play}${started ? 'Continuar treinamento' : 'Começar treinamento'}</a>
-                  <a class="t-btn ghost lg" href="#/modulos">${ICON.grid}Ver módulos</a>
+                  ${cta}
+                  <a class="t-btn ghost lg" href="#/modulos">${ICON.grid}${tudo ? 'Rever módulos' : 'Ver módulos'}</a>
                 </div>
+                ${lojaLinha()}
                 <div class="h-hero-voz">
                   ${vozToggle('home')}
                 </div>
@@ -278,7 +318,7 @@
             <div class="h-fases">
               ${FASES.map((fz, i) => `
                 <div class="h-fase">
-                  <div class="h-fase-h"><span class="h-fase-n">${i + 1}</span><div><b>${fz.t}</b><small>${fz.s}</small></div></div>
+                  <div class="h-fase-h">${fz.m.every((n) => status(n) === 'done') ? `<span class="h-fase-n medal" title="Fase concluída">${ICON.medalha}</span>` : `<span class="h-fase-n">${i + 1}</span>`}<div><b>${fz.t}</b><small>${fz.s}</small></div></div>
                   <ol class="h-mods">${fz.m.map(mod).join('')}</ol>
                 </div>`).join('')}
             </div>
@@ -331,8 +371,8 @@
                 return `
                 <li class="t-mod s-${st}">
                   <a href="#/modulo/${m.n}" class="t-mod-a">
-                    <span class="t-mod-n">${st === 'done' ? ICON.check : m.n}</span>
-                    <span class="t-mod-txt"><small>Módulo ${m.n}</small><b>${m.titulo}</b><span>${m.desc}</span></span>
+                    <span class="t-mod-n">${st === 'done' ? ICON.check : ICON[m.icone] || m.n}</span>
+                    <span class="t-mod-txt"><small>Módulo ${m.n} · ${tempoMod(m)}</small><b>${m.titulo}</b><span>${m.desc}</span></span>
                     <span class="t-mod-st"><i></i>${statusLabel[st]}</span>
                     <span class="t-btn ${st === 'done' ? 'ghost' : 'primary'} sm">${btn}</span>
                   </a>
@@ -346,6 +386,11 @@
               <span><b>Explorar a tela livremente</b><small>Clique onde quiser na tela, sem explicações.</small></span>
               ${ICON.arrowR}
             </a>
+            ${allDone ? `<a class="t-extra-card destaque" href="#/certificado">
+              <span class="t-extra-ic">${ICON.certificado}</span>
+              <span><b>Seu certificado</b><small>Baixe ou imprima o certificado de conclusão.</small></span>
+              ${ICON.arrowR}
+            </a>` : ''}
             <a class="t-extra-card ${allDone ? '' : 'muted'}" href="#/revisao">
               <span class="t-extra-ic">${ICON.check}</span>
               <span><b>O que você aprendeu</b><small>${allDone ? 'Revise tudo em uma tela.' : 'Disponível ao concluir todos os módulos.'}</small></span>
@@ -392,7 +437,10 @@
     // Cada passo herda o estado do anterior quando não define um
     let st = m.steps[0].state;
     m.steps.forEach((s) => { if (s.state) st = s.state; else s.state = st; });
-    const lastState = Object.assign({}, m.steps[m.steps.length - 1].state, { modals: [], xp: null });
+    const lastState = Object.assign({}, m.steps[m.steps.length - 1].state, { modals: [] });
+    const fase = FASES.find((fz) => fz.m.includes(n));
+    const fechaFase = fase && fase.m[fase.m.length - 1] === n;
+    const loja = lojaNome();
 
     const next = A.mods.find((x) => x.n === n + 1);
     const intro = {
@@ -401,7 +449,7 @@
       fala: [`Módulo ${m.n}: ${m.titulo}.`, m.intro].concat(m.aviso ? [m.aviso] : []),
       html: `
         <div class="tr-intro">
-          <span class="tr-kicker">Módulo ${m.n} de ${A.mods.length}</span>
+          <div class="tr-intro-top"><span class="tr-intro-ic">${ICON[m.icone] || ''}</span><span class="tr-kicker">Módulo ${m.n} de ${A.mods.length} · ${tempoMod(m)}</span></div>
           <h3>${m.titulo}</h3>
           <p>${m.intro}</p>
           ${m.aviso ? `<div class="tr-aviso">${ICON.info}<span>${m.aviso}</span></div>` : ''}
@@ -416,11 +464,13 @@
     const summary = {
       kind: 'summary',
       state: lastState,
-      fala: ['Pronto, você concluiu este módulo.', next ? 'Toque em Continuar para seguir.' : 'Toque em Ver o que aprendi para revisar tudo.'],
+      fala: [`Pronto${loja ? ', ' + loja : ''}! Você concluiu este módulo.`].concat(fechaFase ? [`Fase concluída: ${fase.t}.`] : [], [next ? 'Toque em Continuar para seguir.' : 'Toque em Ver o que aprendi para revisar tudo.']),
       html: `
         <div class="tr-sum">
           <div class="tr-check">${ICON.check}</div>
-          <h3>Você entendeu este assunto.</h3>
+          <h3>${loja ? `Mandou bem, ${esc(loja)}!` : 'Mandou bem!'}</h3>
+          <p class="tr-sum-sub">Você concluiu o Módulo ${m.n}${next ? ` · faltam ${A.mods.length - n} módulos` : ''}.</p>
+          ${fechaFase ? `<div class="tr-fase">${ICON.medalha}<span><small>Fase concluída</small><b>${fase.t}</b></span></div>` : ''}
           <ul class="tr-sum-list">${m.resumo.map((x) => `<li>${ICON.check}<span>${x}</span></li>`).join('')}</ul>
           <div class="tr-actions col">
             <button type="button" class="tr-next" data-tr="cb:continue">${next ? 'Continuar' : 'Ver o que aprendi'}</button>
@@ -434,15 +484,21 @@
     };
     const seq = [intro].concat(m.steps.map((s) => Object.assign({ kind: 'step' }, s)), [summary]);
 
+    // Retomar de onde parou (o tour reconstrói a tela pelo estado do passo)
+    const salvo = passos()[n];
+    const inicio = salvo > 1 && salvo < seq.length - 1 ? salvo : 0;
+    if (inicio) TREINO.toast(`Continuando do passo ${inicio} de ${m.steps.length}.`, { label: 'Recomeçar', href: `#/modulo/${n}/inicio` });
+
     window.scrollTo(0, 0);
-    TREINO.Tour.play(seq, 0, {
-      chave: `${A.sc}-${n}`,
+    TREINO.Tour.play(seq, inicio, {
+      chave: `m${n}`,
       barH,
       applyState: (s) => TREINO.Clone.set(s),
       onStep: (i, all, item) => {
         const line = document.getElementById('pb-line');
         if (line) line.style.width = (i / (all.length - 1)) * 100 + '%';
         const at = A.ativo, agora = Date.now();
+        if (item.kind === 'step') { passos()[n] = i; save(); }
         if (at && item.kind === 'step') {
           // "anterior"/"ms": quanto tempo a pessoa ficou no passo de antes
           ev('passo', { modulo: n, passo: i, alvo: item.target, detalhe: { titulo: item.title, anterior: at.passo, ms: agora - at.tPasso } });
@@ -451,15 +507,18 @@
         }
         if (item.kind === 'summary') {
           setStatus(n, 'done');
+          delete passos()[n];
+          save();
           refreshDots(n);
+          celebrar(doneCount() === A.mods.length ? 'grande' : 'normal');
           if (at && !at.concluido) {
             at.concluido = true;
             ev('modulo_fim', { modulo: n, detalhe: { ms: agora - at.inicio, ultimo_passo_ms: agora - at.tPasso, ultimo_passo: at.passo } });
             if (doneCount() === A.mods.length) {
-              const k = 'bigou-treino-concluido-' + (An ? An.id() : '') + '-' + A.sc;
+              const k = 'bigou-treino-concluido-' + (An ? An.id() : '');
               let ja = false;
               try { ja = localStorage.getItem(k) === '1'; localStorage.setItem(k, '1'); } catch (e) { /* sem armazenamento */ }
-              if (!ja) ev('treino_concluido', { detalhe: { cenario: A.sc } });
+              if (!ja) ev('treino_concluido');
             }
           }
         }
@@ -510,11 +569,92 @@
           </ul>
           <p class="t-review-msg">Agora você já consegue entender de onde vêm os valores apresentados.</p>
           <div class="t-cta center">
-            <a class="t-btn primary lg" href="#/modulos">Voltar aos módulos</a>
+            ${doneCount() === A.mods.length ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}Ver meu certificado</a>` : ''}
+            <a class="t-btn ${doneCount() === A.mods.length ? 'ghost' : 'primary'} lg" href="#/modulos">Voltar aos módulos</a>
             <a class="t-btn ghost lg" href="#/explorar">${ICON.cursor}Explorar a tela</a>
           </div>
         </main>
       </div>`;
+  }
+
+  /* ------------------------------ Celebração ------------------------------ */
+  // Confete curto nas cores da marca. Não roda para quem prefere menos movimento.
+  function celebrar(tamanho) {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = document.createElement('canvas');
+    cv.className = 'confete';
+    cv.width = innerWidth * devicePixelRatio;
+    cv.height = innerHeight * devicePixelRatio;
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    const cores = ['#0b8a47', '#16a36a', '#2a78d6', '#eda100', '#eb6834', '#7fd1a3'];
+    const qtd = tamanho === 'grande' ? 160 : 70;
+    const ps = Array.from({ length: qtd }, () => ({
+      x: innerWidth / 2 + (Math.random() - 0.5) * 160, y: innerHeight * 0.38,
+      vx: (Math.random() - 0.5) * 9, vy: -Math.random() * 9 - 4,
+      r: 3 + Math.random() * 4, c: cores[Math.floor(Math.random() * cores.length)],
+      a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.3,
+    }));
+    const t0 = performance.now(), dur = tamanho === 'grande' ? 2200 : 1400;
+    (function quadro(t) {
+      const k = (t - t0) / dur;
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      ps.forEach((p) => {
+        p.vy += 0.28; p.x += p.vx; p.y += p.vy; p.a += p.va;
+        ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k); ctx.translate(p.x, p.y); ctx.rotate(p.a);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore();
+      });
+      if (k < 1) requestAnimationFrame(quadro); else cv.remove();
+    })(t0);
+  }
+
+  /* ------------------------------ Certificado ------------------------------ */
+  function viewCertificado() {
+    if (doneCount() < A.mods.length) {
+      TREINO.toast('O certificado é liberado ao concluir todos os módulos.');
+      location.replace('#/modulos');
+      return;
+    }
+    const p = (An && An.participante()) || {};
+    const k = 'bigou-treino-concluido-em';
+    let quando = null;
+    try { quando = localStorage.getItem(k); if (!quando) { quando = new Date().toISOString(); localStorage.setItem(k, quando); } } catch (e) { quando = new Date().toISOString(); }
+    const data = new Date(quando).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    ev('certificado');
+    app.innerHTML = `
+      <div class="tv tv-cert">
+        <header class="t-top no-print">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="cert-wrap">
+          <article class="cert" aria-label="Certificado de conclusão">
+            <div class="cert-borda">
+              <img class="cert-logo" src="assets/bigou-logo.png" alt="Bigou" width="64" height="64">
+              <span class="cert-kicker">Certificado de conclusão</span>
+              <p class="cert-txt">Certificamos que</p>
+              <h1 class="cert-loja">${esc(p.loja || 'Parceiro Bigou')}</h1>
+              ${p.cidade ? `<p class="cert-cidade">${esc(p.cidade)}</p>` : ''}
+              <p class="cert-txt">concluiu o <b>Treinamento Financeiro</b>, com os ${A.mods.length} módulos: vendas e formas de pagamento, tela Financeiro, fatura, repasse e antecipação.</p>
+              <div class="cert-rodape">
+                <div><small>Concluído em</small><b>${data}</b></div>
+                <div class="cert-selo">${ICON.medalha}</div>
+                <div><small>Carga</small><b>≈ ${minutos(A.mods.reduce((t, m) => t + segundosModulo(m), 0))} min</b></div>
+              </div>
+              <p class="cert-nota">Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.</p>
+            </div>
+          </article>
+          <div class="t-cta center no-print">
+            <button type="button" class="t-btn primary lg" id="cert-print">${ICON.impressora}Baixar ou imprimir</button>
+            <a class="t-btn ghost lg" href="#/revisao">${ICON.check}O que você aprendeu</a>
+          </div>
+          <p class="cert-dica no-print">Para baixar, escolha "Salvar como PDF" na janela de impressão.</p>
+        </main>
+      </div>`;
+    document.getElementById('cert-print').addEventListener('click', () => window.print());
+    celebrar('grande');
   }
 
   /* ------------------------------ Rotas ------------------------------ */
@@ -533,7 +673,7 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const view = parts[0];
     // Pede o cadastro da loja antes de começar
-    if (['comecar', 'modulo', 'modulos'].includes(view) && An && !An.participante()) {
+    if (['comecar', 'modulo', 'modulos', 'certificado'].includes(view) && An && !An.participante()) {
       A.destino = location.hash;
       location.replace('#/cadastro');
       return;
@@ -541,7 +681,12 @@
     if (An) An.enviar();
     if (view === 'cadastro') viewCadastro();
     else if (view === 'modulos') viewModules();
-    else if (view === 'modulo') viewPlayer(parseInt(parts[1], 10) || 1);
+    else if (view === 'modulo') {
+      // "Recomeçar": esquece o passo salvo e abre o módulo do início
+      if (parts[2] === 'inicio') { delete passos()[parts[1]]; save(); location.replace('#/modulo/' + parts[1]); return; }
+      viewPlayer(parseInt(parts[1], 10) || 1);
+    }
+    else if (view === 'certificado') viewCertificado();
     else if (view === 'explorar') viewExplore();
     else if (view === 'revisao') viewReview();
     else if (view === 'comecar') { location.replace('#/modulo/' + firstPending()); return; }
@@ -551,11 +696,11 @@
 
   /* ------------------------------ Início ------------------------------ */
   A.saved = load();
-  const urlScen = parseInt(new URLSearchParams(location.search).get('cenario'), 10);
-  setScenario(urlScen || A.saved.sc || 1);
+  A.d = TREINO.calc(TREINO.dados);
+  A.mods = TREINO.buildModules(A.d);
   TREINO.Tour.init();
   syncVoz();
-  ev('acesso', { detalhe: { cenario: A.sc } });
+  ev('acesso');
   // Dica aberta na tela inicial ("toggle" não borbulha: escuta na captura)
   document.addEventListener('toggle', (e) => {
     const d = e.target;

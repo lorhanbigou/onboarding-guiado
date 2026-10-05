@@ -107,7 +107,7 @@
     r.plataforma = all.bruto - r.recebidoLoja;      // o que passou pela plataforma (online + cupons do Bigou)
 
     if (r.resultado !== all.bruto - f.cobrancas) {
-      console.warn('[treinamento] conferência da conta falhou no cenário', sc.id);
+      console.warn('[treinamento] conferência da conta falhou');
     }
 
     return {

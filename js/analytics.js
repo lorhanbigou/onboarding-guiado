@@ -58,16 +58,16 @@
   }
 
   /** Cadastro da loja. Se já havia outra loja neste aparelho, começa um participante novo. */
-  An.cadastrar = function (loja, cidade, cenario) {
+  An.cadastrar = function (loja, cidade) {
     const atual = ler(K_PART);
     if (atual && (atual.loja !== loja || atual.cidade !== cidade)) { id = uuid(); gravar(K_ID, id); }
-    const p = { id, loja, cidade, cenario, criado_em: new Date().toISOString() };
+    const p = { id, loja, cidade, criado_em: new Date().toISOString() };
     gravar(K_PART, p);
     enfileirar({
       t: 'treino_participantes',
-      row: { id, loja, cidade, cenario, dispositivo: dispositivo(), navegador: navegador(), criado_em: p.criado_em },
+      row: { id, loja, cidade, dispositivo: dispositivo(), navegador: navegador(), criado_em: p.criado_em },
     });
-    An.registrar('cadastro', { detalhe: { loja, cidade, cenario } });
+    An.registrar('cadastro', { detalhe: { loja, cidade } });
     An.enviar();
     return p;
   };

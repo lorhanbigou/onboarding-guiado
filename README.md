@@ -10,53 +10,55 @@ node serve.js
 
 Depois acesse <http://localhost:5178>. Também funciona abrindo o `index.html` direto no navegador.
 
-### Cenário de cada parceiro (pela URL)
+### Dados do treinamento
 
-| Cenário | Link | Total Bruto | Mensalidade |
-|---|---|---|---|
-| 1 — Parceiro começando | `index.html?cenario=1` | R$229,95 | não |
-| 2 — Passou de R$500 e antecipa muito | `index.html?cenario=2` | R$728,87 | sim, e débito remanescente de R$59,90 |
-| 3 — Muito dinheiro e maquininha | `index.html?cenario=3` | R$1.386,80 | sim |
+Há um único conjunto de dados fictícios, igual para todos os parceiros (`TREINO.dados` em `js/data.js`): cerca de R$729 em vendas no mês, com mensalidade (passou de R$500), um débito remanescente do mês anterior e pedidos acima de R$100. Assim, todos os assuntos aparecem na tela.
 
-**Datas:** os valores são fixos, mas as datas acompanham o dia de hoje. A fatura mostra sempre o mês atual, do dia 1 até ontem; os pedidos são distribuídos nesse período e a antecipação cai no próximo dia útil. Para testar outro dia, use `?data=AAAA-MM-DD` (ex.: `index.html?cenario=2&data=2026-10-15`).
+**Datas:** os valores são fixos, mas as datas acompanham o dia de hoje. A fatura mostra sempre o mês atual, do dia 1 até ontem; os pedidos são distribuídos nesse período e a antecipação cai no próximo dia útil. Para testar outro dia, use `?data=AAAA-MM-DD` (ex.: `index.html?data=2026-10-15`).
 
 **Dicas importantes:** a tela inicial tem 6 orientações recolhidas (cupons, pagamento online, antecipação, repasse mensal, boleto e pedidos com tempo expirado), em `js/dicas.js`. Versões curtas aparecem como "Dica" no rodapé dos balões relacionados.
 
-**Aviso:** a tela inicial e a abertura do Módulo 1 deixam claro que tudo é fictício e ilustrativo, inclusive comissão e taxas, e que os valores reais estão no contrato.
+**Aviso:** a tela inicial, a abertura do Módulo 1 e o certificado deixam claro que tudo é fictício e ilustrativo, inclusive comissão e taxas, e que os valores reais estão no contrato.
 
-O parceiro não vê nem escolhe o cenário: ele vem do link. A sequência dos módulos é a mesma nos 3; só mudam os números. O progresso fica salvo no navegador, separado por cenário.
+## Módulos (9, em 4 fases)
 
-## Módulos (mesma ordem para todos)
-
-1. Suas vendas: Relatório e Total Bruto
-2. Pagamento online
-3. Dinheiro e maquininha
-4. Tela Financeiro: resultado e quadros
-5. Fatura: o que entrou de pagamento online
-6. Fatura: o que saiu do pagamento online (deduções, mensalidade e ajuste de preços no cardápio)
-7. Repasse e antecipação
-8. Exercício prático
+| Fase | Módulos |
+|---|---|
+| Vendas e pagamentos | 1. Suas vendas · 2. Pagamento online · 3. Dinheiro e maquininha |
+| Tela Financeiro | 4. Tela Financeiro |
+| A fatura | 5. O que entrou de pagamento online · 6. Comissão e taxas · 7. Taxa de serviço e mensalidade |
+| Repasse e prática | 8. Repasse e antecipação · 9. Exercício final |
 
 Só aparecem telas que existem no sistema: Relatório, Total Bruto, Financeiro, fatura, Comissão, Taxa de Pagamento Online, Taxa de Serviço, Antecipação, Boletos e Repasses.
+
+### Para deixar o treinamento mais leve
+
+- **Desafio rápido:** os módulos 1 a 8 terminam com uma pergunta curta de revisão; o módulo 9 é o exercício final.
+- **Retomar de onde parou:** o último passo de cada módulo fica salvo. Ao voltar, o módulo continua ali (com a opção "Recomeçar"), e a tela inicial mostra "Continuar · Módulo X, passo Y".
+- **Tempo estimado:** cada módulo mostra quanto leva (≈ 12 s por passo de leitura e 25 s por passo de clique ou pergunta). A tela inicial mostra o total e quanto falta.
+- **Ícones, medalhas e celebração:** cada módulo tem um ícone. Ao fechar uma fase, aparece a medalha "Fase concluída". Confete curto ao concluir um módulo, maior ao terminar tudo (desligado para quem prefere menos movimento).
+- **Nome da loja:** saudação na tela inicial e "Mandou bem, {loja}!" no fim de cada módulo.
+- **Certificado** (`#/certificado`): liberado ao concluir os 9 módulos, com o nome da loja, a cidade e a data. "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
 
 ## Cadastro da loja e painel admin (analytics)
 
 Antes de começar, o parceiro digita o **nome da loja** e escolhe a **cidade** (lista fixa em `js/cidades.js`). Isso identifica o parceiro no painel; a tela do treinamento continua com "Loja de Treinamento". O link "trocar" na tela inicial permite cadastrar outra loja no mesmo aparelho.
 
-O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas do exercício, narração, dicas abertas). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.
+O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas dos desafios e do exercício, narração, dicas abertas, certificado). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.
 
-**Painel:** `admin.html` (ex.: <http://localhost:5178/admin.html>). Mostra:
-- KPIs (cadastradas, começaram, concluíram, taxa de conclusão, em andamento, não começaram, tempo para concluir, acessos, ativas em 7 dias);
+**Painel:** `admin.html` (ex.: <http://localhost:5178/admin.html>), com navegação por seções. Mostra:
+- saúde do treinamento: taxa de conclusão em anel, com status (saudável, atenção, crítico) e a frase "De cada 10 lojas que começam, X terminam";
+- KPIs com explicação e comparação com o período anterior (cadastradas, começaram, concluíram, em andamento, não começaram, tempo para concluir, acessos, ativas em 7 dias);
 - destaques automáticos;
-- funil por módulo com a maior queda;
-- passos onde as lojas param, passos mais demorados e etapas puladas;
-- acerto do exercício por pergunta;
+- funil visual do cadastro até o Módulo 9, com o gargalo destacado (e o detalhe iniciaram × concluíram por módulo);
+- gargalos em ranking: onde param, passos mais demorados e etapas puladas;
+- perguntas: acerto na 1ª tentativa dos desafios rápidos e do exercício final;
 - cidades (ranking, top 10, cidades sem cadastro);
 - acessos por dia e mapa de calor por dia/hora;
 - perfil de uso;
-- tabela de lojas com busca e exportação em CSV.
+- tabela de lojas com filtro por status, busca, ordenação, último acesso relativo e exportação em CSV.
 
-Tudo responde aos filtros de período, cidade e cenário.
+Tudo responde aos filtros de período e cidade. Os indicadores principais comparam com o período anterior de mesmo tamanho.
 
 Enquanto o Supabase não estiver configurado, o painel abre com **dados de demonstração** (ou force com `admin.html?demo=1`).
 
@@ -94,10 +96,10 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 
 | Arquivo | O que faz |
 |---|---|
-| `js/data.js` | Dados fixos: loja, pedidos de cada cenário, taxas e mensalidade |
+| `js/data.js` | Dados fixos: loja, pedidos, taxas e mensalidade |
 | `js/calc.js` | Lógica de cálculo |
 | `js/clone.js` | Tela clonada: Relatório, Financeiro, fatura e modais |
-| `js/modules.js` | Conteúdo dos 8 módulos (textos, passos, perguntas) |
+| `js/modules.js` | Conteúdo dos 9 módulos (textos, passos, desafios e exercício final) |
 | `js/dicas.js` | Dicas importantes da tela inicial |
 | `js/cidades.js` | Lista de cidades do cadastro |
 | `js/analytics-config.js` | URL/chave do Supabase e e-mail do admin |
@@ -120,7 +122,7 @@ Estas taxas ficam em `TREINO.config` (`js/data.js`):
 - **Taxa de serviço (fatura)** = todas as taxas de serviço − 4% das taxas pagas na maquininha.
 - **Taxa de transferência** = R$2,50 (despesas bancárias do envio).
 - **Mensalidade** = R$59,90, cobrada apenas quando a loja atinge o faturamento mínimo (R$500,00 em Total Bruto). É deduzida na virada do último dia do mês.
-- **Débitos remanescentes** = deduções que o saldo online não cobriu. Passam para a próxima fatura como primeira dedução (`debitoRemanescente` no cenário). Pode aparecer um boleto, mas ele só deve ser considerado se a loja ficar três meses seguidos sem saldo online suficiente.
+- **Débitos remanescentes** = deduções que o saldo online não cobriu. Passam para a próxima fatura como primeira dedução (`debitoRemanescente` em `TREINO.dados`). Pode aparecer um boleto, mas ele só deve ser considerado se a loja ficar três meses seguidos sem saldo online suficiente.
 - **Repasse mensal** = sem antecipação, o saldo positivo é enviado no 2º dia útil do mês seguinte às vendas. Não há repasse automático durante o mês, nem em fins de semana e feriados (nacionais ou de Rio Pomba - MG).
 - **Repasse** = líquido online + reembolso dos incentivos + taxas de serviço online − todas as deduções. Se der negativo, a diferença vai para a próxima fatura como débito remanescente.
 - **Resultado** = Recebido pela Loja (dinheiro + maquininha) + Repasses recebidos + Repasse disponível.

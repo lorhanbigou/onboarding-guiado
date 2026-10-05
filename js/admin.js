@@ -17,10 +17,33 @@
   const demo = /[?&]demo=1/.test(location.search) || !(CFG.url && CFG.anonKey && CFG.adminEmail);
 
   /* ------------------------------ Metadados do treinamento ------------------------------ */
-  const MODS = TREINO.buildModules(TREINO.calc(TREINO.cenarios[1]));
+  const MODS = TREINO.buildModules(TREINO.calc(TREINO.dados));
   const NMOD = MODS.length;
   const tituloMod = (m) => (MODS[m - 1] ? MODS[m - 1].titulo : 'Módulo ' + m);
-  const tituloPasso = (m, p) => { const s = MODS[m - 1] && MODS[m - 1].steps[p - 1]; return s ? s.title : 'Passo ' + p; };
+  const passoDe = (m, p) => MODS[m - 1] && MODS[m - 1].steps[p - 1];
+  const tituloPasso = (m, p) => { const s = passoDe(m, p); return s ? (s.desafio ? 'Desafio rápido' : s.title) : 'Passo ' + p; };
+  const semValor = (t) => String(t || '').replace(/R\$[\d.,]+/g, 'R$…');
+
+  /* ------------------------------ Ícones ------------------------------ */
+  const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  const IC = {
+    loja: sv('<path d="M4 9.5l1.5-5h13l1.5 5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5.5 12v8h13v-8M10 20v-4.5h4V20"/>'),
+    play: sv('<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5z"/>'),
+    trofeu: sv('<path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.5a3 3 0 0 0 3 4M16.5 6h3a3 3 0 0 1-3 4M12 13.5V17M8.5 20.5h7M9.5 17h5v3.5h-5z"/>'),
+    andamento: sv('<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/>'),
+    parado: sv('<circle cx="12" cy="12" r="9"/><path d="M9.5 9v6M14.5 9v6"/>'),
+    tempo: sv('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M10 2.5h4"/>'),
+    olho: sv('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>'),
+    raio: sv('<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/>'),
+    ok: sv('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'),
+    alerta: sv('<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.3v.2"/>'),
+    critico: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6M12 16.3v.2"/>'),
+    sobe: sv('<path d="M12 19V5M6 11l6-6 6 6"/>'),
+    desce: sv('<path d="M12 5v14M6 13l6 6 6-6"/>'),
+    sair: sv('<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>'),
+    atualizar: sv('<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/>'),
+    baixar: sv('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  };
 
   /* ------------------------------ Formatação ------------------------------ */
   const nf = new Intl.NumberFormat('pt-BR');
@@ -33,12 +56,19 @@
     if (s < 60) return s + ' s';
     const m = Math.floor(s / 60), r = s % 60;
     if (m < 60) return r ? `${m} min ${r} s` : `${m} min`;
-    const h = Math.floor(m / 60);
-    return `${h} h ${m % 60} min`;
+    return `${Math.floor(m / 60)} h ${m % 60} min`;
   }
-  const dias = (ms) => (ms == null ? '—' : ms < DIA ? 'no mesmo dia' : `${(ms / DIA).toFixed(1).replace('.', ',')} dias`);
+  const dias = (ms) => (ms == null ? '—' : ms < DIA ? 'no mesmo dia' : `em ${(ms / DIA).toFixed(1).replace('.', ',')} dias`);
   const dataBR = (t) => new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   const dataHoraBR = (t) => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  function relativo(t) {
+    const d = Date.now() - t;
+    if (d < 60e3) return 'agora';
+    if (d < 3600e3) return `há ${Math.floor(d / 60e3)} min`;
+    if (d < DIA) return `há ${Math.floor(d / 3600e3)} h`;
+    const k = Math.floor(d / DIA);
+    return k === 1 ? 'ontem' : k < 30 ? `há ${k} dias` : dataBR(t);
+  }
   const mediana = (arr) => { if (!arr.length) return null; const a = arr.slice().sort((x, y) => x - y); const k = a.length >> 1; return a.length % 2 ? a[k] : (a[k - 1] + a[k]) / 2; };
   const diaKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 
@@ -58,35 +88,33 @@
     const cidade = () => { let r = rnd() * totPeso; for (let i = 0; i < pesoCid.length; i++) { r -= pesoCid[i]; if (r <= 0) return TREINO.cidades[i]; } return TREINO.cidades[0]; };
     const tipos = ['Lanchonete', 'Pizzaria', 'Restaurante', 'Hamburgueria', 'Açaí', 'Padaria', 'Sorveteria', 'Pastelaria', 'Marmitaria', 'Doceria', 'Espetinho', 'Cafeteria'];
     const nomes = ['da Ana', 'do Zé', 'Sabor & Cia', 'Bom Gosto', 'da Praça', 'Central', 'Delícia', 'do Bairro', 'Primavera', 'Estrela', 'Família', 'Dona Maria', 'Point', 'Express', 'da Esquina'];
-    // hora de uso: picos de manhã e à tarde
     const hora = () => { const r = rnd(); return r < 0.4 ? 9 + Math.floor(rnd() * 3) : r < 0.8 ? 14 + Math.floor(rnd() * 4) : 7 + Math.floor(rnd() * 15); };
     const quando = (base) => { const d = new Date(base); d.setHours(hora(), Math.floor(rnd() * 60), Math.floor(rnd() * 60)); return d.getTime(); };
 
-    const continua = [0.93, 0.92, 0.9, 0.8, 0.88, 0.68, 0.84, 0.9];   // chance de concluir cada módulo
-    const gargaloPasso = { 4: 1, 6: 9, 7: 9 };                        // passos onde mais gente para
-    const acertoQ = [0.86, 0.78, 0.74, 0.71, 0.62, 0.44, 0.69, 0.8, 0.52];
+    const continua = [0.94, 0.93, 0.92, 0.82, 0.89, 0.74, 0.86, 0.85, 0.92];   // chance de concluir cada módulo
+    const gargaloPasso = { 4: 1, 6: 9, 8: 9 };                                 // passos onde mais gente para
+    const acertoFinal = [0.86, 0.78, 0.74, 0.71, 0.62, 0.44, 0.69, 0.8, 0.52];
+    const acertoDesafio = [0.9, 0.82, 0.88, 0.7, 0.76, 0.58, 0.8, 0.66];
 
     const P = [], E = [];
     const ev = (pid, tipo, t, x) => E.push(Object.assign({ participante_id: pid, tipo, modulo: null, passo: null, alvo: null, detalhe: null, criado_em: new Date(t).toISOString() }, x || {}));
 
-    // visitantes que não se cadastraram
-    for (let i = 0; i < 70; i++) { const id = uid(); ev(id, 'acesso', quando(agora - rnd() * 60 * DIA), { detalhe: { cenario: 1 } }); }
+    for (let i = 0; i < 70; i++) ev(uid(), 'acesso', quando(agora - rnd() * 60 * DIA));   // visitantes sem cadastro
 
     for (let i = 0; i < 320; i++) {
       const id = uid();
       let t = quando(agora - Math.pow(rnd(), 0.8) * 75 * DIA);
       if (t > agora) t = agora - 3600e3;
-      const cen = 1 + Math.floor(rnd() * 3);
       const cel = rnd() < 0.72;
-      P.push({ id, loja: `${pick(tipos)} ${pick(nomes)}`, cidade: cidade(), cenario: cen, dispositivo: cel ? 'celular' : 'computador', navegador: cel ? pick(['Chrome', 'Chrome', 'Safari', 'Samsung']) : pick(['Chrome', 'Edge', 'Safari']), criado_em: new Date(t).toISOString() });
-      ev(id, 'acesso', t - 60e3, { detalhe: { cenario: cen } });
-      ev(id, 'cadastro', t, { detalhe: { cenario: cen } });
+      P.push({ id, loja: `${pick(tipos)} ${pick(nomes)}`, cidade: cidade(), dispositivo: cel ? 'celular' : 'computador', navegador: cel ? pick(['Chrome', 'Chrome', 'Safari', 'Samsung']) : pick(['Chrome', 'Edge', 'Safari']), criado_em: new Date(t).toISOString() });
+      ev(id, 'acesso', t - 60e3);
+      ev(id, 'cadastro', t);
       if (rnd() < 0.18) ev(id, 'voz', t + 5e3, { detalhe: { ligada: true } });
       if (rnd() < 0.35) ev(id, 'dica', t + 8e3, { detalhe: { dica: pick(['Antecipação de valores', 'Boleto', 'Repasse mensal', 'Pagamento online', 'Cupons de desconto', 'Pedidos com tempo expirado', 'Antecipação de valores', 'Boleto']) } });
       if (rnd() < 0.16) continue;                       // cadastrou e não começou
       let concluidos = 0;
       for (let m = 1; m <= NMOD; m++) {
-        if (rnd() < 0.08) { t = quando(t + (1 + Math.floor(rnd() * 4)) * DIA); ev(id, 'acesso', t - 30e3, { detalhe: { cenario: cen } }); }
+        if (rnd() < 0.08) { t = quando(t + (1 + Math.floor(rnd() * 4)) * DIA); ev(id, 'acesso', t - 30e3); }
         const ini = (t += 20e3 + rnd() * 60e3);
         ev(id, 'modulo_inicio', t, { modulo: m });
         const steps = MODS[m - 1].steps.length;
@@ -96,14 +124,17 @@
         for (let p = 1; p <= Math.min(paraEm, steps); p++) {
           const ms = Math.round((6 + rnd() * 18 + (gargaloPasso[m] === p - 1 ? 40 * rnd() : 0)) * 1000);
           t += ms;
-          ev(id, 'passo', t, { modulo: m, passo: p, alvo: MODS[m - 1].steps[p - 1].target, detalhe: { titulo: tituloPasso(m, p), anterior: ant, ms } });
-          ant = p;
           const st = MODS[m - 1].steps[p - 1];
+          ev(id, 'passo', t, { modulo: m, passo: p, alvo: st.target, detalhe: { titulo: st.title, anterior: ant, ms } });
+          ant = p;
           if (st.mode === 'click' && rnd() < 0.07) ev(id, 'passo_pulado', t + 2e3, { modulo: m, passo: p, alvo: st.target, detalhe: { titulo: st.title } });
           if (st.mode === 'quiz') {
-            const q = p - 1;
-            let tent = 1;
-            while (tent < 4) { const ok = rnd() < acertoQ[q] + (tent - 1) * 0.25; ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: { pergunta: st.title, acertou: ok, tentativa: tent } }); if (ok) break; tent++; }
+            const base = st.desafio ? acertoDesafio[m - 1] : acertoFinal[p - 1];
+            for (let tent = 1; tent < 4; tent++) {
+              const ok = rnd() < base + (tent - 1) * 0.25;
+              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: { pergunta: st.title, acertou: ok, tentativa: tent } });
+              if (ok) break;
+            }
           }
         }
         if (!termina) { ev(id, 'modulo_saida', t + 15e3, { modulo: m, passo: ant, detalhe: { motivo: rnd() < 0.6 ? 'fechou' : 'navegou', ms: t - ini } }); break; }
@@ -111,7 +142,7 @@
         ev(id, 'modulo_fim', t, { modulo: m, detalhe: { ms: t - ini, ultimo_passo: ant, ultimo_passo_ms: 8000 } });
         concluidos++;
       }
-      if (concluidos === NMOD) ev(id, 'treino_concluido', t + 1e3, { detalhe: { cenario: cen } });
+      if (concluidos === NMOD) { ev(id, 'treino_concluido', t + 1e3); if (rnd() < 0.7) ev(id, 'certificado', t + 6e4); }
     }
     return { participantes: P, eventos: E.filter((e) => +new Date(e.criado_em) <= agora) };
   }
@@ -157,7 +188,7 @@
   async function carregar() {
     if (demo) return gerarDemo();
     const [participantes, eventos] = await Promise.all([
-      lerTudo('treino_participantes', 'id,loja,cidade,cenario,dispositivo,navegador,criado_em', 'criado_em.asc'),
+      lerTudo('treino_participantes', 'id,loja,cidade,dispositivo,navegador,criado_em', 'criado_em.asc'),
       lerTudo('treino_eventos', 'participante_id,tipo,modulo,passo,alvo,detalhe,criado_em', 'id.asc'),
     ]);
     return { participantes, eventos };
@@ -165,19 +196,20 @@
 
   /* =====================================================================
      CÁLCULO DE TODOS OS INDICADORES
+     f = { dias, cidade, ate }  → janela [ate − dias, ate] (ate = agora por padrão)
      ===================================================================== */
   function calcular(D, f) {
-    const agora = Date.now();
+    const agora = f.ate || Date.now();
     const desde = f.dias ? agora - f.dias * DIA : -Infinity;
-    const semFiltroDim = !f.cidade && !f.cenario;
+    const semCidade = !f.cidade;
     const todosIds = new Set(D.participantes.map((p) => p.id));
-    const parts = D.participantes.filter((p) => (!f.cidade || p.cidade === f.cidade) && (!f.cenario || +p.cenario === +f.cenario) && +new Date(p.criado_em) >= desde);
+    const parts = D.participantes.filter((p) => { const t = +new Date(p.criado_em); return (semCidade || p.cidade === f.cidade) && t >= desde && t <= agora; });
     const ids = new Set(parts.map((p) => p.id));
     const cidadeDe = new Map(D.participantes.map((p) => [p.id, p.cidade]));
-    const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e));
+    const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e)).filter((e) => e.t <= agora);
 
     // Resumo por participante
-    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false }]));
+    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false }]));
     for (const e of evs) {
       const s = S.get(e.participante_id);
       if (!s) continue;
@@ -187,6 +219,7 @@
       else if (e.tipo === 'treino_concluido') { if (!s.concluiuEm) s.concluiuEm = e.t; }
       else if (e.tipo === 'modulo_saida') s.saidas.push(e);
       else if (e.tipo === 'voz' && e.detalhe && e.detalhe.ligada) s.voz = true;
+      else if (e.tipo === 'certificado') s.cert = true;
     }
     const L = [...S.values()];
     L.forEach((s) => {
@@ -203,9 +236,9 @@
     const tempoAtivo = L.filter((s) => s.concluiu).map((s) => Object.values(s.msMod).reduce((a, b) => a + b, 0)).filter((x) => x > 0);
     const tempoCal = L.filter((s) => s.concluiu && s.primeiroIni && s.concluiuEm).map((s) => s.concluiuEm - s.primeiroIni);
 
-    // Acessos no período (inclui quem ainda não se cadastrou, se não houver filtro de cidade/cenário)
-    const acessos = evs.filter((e) => e.tipo === 'acesso' && e.t >= desde && (ids.has(e.participante_id) || (semFiltroDim && !todosIds.has(e.participante_id))));
-    const visitantesSemCadastro = semFiltroDim ? new Set(acessos.filter((e) => !todosIds.has(e.participante_id)).map((e) => e.participante_id)).size : null;
+    // Acessos no período (inclui quem ainda não se cadastrou, se não houver filtro de cidade)
+    const acessos = evs.filter((e) => e.tipo === 'acesso' && e.t >= desde && (ids.has(e.participante_id) || (semCidade && !todosIds.has(e.participante_id))));
+    const visitantesSemCadastro = semCidade ? new Set(acessos.filter((e) => !todosIds.has(e.participante_id)).map((e) => e.participante_id)).size : null;
     const ativos7 = L.filter((s) => s.ultimo >= agora - 7 * DIA).length;
 
     // Funil por módulo
@@ -214,21 +247,21 @@
       const ini = L.filter((s) => s.ini.has(m)).length, fim = L.filter((s) => s.fim.has(m)).length;
       funil.push({ m, ini, fim, taxa: ini ? fim / ini : null });
     }
-    // Queda entre etapas: cadastro → concluiu M1 → … → concluiu M8
-    const etapas = [{ nome: 'Cadastraram', v: L.length }].concat(funil.map((x) => ({ nome: `Concluíram o Módulo ${x.m}`, m: x.m, v: x.fim })));
+    // Etapas: cadastro → concluiu M1 → … → concluiu M9
+    const etapas = [{ nome: 'Cadastraram', curto: 'Cadastro', v: L.length }].concat(funil.map((x) => ({ nome: `Concluíram o Módulo ${x.m}`, curto: `M${x.m}`, m: x.m, v: x.fim })));
     let maiorQueda = null;
     for (let i = 1; i < etapas.length; i++) {
       const a = etapas[i - 1].v, b = etapas[i].v;
-      if (a >= 5) { const q = (a - b) / a; if (!maiorQueda || q > maiorQueda.q) maiorQueda = { q, de: etapas[i - 1], para: etapas[i], perdidos: a - b }; }
+      if (a >= 5) { const q = (a - b) / a; if (!maiorQueda || q > maiorQueda.q) maiorQueda = { q, i, de: etapas[i - 1], para: etapas[i], perdidos: a - b }; }
     }
 
-    // Eventos dos participantes filtrados
     const evP = evs.filter((e) => ids.has(e.participante_id));
     const chave = (m, p) => m + ':' + p;
 
     // Alcance por passo (pessoas distintas que viram o passo)
     const alcance = new Map();
     evP.filter((e) => e.tipo === 'passo').forEach((e) => { const k = chave(e.modulo, e.passo); if (!alcance.has(k)) alcance.set(k, new Set()); alcance.get(k).add(e.participante_id); });
+    const viram = (k, c) => (alcance.has(k) ? alcance.get(k).size : c);
 
     // Abandono: última saída de cada pessoa em cada módulo que ela não concluiu
     const aband = new Map();
@@ -237,7 +270,7 @@
       s.saidas.forEach((x) => { if (!s.fim.has(x.modulo) && x.passo) { const o = porMod.get(x.modulo); if (!o || x.t > o.t) porMod.set(x.modulo, x); } });
       porMod.forEach((x) => { const k = chave(x.modulo, x.passo); aband.set(k, (aband.get(k) || 0) + 1); });
     });
-    const abandonos = [...aband.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = alcance.has(k) ? alcance.get(k).size : c; return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c || b.taxa - a.taxa);
+    const abandonos = [...aband.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = viram(k, c); return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c || b.taxa - a.taxa);
 
     // Tempo por passo (mediana)
     const tempos = new Map();
@@ -248,16 +281,22 @@
     });
     const lentos = [...tempos.entries()].filter(([, a]) => a.length >= 3).map(([k, a]) => { const [m, p] = k.split(':').map(Number); return { m, p, med: mediana(a), nAmostra: a.length }; }).sort((a, b) => b.med - a.med);
 
-    // Passos pulados
+    // Etapas de clique puladas
     const pul = new Map();
     evP.filter((e) => e.tipo === 'passo_pulado').forEach((e) => { const k = chave(e.modulo, e.passo); pul.set(k, (pul.get(k) || 0) + 1); });
-    const pulados = [...pul.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = alcance.has(k) ? alcance.get(k).size : c; return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c);
+    const pulados = [...pul.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = viram(k, c); return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c);
 
-    // Exercício: acerto na 1ª tentativa
+    // Perguntas: acerto na 1ª tentativa (desafios por módulo e exercício final)
     const qz = new Map();
-    evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.tentativa === 1).forEach((e) => { const o = qz.get(e.passo) || { ok: 0, tot: 0 }; o.tot++; if (e.detalhe.acertou) o.ok++; qz.set(e.passo, o); });
-    const quizStep = (p) => MODS[NMOD - 1] && MODS[NMOD - 1].steps[p - 1];
-    const quiz = [...qz.entries()].map(([p, o]) => ({ p, q: quizStep(p) ? quizStep(p).q.replace(/R\$[\d.,]+/g, 'R$…') : 'Pergunta ' + p, ok: o.ok, tot: o.tot, taxa: o.ok / o.tot })).sort((a, b) => a.taxa - b.taxa);
+    evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.tentativa === 1).forEach((e) => {
+      const k = chave(e.modulo, e.passo);
+      const o = qz.get(k) || { m: e.modulo, p: e.passo, ok: 0, tot: 0 };
+      o.tot++; if (e.detalhe.acertou) o.ok++;
+      qz.set(k, o);
+    });
+    const perguntas = [...qz.values()].map((o) => { const st = passoDe(o.m, o.p); return Object.assign(o, { taxa: o.ok / o.tot, q: semValor(st ? st.q : 'Pergunta'), desafio: !!(st && st.desafio) }); });
+    const desafios = perguntas.filter((x) => x.desafio).sort((a, b) => a.m - b.m);
+    const exercicio = perguntas.filter((x) => !x.desafio).sort((a, b) => a.taxa - b.taxa);
 
     // Cidades
     const cid = new Map();
@@ -286,43 +325,95 @@
     const perfil = {
       dispositivo: conta(parts.map((p) => p.dispositivo || 'desconhecido')),
       navegador: conta(parts.map((p) => p.navegador || 'Outro')),
-      cenario: conta(parts.map((p) => 'Cenário ' + p.cenario)),
       voz: L.filter((s) => s.voz).length,
-      dicas: conta(evs.filter((e) => e.tipo === 'dica' && e.t >= desde && (ids.has(e.participante_id) || (semFiltroDim && !todosIds.has(e.participante_id)))).map((e) => (e.detalhe && e.detalhe.dica) || '?')),
+      certificados: L.filter((s) => s.cert).length,
+      dicas: conta(evs.filter((e) => e.tipo === 'dica' && e.t >= desde && (ids.has(e.participante_id) || (semCidade && !todosIds.has(e.participante_id)))).map((e) => (e.detalhe && e.detalhe.dica) || '?')),
     };
 
     return {
-      kpi: { cadastradas: L.length, comecaram, concluiram, andamento: comecaram - concluiram, naoComecaram: L.length - comecaram, tempoAtivo: mediana(tempoAtivo), tempoCal: mediana(tempoCal), acessos: acessos.length, ativos7, visitantesSemCadastro },
-      funil, etapas, maiorQueda, abandonos, lentos, pulados, quiz, cidades, semCadastro, serie, calor, perfil, lojas: L,
+      kpi: { cadastradas: L.length, comecaram, concluiram, andamento: comecaram - concluiram, naoComecaram: L.length - comecaram, tempoAtivo: mediana(tempoAtivo), tempoCal: mediana(tempoCal), acessos: acessos.length, ativos7, visitantesSemCadastro, taxa: comecaram ? concluiram / comecaram : null },
+      funil, etapas, maiorQueda, abandonos, lentos, pulados, desafios, exercicio, cidades, semCadastro, serie, calor, perfil, lojas: L,
     };
   }
 
   /* =====================================================================
-     GRÁFICOS (SVG à mão)
+     PEDAÇOS VISUAIS
      ===================================================================== */
   const tipAttr = (html) => `data-tip="${esc(html)}" tabindex="0"`;
+  const ajuda = (txt) => `<span class="ajuda" ${tipAttr(txt)} aria-label="${esc(txt)}">?</span>`;
 
-  // Barras horizontais de uma série (ex.: cidades, acerto do quiz)
-  function barras(rows, { valor, rotulo, fmt, max, cor = COR.a, alerta }) {
+  // Comparação com o período anterior. menor=true quando cair é bom.
+  function delta(atual, anterior, menor) {
+    if (anterior == null || atual == null || !isFinite(anterior)) return '';
+    if (anterior === 0) return atual ? '<span class="dl neutro">novo</span>' : '';
+    const v = (atual - anterior) / anterior;
+    if (Math.abs(v) < 0.005) return '<span class="dl neutro">= período anterior</span>';
+    const bom = menor ? v < 0 : v > 0;
+    return `<span class="dl ${bom ? 'bom' : 'ruim'}">${v > 0 ? IC.sobe : IC.desce}${Math.abs(Math.round(v * 100))}%<small> vs. anterior</small></span>`;
+  }
+
+  function kpi(icone, rotulo, valor, sub, dl, ajudaTxt, cls) {
+    return `<div class="kpi ${cls || ''}">
+      <div class="kpi-h"><span class="kpi-ic">${IC[icone]}</span><span class="kpi-r">${rotulo}</span>${ajudaTxt ? ajuda(ajudaTxt) : ''}</div>
+      <b class="kpi-v">${valor}</b>
+      <div class="kpi-f">${sub ? `<small>${sub}</small>` : ''}${dl || ''}</div>
+    </div>`;
+  }
+
+  // Status sempre com ícone + rótulo (nunca só cor)
+  function saude(taxa) {
+    if (taxa == null) return { cls: 'neutro', ic: IC.andamento, rot: 'Sem dados ainda' };
+    if (taxa >= 0.5) return { cls: 'bom', ic: IC.ok, rot: 'Saudável' };
+    if (taxa >= 0.3) return { cls: 'atencao', ic: IC.alerta, rot: 'Atenção' };
+    return { cls: 'critico', ic: IC.critico, rot: 'Crítico' };
+  }
+
+  function anel(taxa) {
+    const r = 46, c = 2 * Math.PI * r, v = taxa == null ? 0 : Math.max(0, Math.min(1, taxa));
+    return `<svg class="anel" viewBox="0 0 120 120" role="img" aria-label="Taxa de conclusão ${Math.round(v * 100)}%">
+      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#e9efeb" stroke-width="12"/>
+      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#0b8a47" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
+      <text x="60" y="58" text-anchor="middle" class="anel-v">${taxa == null ? '—' : Math.round(v * 100) + '%'}</text>
+      <text x="60" y="76" text-anchor="middle" class="anel-r">concluem</text>
+    </svg>`;
+  }
+
+  // Barras horizontais de uma série (ex.: cidades, acerto das perguntas)
+  function barras(rows, { valor, rotulo, fmt, max, cor = COR.a, alerta, sub }) {
     const mx = max || Math.max(1, ...rows.map(valor));
     return `<div class="hb">${rows.map((r) => {
       const v = valor(r), w = Math.max(0.6, (v / mx) * 100), al = alerta && alerta(r);
       return `<div class="hb-row" ${tipAttr(`<b>${esc(rotulo(r))}</b><br>${fmt(r)}`)}>
-        <div class="hb-l">${al ? '<span class="st-crit" aria-label="Atenção">!</span>' : ''}${esc(rotulo(r))}</div>
+        <div class="hb-l">${al ? `<span class="st-crit" title="Atenção">${IC.alerta}</span>` : ''}<span>${esc(rotulo(r))}${sub ? `<small>${esc(sub(r))}</small>` : ''}</span></div>
         <div class="hb-track"><i style="width:${w}%;background:${cor}"></i></div>
         <div class="hb-v">${fmt(r)}</div>
       </div>`;
     }).join('')}</div>`;
   }
 
-  // Funil: duas barras por módulo (iniciaram × concluíram), com rótulo direto
+  // Funil visual: barras centradas que se estreitam, com a queda entre etapas
+  function funilVisual(R) {
+    const E = R.etapas, mx = Math.max(1, E[0].v);
+    return `<ol class="fv">${E.map((e, i) => {
+      const w = Math.max(4, (e.v / mx) * 100);
+      const a = i ? E[i - 1].v : null, q = i && a ? (a - e.v) / a : null;
+      const gargalo = R.maiorQueda && R.maiorQueda.i === i;
+      return `${i ? `<li class="fv-drop ${gargalo ? 'is-g' : ''}" aria-hidden="true"><span>${q == null ? '' : '−' + Math.round(q * 100) + '%'}${gargalo ? ` · gargalo` : ''}</span></li>` : ''}
+        <li class="fv-st ${gargalo ? 'is-g' : ''}" ${tipAttr(`<b>${esc(e.nome)}</b><br>${n(e.v)} lojas${q != null ? `<br>Queda: −${Math.round(q * 100)}% (${n(a - e.v)} lojas)` : ''}`)}>
+          <span class="fv-l">${i ? `<b>M${e.m}</b> ${esc(tituloMod(e.m))}` : '<b>Cadastraram</b>'}</span>
+          <span class="fv-bar"><i style="width:${w}%"></i></span>
+          <span class="fv-v">${n(e.v)}<small>${pct(e.v, mx)}</small></span>
+        </li>`;
+    }).join('')}</ol>`;
+  }
+
+  // Detalhe por módulo: iniciaram × concluíram (duas séries, rótulo direto)
   function graficoFunil(R) {
     const mx = Math.max(1, ...R.funil.map((x) => x.ini));
-    const pior = R.funil.filter((x) => x.ini >= 5).sort((a, b) => a.taxa - b.taxa)[0];
     return `
       <div class="legend"><span><i style="background:${COR.a}"></i>Iniciaram</span><span><i style="background:${COR.b}"></i>Concluíram</span></div>
       <div class="fn">${R.funil.map((x) => `
-        <div class="fn-row ${pior && pior.m === x.m ? 'is-pior' : ''}" ${tipAttr(`<b>Módulo ${x.m} · ${esc(tituloMod(x.m))}</b><br>Iniciaram: ${n(x.ini)}<br>Concluíram: ${n(x.fim)}<br>Conclusão: ${pct(x.fim, x.ini)}`)}>
+        <div class="fn-row" ${tipAttr(`<b>Módulo ${x.m} · ${esc(tituloMod(x.m))}</b><br>Iniciaram: ${n(x.ini)}<br>Concluíram: ${n(x.fim)}<br>Conclusão: ${pct(x.fim, x.ini)}`)}>
           <div class="fn-l"><b>M${x.m}</b><span>${esc(tituloMod(x.m))}</span></div>
           <div class="fn-bars">
             <div class="fn-bar"><i style="width:${(x.ini / mx) * 100}%;background:${COR.a}"></i><em>${n(x.ini)}</em></div>
@@ -333,6 +424,18 @@
       </div>`;
   }
 
+  // Ranking de passos (gargalos)
+  function ranking(lista, { valor, sub, vazio, max }) {
+    if (!lista.length) return `<p class="empty">${vazio}</p>`;
+    const mx = max || Math.max(...lista.map((x) => x.barra));
+    return `<ol class="rk">${lista.slice(0, 5).map((x, i) => `
+      <li class="rk-i" ${tipAttr(`<b>Módulo ${x.m} · ${esc(tituloMod(x.m))}</b><br>Passo ${x.p}: ${esc(tituloPasso(x.m, x.p))}<br>${sub(x)}`)}>
+        <span class="rk-n">${i + 1}</span>
+        <span class="rk-t"><small>M${x.m} · passo ${x.p}</small><b>${esc(tituloPasso(x.m, x.p))}</b><span class="rk-bar"><i style="width:${Math.max(3, (x.barra / mx) * 100)}%"></i></span></span>
+        <span class="rk-v">${valor(x)}<small>${sub(x)}</small></span>
+      </li>`).join('')}</ol>`;
+  }
+
   // Linha diária: acessos e conclusões (mesma unidade, um eixo)
   function graficoLinha(R, largura) {
     const S = R.serie, W = Math.max(300, largura), H = 220, pl = 36, pr = 12, pt = 12, pb = 26;
@@ -341,6 +444,7 @@
     const X = (i) => pl + (S.length < 2 ? 0 : (i * (W - pl - pr)) / (S.length - 1));
     const Y = (v) => pt + (H - pt - pb) * (1 - v / top);
     const path = (k) => S.map((x, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(x[k]).toFixed(1)}`).join('');
+    const area = `${path('acessos')}L${X(S.length - 1).toFixed(1)},${Y(0)}L${X(0).toFixed(1)},${Y(0)}Z`;
     const grid = [0, 0.25, 0.5, 0.75, 1].map((g) => `<line x1="${pl}" x2="${W - pr}" y1="${Y(top * g)}" y2="${Y(top * g)}" class="grid"/><text x="${pl - 6}" y="${Y(top * g) + 4}" class="ax" text-anchor="end">${n(top * g)}</text>`).join('');
     const passo = Math.max(1, Math.ceil(S.length / 7));
     const xl = S.map((x, i) => (i % passo === 0 || i === S.length - 1 ? `<text x="${X(i)}" y="${H - 6}" class="ax" text-anchor="${i === 0 ? 'start' : i === S.length - 1 ? 'end' : 'middle'}">${dataBR(x.t)}</text>` : '')).join('');
@@ -348,7 +452,9 @@
       <div class="legend"><span><i style="background:${COR.a}"></i>Acessos</span><span><i style="background:${COR.b}"></i>Treinamentos concluídos</span></div>
       <div class="lc" data-linha='${esc(JSON.stringify(S.map((x) => [x.t, x.acessos, x.conclusoes])))}' data-geo='${JSON.stringify({ W, H, pl, pr, pt, pb, top })}'>
         <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Acessos e conclusões por dia">
+          <defs><linearGradient id="lc-g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${COR.a}" stop-opacity=".16"/><stop offset="1" stop-color="${COR.a}" stop-opacity="0"/></linearGradient></defs>
           ${grid}${xl}
+          <path d="${area}" fill="url(#lc-g)"/>
           <path d="${path('acessos')}" fill="none" stroke="${COR.a}" stroke-width="2" stroke-linejoin="round"/>
           <path d="${path('conclusoes')}" fill="none" stroke="${COR.b}" stroke-width="2" stroke-linejoin="round"/>
           <line class="lc-x" x1="0" x2="0" y1="${pt}" y2="${H - pb}" visibility="hidden"/>
@@ -372,18 +478,25 @@
       </div>`;
   }
 
+  function perfilBloco(titulo, lista, total, absoluto) {
+    if (!lista.length) return `<div class="pf-b"><h3>${titulo}</h3><p class="empty">Sem dados.</p></div>`;
+    const mx = Math.max(...lista.map((x) => x[1]));
+    return `<div class="pf-b"><h3>${titulo}</h3>${lista.slice(0, 6).map(([k, v]) => `<div class="pf-r" ${tipAttr(`<b>${esc(k)}</b><br>${n(v)}${absoluto ? '' : ' · ' + pct(v, total)}`)}><span>${esc(k)}</span><div class="hb-track"><i style="width:${(v / mx) * 100}%;background:${COR.a}"></i></div><b>${absoluto ? n(v) : pct(v, total)}</b></div>`).join('')}</div>`;
+  }
+
   /* =====================================================================
      TELAS
      ===================================================================== */
-  const st = { dados: null, filtros: { dias: 30, cidade: '', cenario: '' }, busca: '', ordem: { k: 'ultimo', dir: -1 }, R: null };
+  const st = { dados: null, filtros: { dias: 30, cidade: '' }, busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
+  const SECOES = [['visao', 'Visão geral'], ['funil', 'Funil'], ['gargalos', 'Gargalos'], ['perguntas', 'Perguntas'], ['cidades', 'Cidades'], ['uso', 'Uso'], ['lojas', 'Lojas']];
 
   function telaLogin(msg) {
     root.innerHTML = `
       <main class="lg">
         <form class="lg-card" id="lg-form">
-          <img src="assets/bigou-logo.png" alt="Bigou" width="48" height="48">
+          <img src="assets/bigou-logo.png" alt="Bigou" width="56" height="56">
           <h1>Painel do Treinamento</h1>
-          <p>Acesso restrito à equipe.</p>
+          <p>Acesso restrito à equipe Bigou.</p>
           <label><span>Senha</span><input id="lg-senha" type="password" autocomplete="current-password" required></label>
           ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
           <button class="btn primary" type="submit">Entrar</button>
@@ -401,7 +514,15 @@
     });
   }
 
-  function telaCarregando() { root.innerHTML = `<main class="ld"><img src="assets/bigou-logo.png" alt="" width="48" height="48"><p>Carregando dados…</p></main>`; }
+  function telaCarregando() {
+    root.innerHTML = `
+      <div class="hd"><div class="hd-l"><img src="assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
+      <main class="pg" aria-busy="true">
+        <div class="sk sk-hero"></div>
+        <div class="kpis">${'<div class="sk sk-kpi"></div>'.repeat(8)}</div>
+        <div class="sk sk-card"></div>
+      </main>`;
+  }
 
   async function iniciar() {
     if (!demo && !sessao.get()) return telaLogin();
@@ -410,146 +531,160 @@
     catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else root.innerHTML = `<main class="ld"><p class="lg-err">${esc(err.message)}</p><button class="btn" onclick="location.reload()">Tentar de novo</button></main>`; }
   }
 
-  function kpi(rot, val, sub, cls) { return `<div class="kpi ${cls || ''}"><span>${rot}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`; }
-  const nomePasso = (m, p) => `<b>M${m} · passo ${p}</b><span>${esc(tituloPasso(m, p))}</span>`;
+  const sec = (id, titulo, desc, corpo, extra) => `
+    <section class="sec" id="s-${id}" aria-labelledby="h-${id}">
+      <div class="sec-h"><div><h2 id="h-${id}">${titulo}</h2>${desc ? `<p>${desc}</p>` : ''}</div>${extra || ''}</div>
+      ${corpo}
+    </section>`;
+  const card = (titulo, desc, corpo, cls) => `<div class="card ${cls || ''}">${titulo ? `<div class="card-h"><h3>${titulo}</h3>${desc ? `<p>${desc}</p>` : ''}</div>` : ''}${corpo}</div>`;
 
   function render() {
-    const f = st.filtros, R = (st.R = calcular(st.dados, f)), K = R.kpi;
+    const f = st.filtros;
+    const R = (st.R = calcular(st.dados, f));
+    // Período anterior, de mesmo tamanho (só quando há período definido)
+    const P = (st.P = f.dias ? calcular(st.dados, Object.assign({}, f, { ate: Date.now() - f.dias * DIA })) : null);
+    const K = R.kpi, KP = P && P.kpi;
+    const dl = (k, menor) => (KP ? delta(K[k], KP[k], menor) : '');
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const sd = saude(K.taxa);
+    const deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
+
     const melhorCid = R.cidades[0];
     const piorConcl = R.cidades.filter((c) => c.comecaram >= 5).sort((a, b) => a.concluiram / a.comecaram - b.concluiram / b.comecaram)[0];
-    const piorQuiz = R.quiz[0], maisAband = R.abandonos[0];
-
+    const todasPerg = R.desafios.concat(R.exercicio).filter((x) => x.tot >= 3).sort((a, b) => a.taxa - b.taxa);
+    const piorPerg = todasPerg[0], maisAband = R.abandonos[0];
     const destaques = [
-      R.maiorQueda && `<b>Maior queda:</b> de "${esc(R.maiorQueda.de.nome)}" para "${esc(R.maiorQueda.para.nome)}" (−${Math.round(R.maiorQueda.q * 100)}%, ${n(R.maiorQueda.perdidos)} lojas).`,
-      maisAband && `<b>Passo com mais abandono:</b> Módulo ${maisAband.m}, "${esc(tituloPasso(maisAband.m, maisAband.p))}" (${n(maisAband.c)} lojas pararam ali).`,
-      piorQuiz && piorQuiz.tot >= 3 && `<b>Pergunta com menos acerto:</b> "${esc(piorQuiz.q)}" (${pct(piorQuiz.ok, piorQuiz.tot)} na 1ª tentativa).`,
-      melhorCid && `<b>Cidade com mais acessos:</b> ${esc(melhorCid.cidade)} (${n(melhorCid.acessos)} acessos, ${n(melhorCid.lojas)} lojas).`,
-      piorConcl && `<b>Menor conclusão:</b> ${esc(piorConcl.cidade)}, ${pct(piorConcl.concluiram, piorConcl.comecaram)} de quem começou terminou.`,
+      R.maiorQueda && ['alerta', `<b>Maior queda:</b> entre "${esc(R.maiorQueda.de.nome)}" e "${esc(R.maiorQueda.para.nome)}" (−${Math.round(R.maiorQueda.q * 100)}%, ${n(R.maiorQueda.perdidos)} lojas).`],
+      maisAband && ['parado', `<b>Onde mais param:</b> Módulo ${maisAband.m}, "${esc(tituloPasso(maisAband.m, maisAband.p))}" (${n(maisAband.c)} lojas).`],
+      piorPerg && ['critico', `<b>Pergunta com menos acerto:</b> "${esc(piorPerg.q)}" (${pct(piorPerg.ok, piorPerg.tot)} na 1ª tentativa).`],
+      melhorCid && ['olho', `<b>Cidade com mais acessos:</b> ${esc(melhorCid.cidade)} (${n(melhorCid.acessos)} acessos, ${n(melhorCid.lojas)} lojas).`],
+      piorConcl && ['loja', `<b>Menor conclusão:</b> ${esc(piorConcl.cidade)}, ${pct(piorConcl.concluiram, piorConcl.comecaram)} de quem começou terminou.`],
     ].filter(Boolean);
+
+    const contagem = { todas: R.lojas.length, concluiu: 0, andamento: 0, nao: 0 };
+    R.lojas.forEach((s) => contagem[s.status]++);
+    const periodoTxt = f.dias ? `últimos ${f.dias} dias` : 'todo o período';
 
     root.innerHTML = `
       <header class="hd">
-        <div class="hd-l"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><div><b>Painel do Treinamento</b><small><span class="hd-sub">Treinamento Financeiro</span>${demo ? '<span class="demo">Dados de demonstração</span>' : ''}</small></div></div>
+        <div class="hd-l"><img src="assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small><span class="hd-sub">Treinamento Financeiro</span>${demo ? '<span class="demo">Dados de demonstração</span>' : ''}</small></div></div>
         <div class="hd-r">
-          <button class="btn" data-a="atualizar">Atualizar</button>
-          ${demo ? '' : '<button class="btn" data-a="sair">Sair</button>'}
+          <button class="btn ic" data-a="atualizar" title="Atualizar">${IC.atualizar}<span>Atualizar</span></button>
+          ${demo ? '' : `<button class="btn ic" data-a="sair" title="Sair">${IC.sair}<span>Sair</span></button>`}
         </div>
       </header>
 
-      <div class="flt" role="group" aria-label="Filtros">
-        <label><span>Período</span><select data-f="dias">
-          ${[[7, 'Últimos 7 dias'], [30, 'Últimos 30 dias'], [90, 'Últimos 90 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
-        </select></label>
-        <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
-        <label><span>Cenário</span><select data-f="cenario"><option value="">Todos</option>${[1, 2, 3].map((c) => `<option value="${c}" ${+f.cenario === c ? 'selected' : ''}>Cenário ${c}</option>`).join('')}</select></label>
+      <div class="bar">
+        <div class="flt" role="group" aria-label="Filtros">
+          <label><span>Período</span><select data-f="dias">
+            ${[[7, 'Últimos 7 dias'], [30, 'Últimos 30 dias'], [90, 'Últimos 90 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
+          </select></label>
+          <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        </div>
+        <nav class="nav" aria-label="Seções">${SECOES.map(([id, t]) => `<a href="#s-${id}" data-sec="${id}">${t}</a>`).join('')}</nav>
       </div>
 
       <main class="pg">
-        <section class="kpis" aria-label="Visão geral">
-          ${kpi('Lojas cadastradas', n(K.cadastradas), f.dias ? 'no período' : 'no total')}
-          ${kpi('Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`)}
-          ${kpi('Concluíram os 8 módulos', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, 'hl')}
-          ${kpi('Em andamento', n(K.andamento), 'começaram e não terminaram')}
-          ${kpi('Cadastraram e não começaram', n(K.naoComecaram), pct(K.naoComecaram, K.cadastradas) + ' das cadastradas')}
-          ${kpi('Tempo para concluir', dur(K.tempoAtivo), `tempo de tela (mediana) · ${dias(K.tempoCal)}`)}
-          ${kpi('Acessos', n(K.acessos), K.visitantesSemCadastro != null ? `${n(K.visitantesSemCadastro)} visitantes sem cadastro` : 'das lojas filtradas')}
-          ${kpi('Ativas nos últimos 7 dias', n(K.ativos7), 'lojas com alguma atividade')}
-        </section>
-
-        ${destaques.length ? `<section class="card ins"><h2>Destaques automáticos</h2><ul>${destaques.map((d) => `<li>${d}</li>`).join('')}</ul></section>` : ''}
-
-        <section class="card">
-          <div class="card-h"><h2>Funil do treinamento</h2><p>Quantas lojas iniciaram e concluíram cada módulo. A linha destacada tem a menor taxa de conclusão.</p></div>
-          ${graficoFunil(R)}
-          <div class="drop">${R.etapas.slice(1).map((e, i) => { const a = R.etapas[i].v; const q = a ? (a - e.v) / a : 0; const pior = R.maiorQueda && R.maiorQueda.para === e; return `<div class="drop-i ${pior ? 'is-pior' : ''}" ${tipAttr(`<b>${esc(R.etapas[i].nome)} → ${esc(e.nome)}</b><br>${n(a)} → ${n(e.v)} (−${Math.round(q * 100)}%)`)}><small>${i === 0 ? 'Cad.→M1' : `M${i}→M${i + 1}`}</small><b>${a ? '−' + Math.round(q * 100) + '%' : '—'}</b></div>`; }).join('')}</div>
-          <p class="note">Queda entre etapas: de quem cadastrou para quem concluiu o Módulo 1, e de um módulo concluído para o próximo.${R.maiorQueda ? ' Maior queda destacada.' : ''}</p>
-        </section>
-
-        <div class="cols">
-          <section class="card">
-            <div class="card-h"><h2>Onde as lojas param</h2><p>Último passo visto por quem saiu do módulo sem terminar.</p></div>
-            ${R.abandonos.length ? `<table class="tb"><thead><tr><th>Passo</th><th class="num">Pararam</th><th class="num">% de quem viu</th></tr></thead><tbody>${R.abandonos.slice(0, 8).map((x) => `<tr><td class="ps">${nomePasso(x.m, x.p)}</td><td class="num">${n(x.c)}</td><td class="num">${pct(x.c, x.viu)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">Ainda sem abandonos registrados.</p>'}
-          </section>
-          <section class="card">
-            <div class="card-h"><h2>Passos mais demorados</h2><p>Tempo mediano em cada passo (mínimo de 3 registros).</p></div>
-            ${R.lentos.length ? `<table class="tb"><thead><tr><th>Passo</th><th class="num">Mediana</th><th class="num">Registros</th></tr></thead><tbody>${R.lentos.slice(0, 8).map((x) => `<tr><td class="ps">${nomePasso(x.m, x.p)}</td><td class="num">${dur(x.med)}</td><td class="num">${n(x.nAmostra)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">Sem dados suficientes.</p>'}
-          </section>
-        </div>
-
-        <div class="cols">
-          <section class="card">
-            <div class="card-h"><h2>Exercício: acerto na 1ª tentativa</h2><p>Do pior para o melhor. Abaixo de 60% (marcado com !) indica assunto pouco entendido.</p></div>
-            ${R.quiz.length ? barras(R.quiz, { valor: (x) => x.taxa * 100, max: 100, rotulo: (x) => `P${x.p} · ${x.q}`, fmt: (x) => `${pct(x.ok, x.tot)} <small>(${n(x.tot)})</small>`, alerta: (x) => x.taxa < 0.6 }) : '<p class="empty">Ninguém respondeu o exercício ainda.</p>'}
-          </section>
-          <section class="card">
-            <div class="card-h"><h2>Etapas de clique puladas</h2><p>Quando a loja usa "Pular esta etapa" em vez de clicar na tela.</p></div>
-            ${R.pulados.length ? `<table class="tb"><thead><tr><th>Passo</th><th class="num">Pularam</th><th class="num">% de quem viu</th></tr></thead><tbody>${R.pulados.slice(0, 8).map((x) => `<tr><td class="ps">${nomePasso(x.m, x.p)}</td><td class="num">${n(x.c)}</td><td class="num">${pct(x.c, x.viu)}</td></tr>`).join('')}</tbody></table>` : '<p class="empty">Nenhuma etapa pulada.</p>'}
-          </section>
-        </div>
-
-        <section class="card">
-          <div class="card-h"><h2>Acessos e conclusões por dia</h2><p>Passe o dedo ou o mouse sobre o gráfico para ver cada dia.</p></div>
-          <div id="linha"></div>
-        </section>
-
-        <div class="cols">
-          <section class="card">
-            <div class="card-h"><h2>Cidades com mais acessos</h2><p>Top 10 no período.</p></div>
-            ${R.cidades.length ? barras(R.cidades.slice(0, 10), { valor: (x) => x.acessos, rotulo: (x) => x.cidade, fmt: (x) => n(x.acessos) }) : '<p class="empty">Sem acessos no período.</p>'}
-          </section>
-          <section class="card">
-            <div class="card-h"><h2>Quando acessam</h2><p>Acessos por dia da semana e hora.</p></div>
-            ${graficoCalor(R)}
-          </section>
-        </div>
-
-        <section class="card">
-          <div class="card-h"><h2>Cidades</h2><p>Ranking completo. Toque no cabeçalho para ordenar.</p></div>
-          <div class="tb-wrap"><table class="tb" id="tb-cid"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th class="num">Acessos</th><th class="num">Começaram</th><th class="num">Concluíram</th><th class="num">Conclusão</th></tr></thead>
-          <tbody>${R.cidades.map((c) => `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td><td class="num">${n(c.acessos)}</td><td class="num">${n(c.comecaram)}</td><td class="num">${n(c.concluiram)}</td><td class="num">${pct(c.concluiram, c.comecaram)}</td></tr>`).join('')}</tbody></table></div>
-          ${R.semCadastro.length ? `<details class="sem"><summary>${n(R.semCadastro.length)} cidades ainda sem nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}
-        </section>
-
-        <section class="card">
-          <div class="card-h"><h2>Perfil de uso</h2></div>
-          <div class="pf">
-            ${perfilBloco('Aparelho', R.perfil.dispositivo, K.cadastradas)}
-            ${perfilBloco('Navegador', R.perfil.navegador, K.cadastradas)}
-            ${perfilBloco('Cenário', R.perfil.cenario, K.cadastradas)}
-            <div class="pf-b"><h3>Narração por voz</h3><p class="pf-big">${pct(R.perfil.voz, K.cadastradas)}</p><small>${n(R.perfil.voz)} lojas ligaram a narração</small></div>
-            ${perfilBloco('Dicas mais abertas', R.perfil.dicas, Math.max(1, ...R.perfil.dicas.map((x) => x[1])), true)}
+        ${sec('visao', 'Visão geral', `Lojas que se cadastraram nos ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}.`, `
+          <div class="hero">
+            <div class="hero-anel">${anel(K.taxa)}</div>
+            <div class="hero-txt">
+              <span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span>
+              <h3>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <em>${deCada10}</em> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}</h3>
+              <p>${n(K.concluiram)} concluíram, ${n(K.andamento)} estão no meio do caminho e ${n(K.naoComecaram)} se cadastraram mas não começaram.${KP && KP.taxa != null && K.taxa != null ? ` No período anterior, a conclusão foi de ${Math.round(KP.taxa * 100)}%.` : ''}</p>
+            </div>
           </div>
-        </section>
+          <div class="kpis">
+            ${kpi('loja', 'Lojas cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
+            ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.')}
+            ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`, 'hl')}
+            ${kpi('andamento', 'Em andamento', n(K.andamento), 'começaram e não terminaram', '', 'Lojas que começaram, mas ainda não concluíram todos os módulos.')}
+            ${kpi('parado', 'Não começaram', n(K.naoComecaram), `${pct(K.naoComecaram, K.cadastradas)} das cadastradas`, dl('naoComecaram', true), 'Lojas que se cadastraram e não abriram nenhum módulo.')}
+            ${kpi('tempo', 'Tempo para concluir', dur(K.tempoAtivo), `de tela, ${dias(K.tempoCal)}`, dl('tempoAtivo', true), 'Mediana do tempo de tela de quem concluiu, e quantos dias levou do primeiro módulo ao último.')}
+            ${kpi('olho', 'Acessos', n(K.acessos), K.visitantesSemCadastro != null ? `${n(K.visitantesSemCadastro)} visitantes sem cadastro` : 'das lojas filtradas', dl('acessos'), 'Vezes que o treinamento foi aberto no período.')}
+            ${kpi('raio', 'Ativas em 7 dias', n(K.ativos7), 'com alguma atividade', '', 'Lojas que fizeram qualquer coisa no treinamento nos últimos 7 dias.')}
+          </div>
+          ${destaques.length ? card('O que merece atenção', 'Gerado automaticamente a partir dos dados.', `<ul class="ins">${destaques.map(([i, t]) => `<li><span class="ins-ic">${IC[i]}</span><span>${t}</span></li>`).join('')}</ul>`, 'ins-card') : ''}
+        `)}
 
-        <section class="card">
-          <div class="card-h row"><div><h2>Lojas</h2><p>${n(R.lojas.length)} lojas no filtro.</p></div><div class="lj-act"><input type="search" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"><button class="btn" data-a="csv">Exportar CSV</button></div></div>
-          <div class="tb-wrap" id="lj"></div>
-        </section>
+        ${sec('funil', 'Funil do treinamento', 'Quantas lojas chegam ao fim de cada módulo. A maior queda aparece destacada como gargalo.', `
+          ${card('', '', funilVisual(R))}
+          <details class="det"><summary>Ver iniciaram × concluíram por módulo</summary>${card('', '', graficoFunil(R))}</details>
+        `)}
+
+        ${sec('gargalos', 'Gargalos', 'Os passos que mais seguram as lojas.', `
+          <div class="cols3">
+            ${card('Onde param', 'Último passo visto por quem saiu sem terminar o módulo.', ranking(R.abandonos.map((x) => Object.assign({ barra: x.c }, x)), { valor: (x) => n(x.c), sub: (x) => `${pct(x.c, x.viu)} de quem viu`, vazio: 'Ainda sem abandonos registrados.' }))}
+            ${card('Mais demorados', 'Tempo mediano no passo (mínimo de 3 registros).', ranking(R.lentos.map((x) => Object.assign({ barra: x.med }, x)), { valor: (x) => dur(x.med), sub: (x) => `${n(x.nAmostra)} registros`, vazio: 'Sem dados suficientes.' }))}
+            ${card('Mais pulados', 'Quando a loja usa "Pular esta etapa" em vez de clicar na tela.', ranking(R.pulados.map((x) => Object.assign({ barra: x.c }, x)), { valor: (x) => n(x.c), sub: (x) => `${pct(x.c, x.viu)} de quem viu`, vazio: 'Nenhuma etapa pulada.' }))}
+          </div>
+        `)}
+
+        ${sec('perguntas', 'Perguntas', 'Acerto na 1ª tentativa. Abaixo de 60% (com o ícone de alerta) indica assunto pouco entendido.', `
+          <div class="cols">
+            ${card('Desafios rápidos', 'Uma pergunta no fim de cada módulo.', R.desafios.length ? barras(R.desafios, { valor: (x) => x.taxa * 100, max: 100, rotulo: (x) => `M${x.m} · ${tituloMod(x.m)}`, sub: (x) => x.q, fmt: (x) => `${pct(x.ok, x.tot)} <small>(${n(x.tot)})</small>`, alerta: (x) => x.taxa < 0.6 }) : '<p class="empty">Ninguém respondeu ainda.</p>')}
+            ${card('Exercício final', 'Do pior para o melhor.', R.exercicio.length ? barras(R.exercicio, { valor: (x) => x.taxa * 100, max: 100, rotulo: (x) => `P${x.p} · ${x.q}`, fmt: (x) => `${pct(x.ok, x.tot)} <small>(${n(x.tot)})</small>`, alerta: (x) => x.taxa < 0.6 }) : '<p class="empty">Ninguém respondeu o exercício ainda.</p>')}
+          </div>
+        `)}
+
+        ${sec('cidades', 'Cidades', 'De onde vêm os acessos e onde a conclusão é menor.', `
+          <div class="cols">
+            ${card('Top 10 em acessos', '', R.cidades.length ? barras(R.cidades.slice(0, 10), { valor: (x) => x.acessos, rotulo: (x) => x.cidade, fmt: (x) => n(x.acessos) }) : '<p class="empty">Sem acessos no período.</p>')}
+            ${card('Ranking completo', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div class="tb-wrap" id="cid-tb"></div>
+              ${R.semCadastro.length ? `<details class="sem"><summary>${n(R.semCadastro.length)} cidades ainda sem nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`)}
+          </div>
+        `)}
+
+        ${sec('uso', 'Uso', 'Quando e como o treinamento é usado.', `
+          ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
+          <div class="cols">
+            ${card('Quando acessam', 'Acessos por dia da semana e hora.', graficoCalor(R))}
+            ${card('Perfil', '', `<div class="pf">
+              ${perfilBloco('Aparelho', R.perfil.dispositivo, K.cadastradas)}
+              ${perfilBloco('Navegador', R.perfil.navegador, K.cadastradas)}
+              <div class="pf-b pf-num"><div><b>${pct(R.perfil.voz, K.cadastradas)}</b><small>ligaram a narração</small></div><div><b>${n(R.perfil.certificados)}</b><small>abriram o certificado</small></div></div>
+              ${perfilBloco('Dicas mais abertas', R.perfil.dicas, 0, true)}
+            </div>`)}
+          </div>
+        `)}
+
+        ${sec('lojas', 'Lojas', `${n(R.lojas.length)} lojas no filtro.`, card('', '', `
+          <div class="lj-top">
+            <div class="chips" role="group" aria-label="Status">${[['todas', 'Todas'], ['concluiu', 'Concluíram'], ['andamento', 'Em andamento'], ['nao', 'Não começaram']].map(([k, t]) => `<button class="chip ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
+            <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"><button class="btn ic" data-a="csv">${IC.baixar}<span>Exportar CSV</span></button></div>
+          </div>
+          <div class="tb-wrap" id="lj"></div>`))}
       </main>`;
 
     desenharLinha();
+    desenharCidades();
     desenharLojas();
-  }
-
-  function perfilBloco(titulo, lista, total, absoluto) {
-    if (!lista.length) return `<div class="pf-b"><h3>${titulo}</h3><p class="empty">Sem dados.</p></div>`;
-    const mx = Math.max(...lista.map((x) => x[1]));
-    return `<div class="pf-b"><h3>${titulo}</h3>${lista.slice(0, 6).map(([k, v]) => `<div class="pf-r" ${tipAttr(`<b>${esc(k)}</b><br>${n(v)}${absoluto ? '' : ' · ' + pct(v, total)}`)}><span>${esc(k)}</span><div class="hb-track"><i style="width:${(v / mx) * 100}%;background:${COR.a}"></i></div><b>${absoluto ? n(v) : pct(v, total)}</b></div>`).join('')}</div>`;
+    observarSecoes();
   }
 
   function desenharLinha() {
     const el = document.getElementById('linha');
+    if (el) el.innerHTML = graficoLinha(st.R, el.clientWidth || 600);
+  }
+
+  function desenharCidades() {
+    const el = document.getElementById('cid-tb');
     if (!el) return;
-    el.innerHTML = graficoLinha(st.R, el.clientWidth || 600);
+    const b = st.buscaCid.trim().toLowerCase();
+    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b));
+    const mx = Math.max(1, ...st.R.cidades.map((c) => c.acessos));
+    el.innerHTML = rows.length ? `<table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th>Acessos</th><th class="num">Conclusão</th></tr></thead>
+      <tbody>${rows.map((c) => { const t = c.comecaram ? c.concluiram / c.comecaram : null; const sd = saude(c.comecaram >= 3 ? t : null);
+        return `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td><td><span class="inl"><i style="width:${(c.acessos / mx) * 100}%"></i></span>${n(c.acessos)}</td>
+        <td class="num"><span class="saude mini ${sd.cls}" title="${sd.rot}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td></tr>`; }).join('')}</tbody></table>` : '<p class="empty">Nenhuma cidade encontrada.</p>';
   }
 
   const STATUS = { concluiu: ['Concluiu', 'ok'], andamento: ['Em andamento', 'warn'], nao: ['Não começou', 'off'] };
   function linhasLojas() {
     const b = st.busca.trim().toLowerCase();
-    const rows = st.R.lojas.filter((s) => !b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b));
+    const rows = st.R.lojas.filter((s) => (st.status === 'todas' || s.status === st.status) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
     const k = st.ordem.k, d = st.ordem.dir;
-    const val = (s) => (k === 'loja' ? s.p.loja : k === 'cidade' ? s.p.cidade : k === 'cenario' ? s.p.cenario : k === 'prog' ? s.fim.size : k === 'status' ? s.status : s.ultimo);
+    const val = (s) => (k === 'loja' ? s.p.loja : k === 'cidade' ? s.p.cidade : k === 'prog' ? s.fim.size : k === 'status' ? s.status : s.ultimo);
     return rows.sort((a, c) => { const x = val(a), y = val(c); return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * d; });
   }
   const parouTxt = (s) => (!s.parou ? '—' : s.parou.proximo ? `Não abriu o Módulo ${s.parou.m}` : s.parou.p ? `M${s.parou.m} · ${tituloPasso(s.parou.m, s.parou.p)}` : `Módulo ${s.parou.m}`);
@@ -557,24 +692,35 @@
   function desenharLojas() {
     const el = document.getElementById('lj');
     if (!el) return;
-    const rows = linhasLojas().slice(0, 300);
+    const todas = linhasLojas(), rows = todas.slice(0, 300);
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    el.innerHTML = `<table class="tb"><thead><tr>${th('loja', 'Loja')}${th('cidade', 'Cidade')}${th('cenario', 'Cen.', 1)}${th('prog', 'Progresso', 1)}${th('status', 'Status')}${th('ultimo', 'Último acesso')}<th>Parou em</th></tr></thead>
-      <tbody>${rows.map((s) => `<tr><td>${esc(s.p.loja)}</td><td>${esc(s.p.cidade)}</td><td class="num">${s.p.cenario}</td>
-        <td class="num"><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
-        <td><span class="badge ${STATUS[s.status][1]}">${STATUS[s.status][0]}</span></td><td>${dataHoraBR(s.ultimo)}</td><td class="pr">${esc(parouTxt(s))}</td></tr>`).join('')}</tbody></table>
-      ${st.R.lojas.length > 300 ? '<p class="note">Mostrando 300 lojas. Use a busca ou exporte o CSV para ver todas.</p>' : ''}`;
+    el.innerHTML = rows.length ? `<table class="tb"><thead><tr>${th('loja', 'Loja')}${th('cidade', 'Cidade')}${th('prog', 'Progresso')}${th('status', 'Status')}${th('ultimo', 'Último acesso')}<th>Parou em</th></tr></thead>
+      <tbody>${rows.map((s) => `<tr><td><b class="lj-n">${esc(s.p.loja)}</b></td><td>${esc(s.p.cidade)}</td>
+        <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
+        <td><span class="badge ${STATUS[s.status][1]}">${STATUS[s.status][0]}</span></td><td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td><td class="pr">${esc(parouTxt(s))}</td></tr>`).join('')}</tbody></table>
+      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Nenhuma loja com esse filtro.</p>';
   }
 
   function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Cenário', 'Módulos concluídos', 'Status', 'Último acesso', 'Parou em', 'Cadastro', 'Aparelho'];
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Status', 'Último acesso', 'Parou em', 'Cadastro', 'Aparelho'];
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, s.p.cenario, s.fim.size, STATUS[s.status][0], dataHoraBR(s.ultimo), parouTxt(s), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, STATUS[s.status][0], dataHoraBR(s.ultimo), parouTxt(s), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
     const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(q).join(';')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = `treinamento-lojas-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // Destaca na navegação a seção que está na tela
+  let obs = null;
+  function observarSecoes() {
+    if (obs) obs.disconnect();
+    if (!('IntersectionObserver' in window)) return;
+    obs = new IntersectionObserver((ents) => {
+      ents.forEach((e) => { if (e.isIntersecting) document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.sec === e.target.id.slice(2))); });
+    }, { rootMargin: '-35% 0px -60% 0px' });
+    document.querySelectorAll('.sec').forEach((s) => obs.observe(s));
   }
 
   /* ------------------------------ Interações ------------------------------ */
@@ -584,13 +730,30 @@
     st.filtros[s.dataset.f] = s.dataset.f === 'dias' ? +s.value : s.value;
     render();
   });
-  root.addEventListener('input', (e) => { if (e.target.id === 'lj-busca') { st.busca = e.target.value; desenharLojas(); } });
+  root.addEventListener('input', (e) => {
+    if (e.target.id === 'lj-busca') { st.busca = e.target.value; desenharLojas(); }
+    if (e.target.id === 'cid-busca') { st.buscaCid = e.target.value; desenharCidades(); }
+  });
   root.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]');
     if (a) {
       if (a.dataset.a === 'atualizar') iniciar();
       else if (a.dataset.a === 'sair') { sessao.sair(); telaLogin(); }
       else if (a.dataset.a === 'csv') exportarCSV();
+      return;
+    }
+    const chip = e.target.closest('[data-st]');
+    if (chip) {
+      st.status = chip.dataset.st;
+      document.querySelectorAll('[data-st]').forEach((c) => { const on = c.dataset.st === st.status; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
+      desenharLojas();
+      return;
+    }
+    const nav = e.target.closest('.nav a');
+    if (nav) {
+      e.preventDefault();
+      const alvo = document.querySelector(nav.getAttribute('href'));
+      if (alvo) window.scrollTo({ top: alvo.getBoundingClientRect().top + scrollY - document.querySelector('.bar').offsetHeight - 70, behavior: 'smooth' });
       return;
     }
     const th = e.target.closest('th.sort');
@@ -618,6 +781,14 @@
   root.addEventListener('focusout', esconderTip);
   root.addEventListener('touchstart', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); else { const el = e.target.closest('[data-tip]'); if (el) mostrarTip(el.dataset.tip, e.touches[0].clientX, e.touches[0].clientY); else esconderTip(); } }, { passive: true });
   root.addEventListener('touchmove', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); }, { passive: true });
+  window.addEventListener('scroll', () => {
+    esconderTip();
+    // No fim da página, a última seção nunca cruza a linha do observador: marca ela
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) {
+      const ul = SECOES[SECOES.length - 1][0];
+      document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.sec === ul));
+    }
+  }, { passive: true });
 
   function linhaHover(hit, cx) {
     const box = hit.closest('.lc'), svg = box.querySelector('svg');

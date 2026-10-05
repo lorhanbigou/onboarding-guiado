@@ -446,3 +446,70 @@ body.voz-falando .tr-voz { background: var(--t-g); color: #fff; animation: vozPu
   .cad-card { border: 1px solid var(--t-line); border-radius: 20px; padding: 32px; box-shadow: 0 24px 60px -30px rgba(15,23,42,.25); }
   .cad-card h1 { font-size: 32px; }
 }
+
+/* ---------- Engajamento: ícones, medalhas, celebração, certificado ---------- */
+/* Ícones de módulo (traço verde); concluído vira check branco no fundo verde */
+.h-mod-n svg, .t-mod-n svg { stroke: var(--t-g); stroke-width: 1.9; }
+.h-mod.s-done .h-mod-n svg, .s-done .t-mod-n svg { stroke: #fff; stroke-width: 2.8; }
+.h-mod.s-prog .h-mod-n svg, .s-prog .t-mod-n svg { stroke: var(--t-amber); }
+.h-mod-n { background: var(--t-gsoft); }
+.t-mod-n { background: var(--t-gsoft); }
+.h-mod-t b em { font-style: normal; color: var(--t-ink3); font-weight: 600; margin-right: 2px; }
+.h-fase-n.medal { background: #fff3d1; box-shadow: inset 0 0 0 2px #f2c96b; }
+.h-fase-n.medal svg { width: 18px; height: 18px; fill: none; stroke: #9a6700; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.h-ola { margin: 0 0 4px; font-size: 15px; color: var(--t-ink2); }
+.h-ola b { color: var(--t-g2); }
+.t-extra-card.destaque { border-style: solid; border-color: #cfe7da; background: var(--t-gsoft); }
+
+/* Abertura do módulo com ícone */
+.tr-intro-top { display: flex; align-items: center; gap: 10px; }
+.tr-intro-ic { width: 44px; height: 44px; border-radius: 14px; background: var(--t-gsoft); display: grid; place-items: center; flex: none; }
+.tr-intro-ic svg { width: 24px; height: 24px; fill: none; stroke: var(--t-g); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Resumo do módulo */
+.tr-sum-sub { margin: -4px 0 10px; color: var(--t-ink3); font-size: 14px; }
+.tr-fase { display: inline-flex; align-items: center; gap: 10px; background: #fff8e6; border: 1px solid #f5d68a; border-radius: 12px; padding: 8px 14px 8px 10px; margin: 4px 0 8px; text-align: left; animation: pop .5s .15s cubic-bezier(.2,1.4,.4,1) both; }
+.tr-fase svg { width: 28px; height: 28px; fill: none; stroke: #9a6700; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tr-fase small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: #9a6700; }
+.tr-fase b { font-size: 14.5px; color: #6b4a00; }
+
+/* Confete */
+.confete { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1200; }
+
+/* Toast com ação (ex.: "Recomeçar") */
+#toast .toast-acao { color: #7fe0a8; font-weight: 600; margin-left: 12px; text-decoration: underline; pointer-events: auto; }
+#toast.on:has(.toast-acao) { pointer-events: auto; }
+
+/* Certificado */
+.cert-wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 56px; }
+.cert { background: #fff; border-radius: 20px; padding: 10px; box-shadow: 0 30px 70px -30px rgba(15,23,42,.35); border: 1px solid var(--t-line); animation: rise .5s ease both; }
+.cert-borda { border: 2px solid #cfe7da; border-radius: 14px; padding: 32px 20px 24px; text-align: center; background: radial-gradient(circle at 50% 0%, #f0faf4 0, #fff 60%); }
+.cert-logo { border-radius: 16px; margin: 0 auto 10px; display: block; }
+.cert-kicker { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--t-g); margin-bottom: 14px; }
+.cert-txt { font-size: 15px; color: var(--t-ink2); line-height: 1.6; margin: 0 auto; max-width: 520px; }
+.cert-loja { font-size: 30px; line-height: 1.15; letter-spacing: -.6px; margin: 8px 0 2px; color: var(--t-ink); }
+.cert-cidade { margin: 0 0 12px; color: var(--t-ink3); font-size: 14px; }
+.cert-rodape { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin: 26px 0 14px; padding-top: 18px; border-top: 1px dashed #cfe7da; }
+.cert-rodape small { display: block; font-size: 11.5px; color: var(--t-ink3); text-transform: uppercase; letter-spacing: .5px; }
+.cert-rodape b { font-size: 14px; }
+.cert-selo { width: 56px; height: 56px; border-radius: 50%; background: #fff3d1; box-shadow: inset 0 0 0 2px #f2c96b; display: grid; place-items: center; }
+.cert-selo svg { width: 30px; height: 30px; fill: none; stroke: #9a6700; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cert-nota { font-size: 11.5px; color: var(--t-ink3); margin: 0; }
+.cert-dica { text-align: center; font-size: 13px; color: var(--t-ink3); margin: 8px 0 0; }
+@media (min-width: 640px) {
+  .cert-wrap { padding-top: 40px; }
+  .cert-borda { padding: 44px 48px 28px; }
+  .cert-loja { font-size: 40px; }
+}
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body, .tv { background: #fff !important; }
+  .no-print, #toast, .confete, #tour-layer { display: none !important; }
+  .cert-wrap { padding: 0; max-width: none; }
+  .cert { box-shadow: none; border: 0; animation: none; }
+  .cert-borda { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Linha de botões (revisão e certificado) */
+.t-cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 8px; }
+.t-cta.center { justify-content: center; }

@@ -314,8 +314,10 @@
       btn.classList.add('right');
       tip.querySelectorAll('.tr-opt').forEach((x) => { x.disabled = true; });
       fb.className = 'tr-fb ok';
-      fb.innerHTML = '✓ ' + (cur.ok || 'Isso mesmo!');
-      if (TREINO.Voz) TREINO.Voz.falar(['Isso mesmo!', cur.ok || '']);
+      // Elogio variado: deixa o exercício menos repetitivo
+      const elogio = ['Isso aí!', 'Na mosca!', 'Perfeito!', 'Mandou bem!', 'Exatamente!'][(idx + tentativas) % 5];
+      fb.innerHTML = `<b>✓ ${elogio}</b> ${cur.ok || ''}`;
+      if (TREINO.Voz) TREINO.Voz.falar([elogio, cur.ok || '']);
       const nx = tip.querySelector('.tr-next');
       nx.disabled = false;
       nx.focus({ preventScroll: true });

@@ -1,8 +1,8 @@
 /* =========================================================================
    MÓDULOS DO TREINAMENTO
-   A sequência é a mesma para todos os cenários; só os números mudam.
    Curva: Relatório → formas de pagamento → Financeiro → fatura (entradas,
-   depois deduções) → repasse e antecipação → exercício.
+   depois deduções) → repasse e antecipação → exercício final.
+   Os módulos 1 a 8 terminam com um "Desafio rápido" (uma pergunta).
 
    Cada passo define:
      state   → como a tela deve estar (página, modais abertos, antecipada)
@@ -33,6 +33,7 @@
     const m1 = {
       n: 1,
       titulo: 'Suas vendas',
+      icone: 'relatorio',
       desc: 'Onde ficam suas vendas e o que é o Total Bruto.',
       intro: 'Vamos começar pelo lugar onde ficam todas as vendas da sua loja: a tela Relatório.',
       aviso: 'Lembre: este treinamento é ilustrativo. Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.',
@@ -75,7 +76,6 @@
             { op: '=', l: 'Total Bruto', v: d.totalBruto, total: true },
           ],
           foot: `Cada pedido tem uma taxa de serviço, paga pelo cliente: ${taxaTxt}. Ela aparece de novo na fatura.`,
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -89,6 +89,7 @@
     const m2 = {
       n: 2,
       titulo: 'Pagamento online',
+      icone: 'celular',
       desc: 'Vendas pagas pelo aplicativo.',
       intro: 'Veja o que acontece com o dinheiro quando o cliente paga pelo aplicativo.',
       aprender: ['O que é pagamento online', 'Por que esse valor é tão importante', 'O que é repasse'],
@@ -110,7 +111,6 @@
           target: 'tb-online',
           title: 'O repasse',
           body: 'O valor que fica depois das deduções é enviado para você.<br>Esse envio se chama <b>repasse</b>.',
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -125,6 +125,7 @@
     const m3 = {
       n: 3,
       titulo: 'Dinheiro e maquininha',
+      icone: 'dinheiro',
       desc: 'Vendas que entram direto no seu caixa.',
       intro: 'Agora, as vendas em que o cliente paga direto para você.',
       aprender: ['Vendas em dinheiro', 'Vendas na maquininha', 'Onde está o dinheiro das suas vendas'],
@@ -158,7 +159,6 @@
           ],
           foot: 'Guarde essa ideia: ela explica por que o repasse pode parecer pequeno.',
           wide: true,
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -172,6 +172,7 @@
     const m4 = {
       n: 4,
       titulo: 'Tela Financeiro',
+      icone: 'painel',
       desc: 'Resultado, recebidos e repasse disponível.',
       intro: 'Agora vamos para a tela Financeiro. Ela mostra quanto ficou com você no mês.',
       aprender: ['O que é o Resultado', 'Os 3 quadros ao lado dele', 'Onde ficam as faturas'],
@@ -238,7 +239,6 @@
           target: 'fin-faturas',
           title: 'Faturas do Período',
           body: 'A fatura mostra a conta completa do repasse.<br>Nos próximos módulos, vamos abrir e ler linha por linha.',
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -253,6 +253,7 @@
     const m5 = {
       n: 5,
       titulo: 'Fatura: o que entrou de pagamento online',
+      icone: 'faturaEntra',
       desc: 'As vendas online e os valores devolvidos.',
       intro: 'A fatura mostra todo o cálculo para repasse, linha por linha. Primeiro, o que entrou de pagamento online.',
       aprender: ['Como ler a fatura', 'As vendas online', 'Os valores devolvidos para você'],
@@ -305,7 +306,6 @@
             { op: '=', l: 'Total que passou pela plataforma', v: f.creditos, total: true },
           ],
           foot: 'É o mesmo valor do pagamento online que você viu no Relatório.',
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -316,50 +316,37 @@
     };
 
     /* 6 ------------------------------------------------------------------ */
-    const mensalidadeStep = f.mensalidade
-      ? {
-          target: 'fl-mensalidade',
-          title: 'Mensalidade',
-          body: `A mensalidade é de ${b(f.mensalidade)}, cobrada apenas quando a loja atinge o faturamento mínimo de ${limite} em Total Bruto.<br>Suas vendas somaram ${b(d.totalBruto)}. É um valor fixo por mês, <b>separado</b> da comissão.`,
-          countUp: true,
-        }
-      : {
-          target: 'fl-cobrancas',
-          title: 'E a mensalidade?',
-          body: `A mensalidade é de ${valorMens}, cobrada apenas quando a loja atinge o faturamento mínimo de ${limite} em Total Bruto.<br>Suas vendas somaram ${b(d.totalBruto)}. Por isso, <b>não há mensalidade</b> nesta fatura.`,
-        };
-    const debitosStep = f.debitoRemanescente
-      ? {
-          target: 'fl-debitos',
-          title: 'Débitos remanescentes',
-          body: `Na virada do mês passado, a mensalidade foi deduzida, mas não havia saldo online suficiente para receber, porque todos os valores online foram antecipados durante o mês.<br>O valor veio para esta fatura: ${b(f.debitoRemanescente)}.`,
-          foot: 'Dica: o boleto só deve ser considerado se a loja ficar três meses seguidos sem saldo suficiente no pagamento online.',
-          countUp: true,
-        }
-      : {
-          target: 'fl-cobrancas',
-          title: 'Débitos remanescentes',
-          body: 'Quando o saldo online não é suficiente para cobrir a comissão e as taxas, o valor pendente passa para a próxima fatura como <b>Débitos remanescentes</b>.<br>Nesta fatura, não há.',
-          foot: 'Dica: o boleto só deve ser considerado se a loja ficar três meses seguidos sem saldo suficiente no pagamento online.',
-        };
-    const cobrancasCalc = [];
-    if (f.debitoRemanescente) cobrancasCalc.push({ l: 'Débitos remanescentes', v: f.debitoRemanescente });
-    cobrancasCalc.push(
+    const mensalidadeStep = {
+      target: 'fl-mensalidade',
+      title: 'Mensalidade',
+      body: `A mensalidade é de ${b(f.mensalidade)}, cobrada apenas quando a loja atinge o faturamento mínimo de ${limite} em Total Bruto.<br>Suas vendas somaram ${b(d.totalBruto)}. É um valor fixo por mês, <b>separado</b> da comissão.`,
+      countUp: true,
+    };
+    const debitosStep = {
+      target: 'fl-debitos',
+      title: 'Débitos remanescentes',
+      body: `Na virada do mês passado, a mensalidade foi deduzida, mas não havia saldo online suficiente para receber, porque todos os valores online foram antecipados durante o mês.<br>O valor veio para esta fatura: ${b(f.debitoRemanescente)}.`,
+      foot: 'Dica: o boleto só deve ser considerado se a loja ficar três meses seguidos sem saldo suficiente no pagamento online.',
+      countUp: true,
+    };
+    const cobrancasCalc = [
+      { l: 'Débitos remanescentes', v: f.debitoRemanescente },
       { l: 'Comissão', v: f.comissao },
       { l: 'Taxa do pagamento online', v: f.taxaOnline },
       { l: 'Taxa de transferência', v: f.transferencia },
       { l: 'Taxa de antecipação', v: f.taxaAntecipacao },
-      { l: 'Taxa de serviço', v: f.taxaServico }
-    );
-    if (f.mensalidade) cobrancasCalc.push({ l: 'Mensalidade', v: f.mensalidade });
-    cobrancasCalc.push({ op: '=', l: 'Total das deduções', v: f.cobrancas, total: true });
+      { l: 'Taxa de serviço', v: f.taxaServico },
+      { l: 'Mensalidade', v: f.mensalidade },
+      { op: '=', l: 'Total das deduções', v: f.cobrancas, total: true },
+    ];
 
     const m6 = {
       n: 6,
-      titulo: 'Fatura: o que saiu do pagamento online',
-      desc: 'Comissão, taxas e mensalidade.',
+      titulo: 'Fatura: comissão e taxas',
+      desc: 'O que sai do pagamento online, parte 1.',
+      icone: 'faturaSai',
       intro: 'Agora, as deduções. Todas saem do valor online que passou pela plataforma, ou seja, do pagamento online.',
-      aprender: ['Os débitos remanescentes', 'A comissão', 'As taxas', 'A mensalidade'],
+      aprender: ['Os débitos remanescentes', 'A comissão', 'A taxa do pagamento online', 'As taxas de transferência e de antecipação'],
       steps: [
         Object.assign({ state: S('financeiro', ['fatura']) }, debitosStep),
         {
@@ -445,7 +432,27 @@
           ],
           wide: true,
         },
+      ],
+      resumo: [
+        'Débitos remanescentes: deduções que ficaram sem saldo online em uma fatura anterior.',
+        `Comissão: ${PCT(T.comissao)} do valor dos produtos de todas as vendas.`,
+        `Taxa do pagamento online: ${PCT(T.pagamentoOnline)}, só das vendas online.`,
+        `Taxa de transferência: ${F(f.transferencia)}, de despesas bancárias.`,
+        `Taxa de antecipação: ${PCT(T.antecipacao)} das vendas online, só se você antecipar.`,
+      ],
+    };
+
+    /* 7 ------------------------------------------------------------------ */
+    const m7 = {
+      n: 7,
+      titulo: 'Fatura: taxa de serviço e mensalidade',
+      desc: 'O que sai do pagamento online, parte 2.',
+      icone: 'moedas',
+      intro: 'Vamos ver as últimas deduções da fatura e fechar a conta delas.',
+      aprender: ['A taxa de serviço', 'A mensalidade', 'O total das deduções', 'Como não absorver esses custos'],
+      steps: [
         {
+          state: S('financeiro', ['fatura']),
           target: 'fl-taxa-servico-info',
           mode: 'click',
           pad: 6,
@@ -494,25 +501,20 @@
           pad: 4,
           title: 'Você pode ajustar seus preços',
           body: 'Fique tranquilo: você pode ajustar o valor dos seus produtos para não absorver o custo da comissão e das taxas.<br>Confira se o seu cardápio já está atualizado. Se não estiver, fale com o nosso suporte para atualizar.',
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
-        'Débitos remanescentes: deduções que ficaram sem saldo online em uma fatura anterior.',
-        `Comissão: ${PCT(T.comissao)} do valor dos produtos de todas as vendas.`,
-        `Taxa do pagamento online: ${PCT(T.pagamentoOnline)}, só das vendas online.`,
-        `Taxa de antecipação: ${PCT(T.antecipacao)} das vendas online, só se você antecipar.`,
-        `Taxa de transferência: ${F(f.transferencia)}, de despesas bancárias.`,
         'Taxa de serviço: paga pelos clientes, vai para a plataforma.',
         `Mensalidade: ${valorMens}, só quando a loja atinge o faturamento mínimo (${limite} em Total Bruto).`,
         'Você pode ajustar os preços do seu cardápio para não absorver esses custos.',
       ],
     };
 
-    /* 7 ------------------------------------------------------------------ */
-    const m7 = {
-      n: 7,
+    /* 8 ------------------------------------------------------------------ */
+    const m8 = {
+      n: 8,
       titulo: 'Repasse e antecipação',
+      icone: 'foguete',
       desc: 'Por que o repasse parece menor e como receber antes.',
       intro: 'Vamos fechar a conta e aprender a receber o repasse antes.',
       aprender: ['Como o repasse é formado', 'Por que ele parece pequeno', 'Como pedir a antecipação'],
@@ -618,7 +620,6 @@
           body:
             'A mensalidade é deduzida na virada do último dia do mês. Se você antecipou todas as faturas, normalmente não sobra saldo online.<br>Aí ela entra na próxima fatura como <b>Débitos remanescentes</b>.' +
             (f.debitoRemanescente ? '<br>Foi o que aconteceu no mês passado.' : ''),
-          btn: 'Concluir módulo',
         },
       ],
       resumo: [
@@ -632,9 +633,10 @@
 
     /* 8 ------------------------------------------------------------------ */
     const nums = [mq.n, on.n, d.n].sort((a, c) => a - c);
-    const m8 = {
-      n: 8,
-      titulo: 'Exercício prático',
+    const m9 = {
+      n: 9,
+      titulo: 'Exercício final',
+      icone: 'trofeu',
       desc: 'Teste o que você aprendeu.',
       intro: 'Hora de praticar. Responda olhando para a tela.',
       aprender: ['9 perguntas rápidas', 'Sem pressa: você pode tentar de novo'],
@@ -755,8 +757,22 @@
       ],
     };
 
-    const mods = [m1, m2, m3, m4, m5, m6, m7, m8];
-    mods.forEach((m) => m.steps.forEach((s) => { s.kicker = m.titulo; }));
+    /* Desafio rápido: uma pergunta de revisão no fim dos módulos 1 a 8 */
+    const desafio = (state, target, q, options, ok) => ({ state, target, mode: 'quiz', desafio: true, title: 'Desafio rápido', q, options, ok, no: 'Quase! Pense no que você acabou de ver.' });
+    const DESAFIOS = {
+      1: desafio(S('relatorio'), 'rp-bruto', 'O Total Bruto é…', [{ t: 'Só o que foi pago online' }, { t: 'A soma de todas as vendas do mês', ok: true }, { t: 'O valor que vai cair na sua conta' }], 'O Total Bruto junta todas as formas de pagamento.'),
+      2: desafio(S('relatorio', ['totalBruto']), 'tb-online', 'Do valor do pagamento online, a plataforma deduz…', [{ t: 'Só a comissão das vendas online' }, { t: 'Nada: o valor vai inteiro para você' }, { t: 'A comissão e as taxas de todas as vendas', ok: true }], 'Por isso o repasse é menor que o valor online.'),
+      3: desafio(S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E a maquininha cai direto na conta da sua maquininha.'),
+      4: desafio(S('financeiro'), 'fin-boxes', 'Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', [{ t: 'Repasses recebidos' }, { t: 'Repasse disponível', ok: true }, { t: 'Recebido pela Loja' }], 'Ele vira "Repasses recebidos" quando é transferido.'),
+      5: desafio(S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom do Bigou?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
+      6: desafio(S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
+      7: desafio(S('financeiro', ['fatura']), 'fl-taxa-servico', 'Quem paga a taxa de serviço?', [{ t: 'Você, com o valor dos seus produtos' }, { t: 'O cliente, em cada pedido', ok: true }, { t: 'Ninguém: é só um valor informativo' }], 'Por isso ela não sai do valor dos seus produtos.'),
+      8: desafio(S('financeiro', [], { antecipada: true }), 'fin-disponivel', 'Se você não antecipar, quando a plataforma transfere o repasse?', [{ t: 'Todos os dias' }, { t: 'Só quando você pedir' }, { t: 'No 2º dia útil do mês seguinte às vendas', ok: true }], 'Antecipar é opcional: sem pedir, o repasse chega no mês seguinte.'),
+    };
+
+    const mods = [m1, m2, m3, m4, m5, m6, m7, m8, m9];
+    mods.forEach((m) => { if (DESAFIOS[m.n]) m.steps.push(DESAFIOS[m.n]); });
+    mods.forEach((m) => m.steps.forEach((s) => { s.kicker = s.desafio ? 'Desafio rápido' : m.titulo; }));
     return mods;
   };
 
