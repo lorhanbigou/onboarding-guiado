@@ -54,19 +54,15 @@ O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o
 - na raiz de qualquer endereço que comece com `admin.`: localmente <http://admin.localhost:5178>; publicado, aponte o subdomínio (ex.: `admin.seudominio`) para o mesmo site. O `serve.js` já faz isso; em outra hospedagem, configure o subdomínio para servir a pasta `admin/`;
 - em `/admin` do próprio site (ex.: <http://localhost:5178/admin>).
 
-Tem navegação por seções e mostra:
-- saúde do treinamento: taxa de conclusão em anel, com status (saudável, atenção, crítico) e a frase "De cada 10 lojas que começam, X terminam";
-- KPIs com explicação e comparação com o período anterior (cadastradas, começaram, concluíram, em andamento, não começaram, tempo para concluir, acessos, ativas em 7 dias);
-- destaques automáticos;
-- funil visual do cadastro até o último módulo, com o gargalo destacado (e o detalhe iniciaram × concluíram por módulo);
-- gargalos em ranking: onde param, passos mais demorados e etapas puladas;
-- perguntas: acerto na 1ª tentativa dos desafios rápidos e do exercício final;
-- cidades (ranking, top 10, cidades sem cadastro);
-- acessos por dia e mapa de calor por dia/hora;
-- perfil de uso;
-- tabela de lojas com filtro por status, busca, ordenação, último acesso relativo e exportação em CSV.
+O painel responde a três perguntas: o treinamento está funcionando, o que os parceiros não entenderam e quem precisa de contato. Seções:
+- **Resumo:** 4 números (cadastradas, começaram, concluíram, certificadas) com comparação com o período anterior, a frase "De cada 10 lojas que começam, X terminam" e até 3 ações em "O que fazer agora";
+- **Jornada:** 5 marcos (cadastrou → começou → metade → concluiu → certificou) com a maior perda destacada, e os módulos onde as lojas param, com o passo de saída e o mais demorado;
+- **Assuntos:** acerto de primeira por assunto (campo `tema` das perguntas em `js/modules.js`), do pior para o melhor. Ao abrir, mostra as perguntas e a resposta errada mais escolhida;
+- **Lojas para acompanhar:** situação de cada loja com o motivo. "Precisam de contato" junta as paradas (começaram e estão há 7 dias sem atividade), as que não começaram (cadastradas há 3 dias ou mais) e as que concluíram sem certificado (até 70% de acerto). Tem busca, ordenação e CSV com situação, motivo, acerto e assunto com mais erro;
+- **Cidades:** lojas, conclusão, certificadas e contatos pendentes por cidade;
+- **Uso:** tempo para concluir, % no celular, % que usou a narração e o gráfico diário de acessos e conclusões.
 
-Tudo responde aos filtros de período e cidade. Os indicadores principais comparam com o período anterior de mesmo tamanho.
+O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou todo o período). Os limites de 7 e 3 dias ficam em `PARADA_DIAS` e `SEM_INICIO_DIAS` (`js/admin.js`).
 
 Enquanto o Supabase não estiver configurado, o painel abre com **dados de demonstração** (ou force com `?demo=1`).
 

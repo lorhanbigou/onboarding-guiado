@@ -729,10 +729,25 @@
       ],
     };
 
+    /* Assuntos das perguntas (usados no painel admin para ver o que não foi entendido) */
+    const TEMA = {
+      bruto: 'Total Bruto e formas de pagamento',
+      online: 'Pagamento online',
+      financeiro: 'Tela Financeiro',
+      cupons: 'Cupons',
+      comissao: 'Comissão',
+      cancelados: 'Pedidos cancelados por tempo',
+      taxas: 'Taxas',
+      servico: 'Taxa de serviço',
+      mensalidade: 'Mensalidade e débitos',
+      repasse: 'Repasse, antecipação e comprovante',
+    };
+
     /* 10 ----------------------------------------------------------------- */
     const nums = [mq.n, on.n, d.n].sort((a, c) => a - c);
     const perguntas = [
       {
+        tema: TEMA.bruto,
         state: S('relatorio'),
         target: 'rp-bruto',
         q: 'Quanto a loja vendeu no mês, somando tudo?',
@@ -741,6 +756,7 @@
         no: 'Ainda não. Olhe o valor destacado: é o Total Bruto.',
       },
       {
+        tema: TEMA.bruto,
         state: S('relatorio', ['totalBruto']),
         target: 'tb-list',
         q: 'Quantas vendas foram pagas na maquininha?',
@@ -749,6 +765,7 @@
         no: 'Quase! Procure o bloco "Total pago com maquininha de cartão".',
       },
       {
+        tema: TEMA.comissao,
         state: S('financeiro', ['fatura']),
         target: 'fl-comissao',
         q: 'A comissão é calculada sobre quais vendas?',
@@ -761,6 +778,7 @@
         no: 'Quase! Lembre: todas as vendas entram na conta da comissão.',
       },
       {
+        tema: TEMA.cancelados,
         state: S('financeiro', ['fatura', 'comissao']),
         target: 'cm-canceladas',
         q: 'Por que essa venda cancelada entrou na comissão?',
@@ -773,6 +791,7 @@
         no: 'Ainda não. Lembre do prazo para aceitar ou recusar um pedido.',
       },
       {
+        tema: TEMA.mensalidade,
         state: S('financeiro', ['fatura']),
         target: 'fl-cobrancas',
         q: 'Quando existe mensalidade?',
@@ -785,6 +804,7 @@
         no: 'Ainda não. A mensalidade depende do Total Bruto do mês.',
       },
       {
+        tema: TEMA.online,
         target: 'fl-total',
         q: `O repasse foi de ${F(f.total)}. Por que ele é menor que o total vendido?`,
         options: [
@@ -797,6 +817,7 @@
         wide: true,
       },
       {
+        tema: TEMA.mensalidade,
         target: 'fl-cobrancas',
         q: 'O que acontece quando o saldo online não cobre as deduções?',
         options: [
@@ -808,6 +829,7 @@
         no: 'Ainda não. Lembre do início das deduções na fatura.',
       },
       {
+        tema: TEMA.repasse,
         state: S('financeiro'),
         target: 'fin-boxes',
         q: 'Depois de antecipar, quando o dinheiro cai, para onde vai o valor do repasse?',
@@ -816,6 +838,7 @@
         no: 'Ainda não. Lembre do que aconteceu depois do CONFIRMAR.',
       },
       {
+        tema: TEMA.financeiro,
         target: 'fin-resultado',
         q: 'Qual é o Resultado da loja no mês?',
         options: [{ t: F(d.totalBruto) }, { t: F(r.resultado), ok: true }, { t: F(f.total) }],
@@ -823,6 +846,7 @@
         no: 'Ainda não. O Resultado está em destaque na tela.',
       },
       {
+        tema: TEMA.repasse,
         state: S('financeiro', ['fatura'], pago),
         target: 'fa-repasse-realizado',
         q: 'Onde você pega o comprovante do repasse?',
@@ -851,17 +875,17 @@
     };
 
     /* Desafio rápido: uma pergunta de revisão no fim dos módulos 1 a 9 */
-    const desafio = (state, target, q, options, ok) => ({ state, target, mode: 'quiz', desafio: true, title: 'Desafio rápido', q, options, ok, no: 'Quase! Pense no que você acabou de ver.' });
+    const desafio = (tema, state, target, q, options, ok) => ({ tema, state, target, mode: 'quiz', desafio: true, title: 'Desafio rápido', q, options, ok, no: 'Quase! Pense no que você acabou de ver.' });
     const DESAFIOS = {
-      1: desafio(S('relatorio'), 'rp-bruto', 'O Total Bruto é…', [{ t: 'Só o que foi pago online' }, { t: 'A soma de todas as vendas do mês', ok: true }, { t: 'O valor que vai cair na sua conta' }], 'O Total Bruto junta todas as formas de pagamento.'),
-      2: desafio(S('relatorio', ['totalBruto']), 'tb-online', 'Do valor do pagamento online, a plataforma deduz…', [{ t: 'Só a comissão das vendas online' }, { t: 'Nada: o valor vai inteiro para você' }, { t: 'A comissão e as taxas de todas as vendas', ok: true }], 'Por isso o repasse é menor que o valor online.'),
-      3: desafio(S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E a maquininha cai direto na conta da sua maquininha.'),
-      4: desafio(S('financeiro'), 'fin-boxes', 'Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', [{ t: 'Repasses recebidos' }, { t: 'Repasse disponível', ok: true }, { t: 'Recebido pela Loja' }], 'Ele vira "Repasses recebidos" quando é transferido.'),
-      5: desafio(S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom do Bigou?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
-      6: desafio(S('pedidos'), 'pd-aguardando', 'Um pedido ficou 15 minutos sem ser aceito nem recusado. O que acontece?', [{ t: 'Ele continua esperando até você abrir' }, { t: 'Ele é cancelado e entra na conta da comissão', ok: true }, { t: 'Ele é aceito automaticamente' }], 'Por isso, aceite ou recuse cada pedido a tempo.'),
-      7: desafio(S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
-      8: desafio(S('financeiro', ['fatura', 'taxaServico']), 'ts-offline', 'Por que a taxa de serviço das vendas em dinheiro aparece como dedução?', [{ t: 'Porque é uma multa' }, { t: 'Porque o cliente pagou a taxa para você, e ela é da plataforma', ok: true }, { t: 'Porque a comissão foi cobrada duas vezes' }], 'Você só repassa o que o cliente pagou para a plataforma.'),
-      9: desafio(S('financeiro', [], pago), 'fin-disponivel', 'Se você não antecipar, quando a plataforma transfere o repasse?', [{ t: 'Todos os dias' }, { t: 'Só quando você pedir' }, { t: 'No 2º dia útil do mês seguinte às vendas', ok: true }], 'Antecipar é opcional: sem pedir, o repasse chega no mês seguinte.'),
+      1: desafio(TEMA.bruto, S('relatorio'), 'rp-bruto', 'O Total Bruto é…', [{ t: 'Só o que foi pago online' }, { t: 'A soma de todas as vendas do mês', ok: true }, { t: 'O valor que vai cair na sua conta' }], 'O Total Bruto junta todas as formas de pagamento.'),
+      2: desafio(TEMA.online, S('relatorio', ['totalBruto']), 'tb-online', 'Do valor do pagamento online, a plataforma deduz…', [{ t: 'Só a comissão das vendas online' }, { t: 'Nada: o valor vai inteiro para você' }, { t: 'A comissão e as taxas de todas as vendas', ok: true }], 'Por isso o repasse é menor que o valor online.'),
+      3: desafio(TEMA.bruto, S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E a maquininha cai direto na conta da sua maquininha.'),
+      4: desafio(TEMA.financeiro, S('financeiro'), 'fin-boxes', 'Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', [{ t: 'Repasses recebidos' }, { t: 'Repasse disponível', ok: true }, { t: 'Recebido pela Loja' }], 'Ele vira "Repasses recebidos" quando é transferido.'),
+      5: desafio(TEMA.cupons, S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom do Bigou?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
+      6: desafio(TEMA.cancelados, S('pedidos'), 'pd-aguardando', 'Um pedido ficou 15 minutos sem ser aceito nem recusado. O que acontece?', [{ t: 'Ele continua esperando até você abrir' }, { t: 'Ele é cancelado e entra na conta da comissão', ok: true }, { t: 'Ele é aceito automaticamente' }], 'Por isso, aceite ou recuse cada pedido a tempo.'),
+      7: desafio(TEMA.taxas, S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
+      8: desafio(TEMA.servico, S('financeiro', ['fatura', 'taxaServico']), 'ts-offline', 'Por que a taxa de serviço das vendas em dinheiro aparece como dedução?', [{ t: 'Porque é uma multa' }, { t: 'Porque o cliente pagou a taxa para você, e ela é da plataforma', ok: true }, { t: 'Porque a comissão foi cobrada duas vezes' }], 'Você só repassa o que o cliente pagou para a plataforma.'),
+      9: desafio(TEMA.repasse, S('financeiro', [], pago), 'fin-disponivel', 'Se você não antecipar, quando a plataforma transfere o repasse?', [{ t: 'Todos os dias' }, { t: 'Só quando você pedir' }, { t: 'No 2º dia útil do mês seguinte às vendas', ok: true }], 'Antecipar é opcional: sem pedir, o repasse chega no mês seguinte.'),
     };
 
     const mods = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10];

@@ -10,9 +10,7 @@
   const root = document.getElementById('adm');
   const tip = document.getElementById('adm-tip');
   const DIA = 864e5;
-  const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const COR = { a: '#2a78d6', b: '#eb6834' };            // validados (dataviz): série 1 e 2
-  const SEQ = ['#f1f6fd', '#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
 
   const demo = /[?&]demo=1/.test(location.search) || !(CFG.url && CFG.anonKey && CFG.adminEmail);
 
@@ -23,6 +21,10 @@
   const passoDe = (m, p) => MODS[m - 1] && MODS[m - 1].steps[p - 1];
   const tituloPasso = (m, p) => { const s = passoDe(m, p); return s ? (s.desafio ? 'Desafio rápido' : s.title) : 'Passo ' + p; };
   const semValor = (t) => String(t || '').replace(/R\$[\d.,]+/g, 'R$…');
+  const NPERG = MODS.reduce((t, m) => t + m.steps.filter((x) => x.mode === 'quiz').length, 0);
+  const ACERTO_MIN = 0.7;        // certificado: mais de 70% de acerto (igual ao treinamento)
+  const PARADA_DIAS = 7;         // começou e está sem atividade há 7 dias ou mais
+  const SEM_INICIO_DIAS = 3;     // cadastrou há 3 dias ou mais e não abriu nenhum módulo
 
   /* ------------------------------ Ícones ------------------------------ */
   const sv = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
@@ -112,7 +114,8 @@
       if (rnd() < 0.18) ev(id, 'voz', t + 5e3, { detalhe: { ligada: true } });
       if (rnd() < 0.35) ev(id, 'dica', t + 8e3, { detalhe: { dica: pick(['Antecipação de valores', 'Boleto', 'Repasse mensal', 'Pagamento online', 'Cupons de desconto', 'Pedidos com tempo expirado', 'Antecipação de valores', 'Boleto']) } });
       if (rnd() < 0.16) continue;                       // cadastrou e não começou
-      let concluidos = 0;
+      let concluidos = 0, acertosPrimeira = 0;
+      const habilidade = (rnd() - 0.5) * 0.3;          // umas lojas entendem mais que outras
       for (let m = 1; m <= NMOD; m++) {
         if (rnd() < 0.08) { t = quando(t + (1 + Math.floor(rnd() * 4)) * DIA); ev(id, 'acesso', t - 30e3); }
         const ini = (t += 20e3 + rnd() * 60e3);
@@ -129,10 +132,15 @@
           ant = p;
           if (st.mode === 'click' && rnd() < 0.07) ev(id, 'passo_pulado', t + 2e3, { modulo: m, passo: p, alvo: st.target, detalhe: { titulo: st.title } });
           if (st.mode === 'quiz') {
-            const base = st.desafio ? acertoDesafio[m - 1] : acertoFinal[p - 1];
+            const base = (st.desafio ? acertoDesafio[m - 1] : acertoFinal[p - 1]) + habilidade;
+            const certa = st.options.findIndex((o) => o.ok);
+            const erradas = st.options.map((_, i) => i).filter((i) => i !== certa);
             for (let tent = 1; tent < 4; tent++) {
               const ok = rnd() < base + (tent - 1) * 0.25;
-              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: { pergunta: st.title, acertou: ok, tentativa: tent } });
+              // O erro se concentra numa alternativa (o equívoco mais comum)
+              const opcao = ok ? certa : erradas[rnd() < 0.7 ? 0 : erradas.length - 1];
+              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: { pergunta: st.title, acertou: ok, tentativa: tent, opcao } });
+              if (tent === 1 && ok) acertosPrimeira++;
               if (ok) break;
             }
           }
@@ -142,7 +150,11 @@
         ev(id, 'modulo_fim', t, { modulo: m, detalhe: { ms: t - ini, ultimo_passo: ant, ultimo_passo_ms: 8000 } });
         concluidos++;
       }
-      if (concluidos === NMOD) { ev(id, 'treino_concluido', t + 1e3); if (rnd() < 0.7) ev(id, 'certificado', t + 6e4); }
+      if (concluidos === NMOD) {
+        ev(id, 'treino_concluido', t + 1e3);
+        const nota = acertosPrimeira / NPERG;
+        if (nota > ACERTO_MIN && rnd() < 0.8) ev(id, 'certificado', t + 6e4, { detalhe: { acertos: Math.round(nota * 100) } });
+      }
     }
     return { participantes: P, eventos: E.filter((e) => +new Date(e.criado_em) <= agora) };
   }
@@ -209,7 +221,7 @@
     const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e)).filter((e) => e.t <= agora);
 
     // Resumo por participante
-    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false }]));
+    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {} }]));
     for (const e of evs) {
       const s = S.get(e.participante_id);
       if (!s) continue;
@@ -238,75 +250,132 @@
 
     // Acessos no período (inclui quem ainda não se cadastrou, se não houver filtro de cidade)
     const acessos = evs.filter((e) => e.tipo === 'acesso' && e.t >= desde && (ids.has(e.participante_id) || (semCidade && !todosIds.has(e.participante_id))));
-    const visitantesSemCadastro = semCidade ? new Set(acessos.filter((e) => !todosIds.has(e.participante_id)).map((e) => e.participante_id)).size : null;
-    const ativos7 = L.filter((s) => s.ultimo >= agora - 7 * DIA).length;
-
-    // Funil por módulo
-    const funil = [];
-    for (let m = 1; m <= NMOD; m++) {
-      const ini = L.filter((s) => s.ini.has(m)).length, fim = L.filter((s) => s.fim.has(m)).length;
-      funil.push({ m, ini, fim, taxa: ini ? fim / ini : null });
-    }
-    // Etapas: cadastro → concluiu M1 → … → concluiu o último módulo
-    const etapas = [{ nome: 'Cadastraram', curto: 'Cadastro', v: L.length }].concat(funil.map((x) => ({ nome: `Concluíram o Módulo ${x.m}`, curto: `M${x.m}`, m: x.m, v: x.fim })));
-    let maiorQueda = null;
-    for (let i = 1; i < etapas.length; i++) {
-      const a = etapas[i - 1].v, b = etapas[i].v;
-      if (a >= 5) { const q = (a - b) / a; if (!maiorQueda || q > maiorQueda.q) maiorQueda = { q, i, de: etapas[i - 1], para: etapas[i], perdidos: a - b }; }
-    }
 
     const evP = evs.filter((e) => ids.has(e.participante_id));
     const chave = (m, p) => m + ':' + p;
 
-    // Alcance por passo (pessoas distintas que viram o passo)
-    const alcance = new Map();
-    evP.filter((e) => e.tipo === 'passo').forEach((e) => { const k = chave(e.modulo, e.passo); if (!alcance.has(k)) alcance.set(k, new Set()); alcance.get(k).add(e.participante_id); });
-    const viram = (k, c) => (alcance.has(k) ? alcance.get(k).size : c);
+    /* ---------- Perguntas: nota por loja e entendimento por assunto ---------- */
+    // Nota da loja: última 1ª tentativa de cada pergunta (igual à regra do certificado no treinamento)
+    // Assuntos: primeira resposta de cada loja em cada pergunta (o entendimento "de primeira")
+    const primeira = new Map();
+    evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.tentativa === 1).forEach((e) => {
+      const s = S.get(e.participante_id), k = chave(e.modulo, e.passo);
+      s.notaQ[k] = !!e.detalhe.acertou;
+      const kk = e.participante_id + '|' + k;
+      if (!primeira.has(kk)) primeira.set(kk, e);
+    });
+    const porPergunta = new Map();
+    primeira.forEach((e) => {
+      const k = chave(e.modulo, e.passo);
+      const o = porPergunta.get(k) || { m: e.modulo, p: e.passo, ok: 0, tot: 0, erradas: {} };
+      o.tot++;
+      if (e.detalhe.acertou) o.ok++;
+      else if (e.detalhe.opcao != null) o.erradas[e.detalhe.opcao] = (o.erradas[e.detalhe.opcao] || 0) + 1;
+      porPergunta.set(k, o);
+    });
+    const temas = new Map();
+    porPergunta.forEach((o) => {
+      const st = passoDe(o.m, o.p);
+      if (!st) return;
+      const [opErr, nErr] = Object.entries(o.erradas).sort((a, b) => b[1] - a[1])[0] || [];
+      Object.assign(o, {
+        taxa: o.ok / o.tot,
+        q: semValor(st.q),
+        onde: st.desafio ? `Desafio do Módulo ${o.m}` : `Exercício final, ${st.title}`,
+        erroComum: opErr != null && st.options[opErr] ? { t: semValor(st.options[opErr].t), n: nErr } : null,
+      });
+      const t = temas.get(st.tema) || { tema: st.tema, ok: 0, tot: 0, perguntas: [] };
+      t.ok += o.ok; t.tot += o.tot; t.perguntas.push(o);
+      temas.set(st.tema, t);
+    });
+    const assuntos = [...temas.values()].map((t) => Object.assign(t, { taxa: t.ok / t.tot, perguntas: t.perguntas.sort((a, b) => a.taxa - b.taxa) })).sort((a, b) => a.taxa - b.taxa);
 
-    // Abandono: última saída de cada pessoa em cada módulo que ela não concluiu
-    const aband = new Map();
+    /* ---------- Situação de cada loja ---------- */
+    L.forEach((s) => {
+      const ks = Object.keys(s.notaQ);
+      s.nota = ks.filter((k) => s.notaQ[k]).length / NPERG;
+      const erros = {};
+      ks.filter((k) => !s.notaQ[k]).forEach((k) => { const [m, p] = k.split(':').map(Number); const st = passoDe(m, p); if (st) erros[st.tema] = (erros[st.tema] || 0) + 1; });
+      s.erroTema = (Object.entries(erros).sort((a, b) => b[1] - a[1])[0] || [])[0] || null;
+      // Certificada: abriu o certificado, ou concluiu com mais de 70% (o certificado já está liberado)
+      s.certificada = s.cert || (s.concluiu && s.nota > ACERTO_MIN);
+      const parado = agora - s.ultimo, cadastro = agora - +new Date(s.p.criado_em);
+      s.sit = s.certificada ? 'certificada'
+        : s.concluiu ? 'semcert'
+        : s.comecou ? (parado >= PARADA_DIAS * DIA ? 'parada' : 'andamento')
+        : cadastro >= SEM_INICIO_DIAS * DIA ? 'naocomecou' : 'recente';
+      s.contato = ['parada', 'naocomecou', 'semcert'].includes(s.sit);
+      const k = (ms) => Math.floor(ms / DIA);
+      const ondeParou = s.parou ? (s.parou.proximo ? `antes do Módulo ${s.parou.m}` : `no Módulo ${s.parou.m}${s.parou.p ? ` · ${tituloPasso(s.parou.m, s.parou.p)}` : ''}`) : '';
+      s.motivo = {
+        parada: `Parada há ${k(parado)} dias ${ondeParou}`,
+        naocomecou: `Cadastrou há ${k(cadastro)} dias e não abriu nenhum módulo`,
+        semcert: `Acertou ${Math.round(s.nota * 100)}%${s.erroTema ? `: errou mais em ${s.erroTema}` : ''}`,
+        certificada: `Acertou ${Math.round(s.nota * 100)}%`,
+        andamento: `Em andamento, ${ondeParou.replace(/^no /, 'no ').replace(/^antes do /, 'indo para o ')}`,
+        recente: 'Cadastrou há pouco',
+      }[s.sit];
+    });
+    const conta = (sit) => L.filter((s) => s.sit === sit).length;
+    const sit = { parada: conta('parada'), naocomecou: conta('naocomecou'), semcert: conta('semcert'), certificada: conta('certificada'), andamento: conta('andamento'), recente: conta('recente') };
+    sit.contato = sit.parada + sit.naocomecou + sit.semcert;
+
+    /* ---------- Jornada: 5 marcos ---------- */
+    const META = Math.ceil(NMOD / 2);
+    const jornada = [
+      { k: 'cadastro', nome: 'Cadastraram', v: L.length },
+      { k: 'comecou', nome: 'Começaram', v: comecaram },
+      { k: 'metade', nome: 'Chegaram à metade', sub: `concluíram o Módulo ${META}`, v: L.filter((s) => s.fim.has(META) || s.concluiu).length },
+      { k: 'concluiu', nome: 'Concluíram', sub: `os ${NMOD} módulos`, v: concluiram },
+      { k: 'certificou', nome: 'Certificadas', sub: 'conteúdo completo e mais de 70% de acerto', v: sit.certificada },
+    ];
+
+    /* ---------- Onde param: módulo em que a loja em andamento ficou ---------- */
+    const passosAband = new Map();
     L.forEach((s) => {
       const porMod = new Map();
       s.saidas.forEach((x) => { if (!s.fim.has(x.modulo) && x.passo) { const o = porMod.get(x.modulo); if (!o || x.t > o.t) porMod.set(x.modulo, x); } });
-      porMod.forEach((x) => { const k = chave(x.modulo, x.passo); aband.set(k, (aband.get(k) || 0) + 1); });
+      porMod.forEach((x) => { const k = chave(x.modulo, x.passo); passosAband.set(k, (passosAband.get(k) || 0) + 1); });
     });
-    const abandonos = [...aband.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = viram(k, c); return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c || b.taxa - a.taxa);
-
-    // Tempo por passo (mediana)
     const tempos = new Map();
     const addT = (m, p, ms) => { if (!p || !ms || ms > 15 * 60e3) return; const k = chave(m, p); if (!tempos.has(k)) tempos.set(k, []); tempos.get(k).push(ms); };
     evP.forEach((e) => {
       if (e.tipo === 'passo' && e.detalhe && e.detalhe.anterior) addT(e.modulo, e.detalhe.anterior, e.detalhe.ms);
       if (e.tipo === 'modulo_fim' && e.detalhe && e.detalhe.ultimo_passo) addT(e.modulo, e.detalhe.ultimo_passo, e.detalhe.ultimo_passo_ms);
     });
-    const lentos = [...tempos.entries()].filter(([, a]) => a.length >= 3).map(([k, a]) => { const [m, p] = k.split(':').map(Number); return { m, p, med: mediana(a), nAmostra: a.length }; }).sort((a, b) => b.med - a.med);
-
-    // Etapas de clique puladas
-    const pul = new Map();
-    evP.filter((e) => e.tipo === 'passo_pulado').forEach((e) => { const k = chave(e.modulo, e.passo); pul.set(k, (pul.get(k) || 0) + 1); });
-    const pulados = [...pul.entries()].map(([k, c]) => { const [m, p] = k.split(':').map(Number); const viu = viram(k, c); return { m, p, c, viu, taxa: viu ? c / viu : 0 }; }).sort((a, b) => b.c - a.c);
-
-    // Perguntas: acerto na 1ª tentativa (desafios por módulo e exercício final)
-    const qz = new Map();
-    evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.tentativa === 1).forEach((e) => {
+    const viram = new Map(), pul = new Map();
+    evP.forEach((e) => {
       const k = chave(e.modulo, e.passo);
-      const o = qz.get(k) || { m: e.modulo, p: e.passo, ok: 0, tot: 0 };
-      o.tot++; if (e.detalhe.acertou) o.ok++;
-      qz.set(k, o);
+      if (e.tipo === 'passo') { if (!viram.has(k)) viram.set(k, new Set()); viram.get(k).add(e.participante_id); }
+      if (e.tipo === 'passo_pulado') pul.set(k, (pul.get(k) || 0) + 1);
     });
-    const perguntas = [...qz.values()].map((o) => { const st = passoDe(o.m, o.p); return Object.assign(o, { taxa: o.ok / o.tot, q: semValor(st ? st.q : 'Pergunta'), desafio: !!(st && st.desafio) }); });
-    const desafios = perguntas.filter((x) => x.desafio).sort((a, b) => a.m - b.m);
-    const exercicio = perguntas.filter((x) => !x.desafio).sort((a, b) => a.taxa - b.taxa);
+    const paradas = [];
+    for (let m = 1; m <= NMOD; m++) {
+      const ini = L.filter((s) => s.ini.has(m)).length;
+      const pararam = L.filter((s) => (s.sit === 'parada' || s.sit === 'andamento') && s.parou && s.parou.m === m && !s.parou.proximo).length;
+      if (!pararam) continue;
+      const doMod = (mapa) => [...mapa.entries()].filter(([k]) => +k.split(':')[0] === m);
+      const [pk, pc] = doMod(passosAband).sort((a, b) => b[1] - a[1])[0] || [];
+      const lento = doMod(tempos).filter(([, a]) => a.length >= 3).map(([k, a]) => [k, mediana(a)]).sort((a, b) => b[1] - a[1])[0];
+      const pulado = doMod(pul).map(([k, c]) => [k, c, viram.has(k) ? c / viram.get(k).size : 0]).filter((x) => x[2] >= 0.15).sort((a, b) => b[2] - a[2])[0];
+      const passo = (k) => +k.split(':')[1];
+      paradas.push({
+        m, ini, pararam, taxa: ini ? pararam / ini : 0,
+        passo: pk ? { p: passo(pk), c: pc } : null,
+        lento: lento ? { p: passo(lento[0]), ms: lento[1] } : null,
+        pulado: pulado ? { p: passo(pulado[0]), taxa: pulado[2] } : null,
+      });
+    }
+    paradas.sort((a, b) => b.pararam - a.pararam || b.taxa - a.taxa);
 
-    // Cidades
+    /* ---------- Cidades ---------- */
     const cid = new Map();
-    const C = (c) => { if (!cid.has(c)) cid.set(c, { cidade: c, lojas: 0, acessos: 0, comecaram: 0, concluiram: 0 }); return cid.get(c); };
-    L.forEach((s) => { const o = C(s.p.cidade); o.lojas++; if (s.comecou) o.comecaram++; if (s.concluiu) o.concluiram++; });
-    acessos.forEach((e) => { const c = cidadeDe.get(e.participante_id); if (c && ids.has(e.participante_id)) C(c).acessos++; });
-    const cidades = [...cid.values()].sort((a, b) => b.acessos - a.acessos || b.lojas - a.lojas);
+    const C = (c) => { if (!cid.has(c)) cid.set(c, { cidade: c, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0 }); return cid.get(c); };
+    L.forEach((s) => { const o = C(s.p.cidade); o.lojas++; if (s.comecou) o.comecaram++; if (s.concluiu) o.concluiram++; if (s.certificada) o.certificadas++; if (s.contato) o.contato++; });
+    const cidades = [...cid.values()].sort((a, b) => b.lojas - a.lojas || b.contato - a.contato);
     const semCadastro = f.cidade ? [] : TREINO.cidades.filter((c) => !cid.has(c));
 
-    // Série diária
+    /* ---------- Série diária ---------- */
     const ini0 = isFinite(desde) ? desde : Math.min(...evs.map((e) => e.t), agora);
     const nDias = Math.max(1, Math.ceil((agora - ini0) / DIA));
     const serie = [];
@@ -316,23 +385,17 @@
     acessos.forEach((e) => { const i = idx.get(diaKey(e.t)); if (i != null) serie[i].acessos++; });
     L.forEach((s) => { if (s.concluiuEm && s.concluiuEm >= desde) { const i = idx.get(diaKey(s.concluiuEm)); if (i != null) serie[i].conclusoes++; } });
 
-    // Mapa de calor (dia da semana × hora) dos acessos
-    const calor = Array.from({ length: 7 }, () => Array(24).fill(0));
-    acessos.forEach((e) => { const d = new Date(e.t); calor[d.getDay()][d.getHours()]++; });
-
-    // Perfil
-    const conta = (arr) => { const m = new Map(); arr.forEach((x) => m.set(x, (m.get(x) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
-    const perfil = {
-      dispositivo: conta(parts.map((p) => p.dispositivo || 'desconhecido')),
-      navegador: conta(parts.map((p) => p.navegador || 'Outro')),
+    const uso = {
+      celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
-      certificados: L.filter((s) => s.cert).length,
-      dicas: conta(evs.filter((e) => e.tipo === 'dica' && e.t >= desde && (ids.has(e.participante_id) || (semCidade && !todosIds.has(e.participante_id)))).map((e) => (e.detalhe && e.detalhe.dica) || '?')),
+      tempoAtivo: mediana(tempoAtivo),
+      tempoCal: mediana(tempoCal),
+      acessos: acessos.length,
     };
 
     return {
-      kpi: { cadastradas: L.length, comecaram, concluiram, andamento: comecaram - concluiram, naoComecaram: L.length - comecaram, tempoAtivo: mediana(tempoAtivo), tempoCal: mediana(tempoCal), acessos: acessos.length, ativos7, visitantesSemCadastro, taxa: comecaram ? concluiram / comecaram : null },
-      funil, etapas, maiorQueda, abandonos, lentos, pulados, desafios, exercicio, cidades, semCadastro, serie, calor, perfil, lojas: L,
+      kpi: { cadastradas: L.length, comecaram, concluiram, certificadas: sit.certificada, taxa: comecaram ? concluiram / comecaram : null },
+      sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, lojas: L,
     };
   }
 
@@ -391,49 +454,52 @@
     }).join('')}</div>`;
   }
 
-  // Funil visual: barras centradas que se estreitam, com a queda entre etapas
-  function funilVisual(R) {
-    const E = R.etapas, mx = Math.max(1, E[0].v);
-    return `<ol class="fv">${E.map((e, i) => {
-      const w = Math.max(4, (e.v / mx) * 100);
-      const a = i ? E[i - 1].v : null, q = i && a ? (a - e.v) / a : null;
-      const gargalo = R.maiorQueda && R.maiorQueda.i === i;
-      return `${i ? `<li class="fv-drop ${gargalo ? 'is-g' : ''}" aria-hidden="true"><span>${q == null ? '' : '−' + Math.round(q * 100) + '%'}${gargalo ? ` · gargalo` : ''}</span></li>` : ''}
-        <li class="fv-st ${gargalo ? 'is-g' : ''}" ${tipAttr(`<b>${esc(e.nome)}</b><br>${n(e.v)} lojas${q != null ? `<br>Queda: −${Math.round(q * 100)}% (${n(a - e.v)} lojas)` : ''}`)}>
-          <span class="fv-l">${i ? `<b>M${e.m}</b> ${esc(tituloMod(e.m))}` : '<b>Cadastraram</b>'}</span>
-          <span class="fv-bar"><i style="width:${w}%"></i></span>
-          <span class="fv-v">${n(e.v)}<small>${pct(e.v, mx)}</small></span>
+  // Jornada em 5 marcos: barra única por marco, com a perda entre eles
+  function jornadaVisual(R) {
+    const J = R.jornada, base = Math.max(1, J[0].v);
+    let pior = null;
+    for (let i = 1; i < J.length; i++) { const a = J[i - 1].v; if (a >= 5) { const q = (a - J[i].v) / a; if (!pior || q > pior.q) pior = { i, q }; } }
+    return `<ol class="jr">${J.map((e, i) => {
+      const a = i ? J[i - 1].v : null, perda = i ? a - e.v : 0, g = pior && pior.i === i && perda > 0;
+      return `${i ? `<li class="jr-perda ${g ? 'is-g' : ''}" aria-hidden="true"><span>${perda > 0 ? `−${n(perda)} lojas (${pct(perda, a)})` : 'sem perda'}${g ? ' · maior perda' : ''}</span></li>` : ''}
+        <li class="jr-st ${g ? 'is-g' : ''}">
+          <span class="jr-l"><b>${e.nome}</b>${e.sub ? `<small>${e.sub}</small>` : ''}</span>
+          <span class="jr-bar"><i style="width:${Math.max(2, (e.v / base) * 100)}%"></i></span>
+          <span class="jr-v">${n(e.v)}<small>${pct(e.v, base)}</small></span>
         </li>`;
     }).join('')}</ol>`;
   }
 
-  // Detalhe por módulo: iniciaram × concluíram (duas séries, rótulo direto)
-  function graficoFunil(R) {
-    const mx = Math.max(1, ...R.funil.map((x) => x.ini));
-    return `
-      <div class="legend"><span><i style="background:${COR.a}"></i>Iniciaram</span><span><i style="background:${COR.b}"></i>Concluíram</span></div>
-      <div class="fn">${R.funil.map((x) => `
-        <div class="fn-row" ${tipAttr(`<b>Módulo ${x.m} · ${esc(tituloMod(x.m))}</b><br>Iniciaram: ${n(x.ini)}<br>Concluíram: ${n(x.fim)}<br>Conclusão: ${pct(x.fim, x.ini)}`)}>
-          <div class="fn-l"><b>M${x.m}</b><span>${esc(tituloMod(x.m))}</span></div>
-          <div class="fn-bars">
-            <div class="fn-bar"><i style="width:${(x.ini / mx) * 100}%;background:${COR.a}"></i><em>${n(x.ini)}</em></div>
-            <div class="fn-bar"><i style="width:${(x.fim / mx) * 100}%;background:${COR.b}"></i><em>${n(x.fim)}</em></div>
-          </div>
-          <div class="fn-t"><b>${pct(x.fim, x.ini)}</b><small>concluem</small></div>
-        </div>`).join('')}
-      </div>`;
+  // Módulos onde as lojas param, com o passo e o motivo provável
+  function paradasVisual(R) {
+    if (!R.paradas.length) return '<p class="empty">Nenhuma loja parada no meio de um módulo.</p>';
+    return `<div class="pd-cards">${R.paradas.slice(0, 3).map((x, i) => `
+      <div class="pd-c">
+        <div class="pd-c-h"><span class="pd-c-n">${i + 1}</span><div><small>Módulo ${x.m}</small><b>${esc(tituloMod(x.m))}</b></div></div>
+        <div class="pd-c-v"><b>${n(x.pararam)}</b> ${x.pararam === 1 ? 'loja parou' : 'lojas pararam'} aqui<small>${pct(x.pararam, x.ini)} de quem abriu o módulo</small></div>
+        <ul class="pd-c-l">
+          ${x.passo ? `<li><span>Saem mais em</span><b>${esc(tituloPasso(x.m, x.passo.p))}${x.lento && x.lento.p === x.passo.p ? ` · o passo mais demorado (${dur(x.lento.ms)})` : ''}</b></li>` : ''}
+          ${x.lento && (!x.passo || x.lento.p !== x.passo.p) ? `<li><span>Passo mais demorado</span><b>${esc(tituloPasso(x.m, x.lento.p))} · ${dur(x.lento.ms)}</b></li>` : ''}
+          ${x.pulado ? `<li><span>Pulam o clique em</span><b>${esc(tituloPasso(x.m, x.pulado.p))} · ${pct(x.pulado.taxa, 1)}</b></li>` : ''}
+        </ul>
+      </div>`).join('')}</div>`;
   }
 
-  // Ranking de passos (gargalos)
-  function ranking(lista, { valor, sub, vazio, max }) {
-    if (!lista.length) return `<p class="empty">${vazio}</p>`;
-    const mx = max || Math.max(...lista.map((x) => x.barra));
-    return `<ol class="rk">${lista.slice(0, 5).map((x, i) => `
-      <li class="rk-i" ${tipAttr(`<b>Módulo ${x.m} · ${esc(tituloMod(x.m))}</b><br>Passo ${x.p}: ${esc(tituloPasso(x.m, x.p))}<br>${sub(x)}`)}>
-        <span class="rk-n">${i + 1}</span>
-        <span class="rk-t"><small>M${x.m} · passo ${x.p}</small><b>${esc(tituloPasso(x.m, x.p))}</b><span class="rk-bar"><i style="width:${Math.max(3, (x.barra / mx) * 100)}%"></i></span></span>
-        <span class="rk-v">${valor(x)}<small>${sub(x)}</small></span>
-      </li>`).join('')}</ol>`;
+  // Assuntos do pior para o melhor; ao abrir, as perguntas e a resposta errada mais escolhida
+  function assuntosVisual(R) {
+    if (!R.assuntos.length) return '<p class="empty">Ninguém respondeu as perguntas ainda.</p>';
+    return `<div class="as">${R.assuntos.map((t) => {
+      const al = t.taxa < 0.6, v = Math.round(t.taxa * 100);
+      return `<details class="as-i ${al ? 'al' : ''}">
+        <summary>
+          <span class="as-t">${al ? `<span class="st-crit" title="Pouco entendido">${IC.alerta}</span>` : ''}<b>${esc(t.tema)}</b><small>${t.perguntas.length} ${t.perguntas.length === 1 ? 'pergunta' : 'perguntas'} · ${n(t.tot)} respostas</small></span>
+          <span class="as-bar"><i style="width:${Math.max(1, v)}%"></i></span>
+          <span class="as-v">${v}%<small>acertam de primeira</small></span>
+        </summary>
+        <ul class="as-q">${t.perguntas.map((q) => `
+          <li><div><small>${esc(q.onde)}</small><b>${esc(q.q)}</b>${q.erroComum ? `<span class="as-err">Erro mais comum: “${esc(q.erroComum.t)}” (${pct(q.erroComum.n, q.tot)})</span>` : ''}</div><b class="as-qv">${pct(q.ok, q.tot)}</b></li>`).join('')}</ul>
+      </details>`;
+    }).join('')}</div>`;
   }
 
   // Linha diária: acessos e conclusões (mesma unidade, um eixo)
@@ -465,30 +531,11 @@
       </div>`;
   }
 
-  // Mapa de calor: sequencial azul, do claro (pouco) ao escuro (muito)
-  function graficoCalor(R) {
-    const mx = Math.max(1, ...R.calor.flat());
-    const cor = (v) => (v ? SEQ[Math.min(SEQ.length - 1, 1 + Math.floor((v / mx) * (SEQ.length - 2)))] : SEQ[0]);
-    const ordem = [1, 2, 3, 4, 5, 6, 0];
-    return `
-      <div class="hm" role="table" aria-label="Acessos por dia da semana e hora">
-        <div class="hm-row hm-head"><span></span>${Array.from({ length: 24 }, (_, h) => `<span>${h % 3 === 0 ? h + 'h' : ''}</span>`).join('')}</div>
-        ${ordem.map((d) => `<div class="hm-row"><span class="hm-d">${SEMANA[d]}</span>${R.calor[d].map((v, h) => `<i style="background:${cor(v)}" ${tipAttr(`<b>${SEMANA[d]}, ${h}h–${h + 1}h</b><br>${n(v)} acesso${v === 1 ? '' : 's'}`)}></i>`).join('')}</div>`).join('')}
-        <div class="hm-scale"><small>Menos</small>${SEQ.slice(1).map((c) => `<i style="background:${c}"></i>`).join('')}<small>Mais</small></div>
-      </div>`;
-  }
-
-  function perfilBloco(titulo, lista, total, absoluto) {
-    if (!lista.length) return `<div class="pf-b"><h3>${titulo}</h3><p class="empty">Sem dados.</p></div>`;
-    const mx = Math.max(...lista.map((x) => x[1]));
-    return `<div class="pf-b"><h3>${titulo}</h3>${lista.slice(0, 6).map(([k, v]) => `<div class="pf-r" ${tipAttr(`<b>${esc(k)}</b><br>${n(v)}${absoluto ? '' : ' · ' + pct(v, total)}`)}><span>${esc(k)}</span><div class="hb-track"><i style="width:${(v / mx) * 100}%;background:${COR.a}"></i></div><b>${absoluto ? n(v) : pct(v, total)}</b></div>`).join('')}</div>`;
-  }
-
   /* =====================================================================
      TELAS
      ===================================================================== */
-  const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
-  const SECOES = [['visao', 'Visão geral'], ['funil', 'Funil'], ['gargalos', 'Gargalos'], ['perguntas', 'Perguntas'], ['cidades', 'Cidades'], ['uso', 'Uso'], ['lojas', 'Lojas']];
+  const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
+  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos'], ['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']];
 
   function telaLogin(msg) {
     root.innerHTML = `
@@ -518,8 +565,7 @@
     root.innerHTML = `
       <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
       <main class="pg" aria-busy="true">
-        <div class="sk sk-hero"></div>
-        <div class="kpis">${'<div class="sk sk-kpi"></div>'.repeat(8)}</div>
+        <div class="kpis k4">${'<div class="sk sk-kpi"></div>'.repeat(4)}</div>
         <div class="sk sk-card"></div>
       </main>`;
   }
@@ -543,27 +589,22 @@
     const R = (st.R = calcular(st.dados, f));
     // Período anterior, de mesmo tamanho (só quando há período definido)
     const P = (st.P = f.dias ? calcular(st.dados, Object.assign({}, f, { ate: Date.now() - f.dias * DIA })) : null);
-    const K = R.kpi, KP = P && P.kpi;
+    const K = R.kpi, KP = P && P.kpi, SI = R.sit;
     const dl = (k, menor) => (KP ? delta(K[k], KP[k], menor) : '');
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const sd = saude(K.taxa);
     const deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
+    const periodoTxt = f.dias ? `nos últimos ${f.dias} dias` : 'desde o início';
 
-    const melhorCid = R.cidades[0];
-    const piorConcl = R.cidades.filter((c) => c.comecaram >= 5).sort((a, b) => a.concluiram / a.comecaram - b.concluiram / b.comecaram)[0];
-    const todasPerg = R.desafios.concat(R.exercicio).filter((x) => x.tot >= 3).sort((a, b) => a.taxa - b.taxa);
-    const piorPerg = todasPerg[0], maisAband = R.abandonos[0];
-    const destaques = [
-      R.maiorQueda && ['alerta', `<b>Maior queda:</b> entre "${esc(R.maiorQueda.de.nome)}" e "${esc(R.maiorQueda.para.nome)}" (−${Math.round(R.maiorQueda.q * 100)}%, ${n(R.maiorQueda.perdidos)} lojas).`],
-      maisAband && ['parado', `<b>Onde mais param:</b> Módulo ${maisAband.m}, "${esc(tituloPasso(maisAband.m, maisAband.p))}" (${n(maisAband.c)} lojas).`],
-      piorPerg && ['critico', `<b>Pergunta com menos acerto:</b> "${esc(piorPerg.q)}" (${pct(piorPerg.ok, piorPerg.tot)} na 1ª tentativa).`],
-      melhorCid && ['olho', `<b>Cidade com mais acessos:</b> ${esc(melhorCid.cidade)} (${n(melhorCid.acessos)} acessos, ${n(melhorCid.lojas)} lojas).`],
-      piorConcl && ['loja', `<b>Menor conclusão:</b> ${esc(piorConcl.cidade)}, ${pct(piorConcl.concluiram, piorConcl.comecaram)} de quem começou terminou.`],
+    // O que fazer agora: no máximo 3 ações, cada uma levando à seção
+    const pa = R.paradas[0], pior = R.assuntos.find((t) => t.tot >= 5 && t.taxa < 0.7);
+    const acoes = [
+      SI.contato && ['parado', 'lojas', `<b>${n(SI.contato)} ${SI.contato === 1 ? 'loja precisa' : 'lojas precisam'} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lista'],
+      pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver perguntas'],
+      pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${n(pa.pararam)} ${pa.pararam === 1 ? 'loja' : 'lojas'}.`, 'Ver jornada'],
     ].filter(Boolean);
 
-    const contagem = { todas: R.lojas.length, concluiu: 0, andamento: 0, nao: 0 };
-    R.lojas.forEach((s) => contagem[s.status]++);
-    const periodoTxt = f.dias ? `últimos ${f.dias} dias` : 'todo o período';
+    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, todas: R.lojas.length };
 
     root.innerHTML = `
       <header class="hd">
@@ -576,7 +617,7 @@
 
       <div class="bar">
         <div class="flt" role="group" aria-label="Filtros">
-          <label><span>Período</span><select data-f="dias">
+          <label><span>Cadastradas</span><select data-f="dias">
             ${[[7, 'Últimos 7 dias'], [14, 'Últimos 14 dias'], [28, 'Últimos 28 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
           </select></label>
           <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
@@ -585,75 +626,44 @@
       </div>
 
       <main class="pg">
-        ${sec('visao', 'Visão geral', `Lojas que se cadastraram nos ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}.`, `
-          <div class="hero">
-            <div class="hero-anel">${anel(K.taxa)}</div>
-            <div class="hero-txt">
-              <span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span>
-              <h3>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <em>${deCada10}</em> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}</h3>
-              <p>${n(K.concluiram)} concluíram, ${n(K.andamento)} estão no meio do caminho e ${n(K.naoComecaram)} se cadastraram mas não começaram.${KP && KP.taxa != null && K.taxa != null ? ` No período anterior, a conclusão foi de ${Math.round(KP.taxa * 100)}%.` : ''}</p>
-            </div>
-          </div>
-          <div class="kpis">
-            ${kpi('loja', 'Lojas cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
+        ${sec('resumo', 'Resumo', `Lojas que se cadastraram ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}.`, `
+          <div class="kpis k4">
+            ${kpi('loja', 'Cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
             ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.')}
-            ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`, 'hl')}
-            ${kpi('andamento', 'Em andamento', n(K.andamento), 'começaram e não terminaram', '', 'Lojas que começaram, mas ainda não concluíram todos os módulos.')}
-            ${kpi('parado', 'Não começaram', n(K.naoComecaram), `${pct(K.naoComecaram, K.cadastradas)} das cadastradas`, dl('naoComecaram', true), 'Lojas que se cadastraram e não abriram nenhum módulo.')}
-            ${kpi('tempo', 'Tempo para concluir', dur(K.tempoAtivo), `de tela, ${dias(K.tempoCal)}`, dl('tempoAtivo', true), 'Mediana do tempo de tela de quem concluiu, e quantos dias levou do primeiro módulo ao último.')}
-            ${kpi('olho', 'Acessos', n(K.acessos), K.visitantesSemCadastro != null ? `${n(K.visitantesSemCadastro)} visitantes sem cadastro` : 'das lojas filtradas', dl('acessos'), 'Vezes que o treinamento foi aberto no período.')}
-            ${kpi('raio', 'Ativas em 7 dias', n(K.ativos7), 'com alguma atividade', '', 'Lojas que fizeram qualquer coisa no treinamento nos últimos 7 dias.')}
+            ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`)}
+            ${kpi('ok', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas. É quem realmente entendeu.', 'hl')}
           </div>
-          ${destaques.length ? card('O que merece atenção', 'Gerado automaticamente a partir dos dados.', `<ul class="ins">${destaques.map(([i, t]) => `<li><span class="ins-ic">${IC[i]}</span><span>${t}</span></li>`).join('')}</ul>`, 'ins-card') : ''}
+          <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
+          ${acoes.length ? card('O que fazer agora', '', `<ul class="ac">${acoes.map(([i, s, t, l]) => `<li><span class="ac-ic ${i}">${IC[i]}</span><span class="ac-t">${t}</span><a href="#s-${s}" class="ac-a" data-ir="${s}">${l} →</a></li>`).join('')}</ul>`, 'ac-card') : ''}
         `)}
 
-        ${sec('funil', 'Funil do treinamento', 'Quantas lojas chegam ao fim de cada módulo. A maior queda aparece destacada como gargalo.', `
-          ${card('', '', funilVisual(R))}
-          <details class="det"><summary>Ver iniciaram × concluíram por módulo</summary>${card('', '', graficoFunil(R))}</details>
-        `)}
-
-        ${sec('gargalos', 'Gargalos', 'Os passos que mais seguram as lojas.', `
-          <div class="cols3">
-            ${card('Onde param', 'Último passo visto por quem saiu sem terminar o módulo.', ranking(R.abandonos.map((x) => Object.assign({ barra: x.c }, x)), { valor: (x) => n(x.c), sub: (x) => `${pct(x.c, x.viu)} de quem viu`, vazio: 'Ainda sem abandonos registrados.' }))}
-            ${card('Mais demorados', 'Tempo mediano no passo (mínimo de 3 registros).', ranking(R.lentos.map((x) => Object.assign({ barra: x.med }, x)), { valor: (x) => dur(x.med), sub: (x) => `${n(x.nAmostra)} registros`, vazio: 'Sem dados suficientes.' }))}
-            ${card('Mais pulados', 'Quando a loja usa "Pular esta etapa" em vez de clicar na tela.', ranking(R.pulados.map((x) => Object.assign({ barra: x.c }, x)), { valor: (x) => n(x.c), sub: (x) => `${pct(x.c, x.viu)} de quem viu`, vazio: 'Nenhuma etapa pulada.' }))}
+        ${sec('jornada', 'Jornada', 'Até onde as lojas chegam e onde ficam pelo caminho.', `
+          <div class="cols j2">
+            ${card('Até onde chegam', '', jornadaVisual(R))}
+            ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}
           </div>
         `)}
 
-        ${sec('perguntas', 'Perguntas', 'Acerto na 1ª tentativa. Abaixo de 60% (com o ícone de alerta) indica assunto pouco entendido.', `
-          <div class="cols">
-            ${card('Desafios rápidos', 'Uma pergunta no fim de cada módulo.', R.desafios.length ? barras(R.desafios, { valor: (x) => x.taxa * 100, max: 100, rotulo: (x) => `M${x.m} · ${tituloMod(x.m)}`, sub: (x) => x.q, fmt: (x) => `${pct(x.ok, x.tot)} <small>(${n(x.tot)})</small>`, alerta: (x) => x.taxa < 0.6 }) : '<p class="empty">Ninguém respondeu ainda.</p>')}
-            ${card('Exercício final', 'Do pior para o melhor.', R.exercicio.length ? barras(R.exercicio, { valor: (x) => x.taxa * 100, max: 100, rotulo: (x) => `P${x.p} · ${x.q}`, fmt: (x) => `${pct(x.ok, x.tot)} <small>(${n(x.tot)})</small>`, alerta: (x) => x.taxa < 0.6 }) : '<p class="empty">Ninguém respondeu o exercício ainda.</p>')}
-          </div>
-        `)}
+        ${sec('assuntos', 'Assuntos', 'O que os parceiros entendem de primeira. Abaixo de 60% (com alerta) vale reforçar no atendimento. Toque em um assunto para ver as perguntas e o erro mais comum.', card('', '', assuntosVisual(R)))}
 
-        ${sec('cidades', 'Cidades', 'De onde vêm os acessos e onde a conclusão é menor.', `
-          <div class="cols">
-            ${card('Top 10 em acessos', '', R.cidades.length ? barras(R.cidades.slice(0, 10), { valor: (x) => x.acessos, rotulo: (x) => x.cidade, fmt: (x) => n(x.acessos) }) : '<p class="empty">Sem acessos no período.</p>')}
-            ${card('Ranking completo', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div class="tb-wrap" id="cid-tb"></div>
-              ${R.semCadastro.length ? `<details class="sem"><summary>${n(R.semCadastro.length)} cidades ainda sem nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`)}
-          </div>
-        `)}
-
-        ${sec('uso', 'Uso', 'Quando e como o treinamento é usado.', `
-          ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
-          <div class="cols">
-            ${card('Quando acessam', 'Acessos por dia da semana e hora.', graficoCalor(R))}
-            ${card('Perfil', '', `<div class="pf">
-              ${perfilBloco('Aparelho', R.perfil.dispositivo, K.cadastradas)}
-              ${perfilBloco('Navegador', R.perfil.navegador, K.cadastradas)}
-              <div class="pf-b pf-num"><div><b>${pct(R.perfil.voz, K.cadastradas)}</b><small>ligaram a narração</small></div><div><b>${n(R.perfil.certificados)}</b><small>abriram o certificado</small></div></div>
-              ${perfilBloco('Dicas mais abertas', R.perfil.dicas, 0, true)}
-            </div>`)}
-          </div>
-        `)}
-
-        ${sec('lojas', 'Lojas', `${n(R.lojas.length)} lojas no filtro.`, card('', '', `
+        ${sec('lojas', 'Lojas para acompanhar', 'Quem precisa de contato e por quê.', card('', '', `
           <div class="lj-top">
-            <div class="chips" role="group" aria-label="Status">${[['todas', 'Todas'], ['concluiu', 'Concluíram'], ['andamento', 'Em andamento'], ['nao', 'Não começaram']].map(([k, t]) => `<button class="chip ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
+            <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
             <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"><button class="btn ic" data-a="csv">${IC.baixar}<span>Exportar CSV</span></button></div>
           </div>
           <div class="tb-wrap" id="lj"></div>`))}
+
+        ${sec('cidades', 'Cidades', 'Conclusão e contatos pendentes por cidade.', card('', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div class="tb-wrap" id="cid-tb"></div>
+          ${R.semCadastro.length ? `<details class="sem"><summary>${n(R.semCadastro.length)} cidades ainda sem nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`))}
+
+        ${sec('uso', 'Uso', 'Como e quando o treinamento é usado.', `
+          <div class="kpis k3">
+            ${kpi('tempo', 'Tempo para concluir', dur(R.uso.tempoAtivo), `de tela · ${dias(R.uso.tempoCal)}`, '', 'Mediana de quem concluiu: tempo de tela somado e dias entre o primeiro e o último módulo.')}
+            ${kpi('olho', 'No celular', pct(R.uso.celular, K.cadastradas), `${n(R.uso.acessos)} acessos no período`, '', 'Lojas que fizeram o treinamento pelo celular.')}
+            ${kpi('raio', 'Usaram a narração', pct(R.uso.voz, K.cadastradas), 'das cadastradas', '', 'Lojas que ligaram a narração por voz.')}
+          </div>
+          ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
+        `)}
       </main>`;
 
     desenharLinha();
@@ -672,39 +682,43 @@
     if (!el) return;
     const b = st.buscaCid.trim().toLowerCase();
     const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b));
-    const mx = Math.max(1, ...st.R.cidades.map((c) => c.acessos));
-    el.innerHTML = rows.length ? `<table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th>Acessos</th><th class="num">Conclusão</th></tr></thead>
+    el.innerHTML = rows.length ? `<table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th class="num">Concluíram</th><th class="num">Certificadas</th><th class="num">Precisam de contato</th></tr></thead>
       <tbody>${rows.map((c) => { const t = c.comecaram ? c.concluiram / c.comecaram : null; const sd = saude(c.comecaram >= 3 ? t : null);
-        return `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td><td><span class="inl"><i style="width:${(c.acessos / mx) * 100}%"></i></span>${n(c.acessos)}</td>
-        <td class="num"><span class="saude mini ${sd.cls}" title="${sd.rot}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td></tr>`; }).join('')}</tbody></table>` : '<p class="empty">Nenhuma cidade encontrada.</p>';
+        return `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td>
+        <td class="num"><span class="saude mini ${sd.cls}" title="${t == null ? 'Sem dados' : sd.rot + ' · de quem começou'}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td>
+        <td class="num">${n(c.certificadas)}</td><td class="num">${c.contato ? `<b class="ct">${n(c.contato)}</b>` : '<span class="mut">0</span>'}</td></tr>`; }).join('')}</tbody></table>` : '<p class="empty">Nenhuma cidade encontrada.</p>';
   }
 
-  const STATUS = { concluiu: ['Concluiu', 'ok'], andamento: ['Em andamento', 'warn'], nao: ['Não começou', 'off'] };
+  const SIT = {
+    parada: ['Parada', 'bad'], naocomecou: ['Não começou', 'off'], semcert: ['Sem certificado', 'warn'],
+    andamento: ['Em andamento', 'info'], recente: ['Recém-cadastrada', 'info'], certificada: ['Certificada', 'ok'],
+  };
   function linhasLojas() {
     const b = st.busca.trim().toLowerCase();
-    const rows = st.R.lojas.filter((s) => (st.status === 'todas' || s.status === st.status) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
+    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
+    const rows = st.R.lojas.filter((s) => filtro(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
     const k = st.ordem.k, d = st.ordem.dir;
-    const val = (s) => (k === 'loja' ? s.p.loja : k === 'cidade' ? s.p.cidade : k === 'prog' ? s.fim.size : k === 'status' ? s.status : s.ultimo);
+    const val = (s) => (k === 'loja' ? s.p.loja : k === 'cidade' ? s.p.cidade : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : s.ultimo);
     return rows.sort((a, c) => { const x = val(a), y = val(c); return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * d; });
   }
-  const parouTxt = (s) => (!s.parou ? '—' : s.parou.proximo ? `Não abriu o Módulo ${s.parou.m}` : s.parou.p ? `M${s.parou.m} · ${tituloPasso(s.parou.m, s.parou.p)}` : `Módulo ${s.parou.m}`);
 
   function desenharLojas() {
     const el = document.getElementById('lj');
     if (!el) return;
     const todas = linhasLojas(), rows = todas.slice(0, 300);
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    el.innerHTML = rows.length ? `<table class="tb"><thead><tr>${th('loja', 'Loja')}${th('cidade', 'Cidade')}${th('prog', 'Progresso')}${th('status', 'Status')}${th('ultimo', 'Último acesso')}<th>Parou em</th></tr></thead>
+    el.innerHTML = rows.length ? `<table class="tb"><thead><tr>${th('loja', 'Loja')}${th('cidade', 'Cidade')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('ultimo', 'Último acesso')}</tr></thead>
       <tbody>${rows.map((s) => `<tr><td><b class="lj-n">${esc(s.p.loja)}</b></td><td>${esc(s.p.cidade)}</td>
         <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
-        <td><span class="badge ${STATUS[s.status][1]}">${STATUS[s.status][0]}</span></td><td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td><td class="pr">${esc(parouTxt(s))}</td></tr>`).join('')}</tbody></table>
-      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Nenhuma loja com esse filtro.</p>';
+        <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span><small>${esc(s.motivo)}</small></td>
+        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td></tr>`).join('')}</tbody></table>
+      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora.' : 'Nenhuma loja com esse filtro.'}</p>`;
   }
 
   function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Status', 'Último acesso', 'Parou em', 'Cadastro', 'Aparelho'];
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Último acesso', 'Cadastro', 'Aparelho'];
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, STATUS[s.status][0], dataHoraBR(s.ultimo), parouTxt(s), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
     const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(q).join(';')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -749,7 +763,7 @@
       desenharLojas();
       return;
     }
-    const nav = e.target.closest('.nav a');
+    const nav = e.target.closest('.nav a, [data-ir]');
     if (nav) {
       e.preventDefault();
       const alvo = document.querySelector(nav.getAttribute('href'));
