@@ -487,7 +487,7 @@
   /* =====================================================================
      TELAS
      ===================================================================== */
-  const st = { dados: null, filtros: { dias: 30, cidade: '' }, busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
+  const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
   const SECOES = [['visao', 'Visão geral'], ['funil', 'Funil'], ['gargalos', 'Gargalos'], ['perguntas', 'Perguntas'], ['cidades', 'Cidades'], ['uso', 'Uso'], ['lojas', 'Lojas']];
 
   function telaLogin(msg) {
@@ -577,7 +577,7 @@
       <div class="bar">
         <div class="flt" role="group" aria-label="Filtros">
           <label><span>Período</span><select data-f="dias">
-            ${[[7, 'Últimos 7 dias'], [30, 'Últimos 30 dias'], [90, 'Últimos 90 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
+            ${[[7, 'Últimos 7 dias'], [14, 'Últimos 14 dias'], [28, 'Últimos 28 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
           </select></label>
           <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         </div>
