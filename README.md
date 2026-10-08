@@ -42,7 +42,7 @@ Só aparecem telas que existem no sistema: Pedidos, Relatório, Total Bruto, Fin
 - **Tempo estimado:** cada módulo mostra quanto leva (≈ 12 s por passo de leitura e 25 s por passo de clique ou pergunta), na lista de módulos.
 - **Ícones, medalhas e celebração:** cada módulo tem um ícone. Ao fechar uma fase, aparece a medalha "Fase concluída". Confete curto ao concluir um módulo, maior ao terminar tudo (desligado para quem prefere menos movimento).
 - **Nome da loja:** saudação na tela inicial e "Mandou bem, {loja}!" no fim de cada módulo.
-- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta e quais módulos refazer; refazer um módulo substitui as respostas dele. Mostra o nome da loja, a cidade, a data e a % de acertos. "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
+- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta e quais módulos refazer; refazer um módulo substitui as respostas dele. Mostra o nome da loja, a cidade, a data e os módulos concluídos (a nota não aparece no certificado). "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
 
 ## Cadastro da loja e painel admin (analytics)
 

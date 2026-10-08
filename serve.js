@@ -20,7 +20,7 @@ function getNetworkIp() {
 const server = http.createServer((req, res) => {
   const p = path.normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[\/\\])+/, '');
   const ehAdmin = /^admin\./i.test(req.headers.host || '');
-  if (p === '/admin') { res.writeHead(301, { Location: '/admin/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '') }); return res.end(); }
+  if (p === '/admin' || p === '/admin.html') { res.writeHead(301, { Location: '/admin/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '') }); return res.end(); }
   const pagina = p === '/' ? (ehAdmin ? 'admin/index.html' : 'index.html') : p.endsWith('/') ? p + 'index.html' : p;
   const file = path.join(root, pagina);
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }

@@ -677,7 +677,7 @@
               <div class="cert-rodape">
                 <div><small>Concluído em</small><b>${data}</b></div>
                 <div class="cert-selo">${ICON.medalha}</div>
-                <div><small>Acertos</small><b>${pct(c.taxa)}</b></div>
+                <div><small>Módulos</small><b>${A.mods.length} de ${A.mods.length} concluídos</b></div>
               </div>
               <p class="cert-nota">Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.</p>
             </div>

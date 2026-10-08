@@ -229,9 +229,9 @@
 .pd-box b { font-size: 13.5px; font-weight: 600; }
 .pd-st { font-size: 12px; font-weight: 600; color: #fff; padding: 4px 12px; border-radius: 2px; letter-spacing: .2px; }
 .pd-st.entrega { background: #f0a24a; }
-.pd-st.confirmacao { background: #d93b30; }
+.pd-st.confirmacao { background: var(--bx-green); }
 .pd-chev { width: 30px; height: 30px; color: #333; stroke-width: 2.2; }
-.pd-wait { box-shadow: inset 5px 0 0 #d93b30; }
+.pd-wait { box-shadow: inset 5px 0 0 var(--bx-green); }
 
 /* Fatura: repasse realizado */
 .fa-pago { background: #e9f5ef; border-radius: 6px; margin-top: 22px; padding: 18px 16px; display: grid; gap: 4px; color: #0a6e3a; }
