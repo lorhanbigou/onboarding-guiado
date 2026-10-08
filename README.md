@@ -76,6 +76,18 @@ Enquanto o Supabase não estiver configurado, o painel abre com **dados de demon
 
 Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
 
+## Assistente de dúvidas (chat)
+
+Botão flutuante no canto da tela, liberado quando a loja **conclui os 10 módulos** (antes disso aparece com cadeado e mostra quantos módulos faltam). Não aparece dentro dos módulos guiados nem no cadastro.
+
+- **Sem IA e sem custo:** as respostas ficam em `js/bot.js` (lista `INTENCOES`), escritas a partir do conteúdo do treinamento. Cada intenção tem palavras-chave com peso (`k3`, `k2`, `k1`), a resposta, o módulo para "Rever no treinamento" e perguntas relacionadas.
+- **Entendimento:** ignora acentos, maiúsculas, plural e palavras comuns, aceita erros de digitação ("comição") e abreviações ("qnd", "pq"). Se houver dúvida entre assuntos, mostra "Você quis dizer…". Perguntas fora do treinamento (cardápio, horário, nota fiscal…) são encaminhadas ao suporte.
+- **No chat:** perguntas prontas, "digitando…", 👍/👎 em cada resposta, nova conversa e histórico salvo no aparelho. Lê a resposta em voz alta se a narração estiver ligada.
+- **Coleta** (tabela `treino_eventos`, sem mudar o banco): `duvida` (texto, assunto, resultado: respondida, sugestão, sem resposta ou fora do treinamento), `duvida_escolha`, `duvida_feedback` e `bot_aberto`. CPF, telefone, e-mail e números longos são trocados por `[removido]` antes de enviar.
+- **Painel → Dúvidas do chat:** perguntas, % respondidas de primeira, % que ajudou, assuntos mais perguntados, perguntas sem resposta ou fora do treinamento, respostas que não ajudaram e exportação em CSV.
+
+Para melhorar o bot: veja no painel as perguntas sem resposta e as respostas com 👎, e ajuste ou crie intenções em `js/bot.js`.
+
 ## Narração por voz (opcional)
 
 O parceiro liga a narração pelo botão de alto-falante no topo da tela inicial ou pelo botão **Narração** na barra do módulo. A escolha fica salva no navegador. Com a narração ligada:
@@ -105,6 +117,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/clone.js` | Tela clonada: Pedidos, Relatório, Financeiro, fatura e modais |
 | `js/modules.js` | Conteúdo dos 10 módulos (textos, passos, desafios e exercício final) |
 | `js/dicas.js` | Dicas importantes da tela inicial |
+| `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
 | `js/analytics-config.js` | URL/chave do Supabase e e-mail do admin |
 | `js/analytics.js` | Fila e envio dos eventos do treinamento |

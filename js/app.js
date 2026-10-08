@@ -729,6 +729,8 @@
     else if (view === 'comecar') { location.replace('#/modulo/' + firstPending()); return; }
     else viewHome();
     if (view !== 'modulo') window.scrollTo(0, 0);
+    // Assistente de dúvidas: liberado ao concluir os módulos; some dentro dos módulos guiados e do cadastro
+    if (TREINO.Bot) TREINO.Bot.atualizar({ liberado: doneCount() === A.mods.length, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome(), restantes: A.mods.length - doneCount() });
   }
 
   /* ------------------------------ Início ------------------------------ */

@@ -77,6 +77,16 @@
   /* =====================================================================
      DADOS DE DEMONSTRAÇÃO (fixos, mesma estrutura do banco)
      ===================================================================== */
+  const Bot = TREINO.Bot;
+  const DUVIDAS_DEMO = [
+    'quando cai meu repasse?', 'qnd vou receber o dinheiro do app', 'pq paguei comissão de pedido cancelado', 'pedido cancelou sozinho',
+    'o que é a taxa de serviço', 'por que desconta taxa de servico se o cliente pagou em dinheiro', 'como antecipar', 'quanto custa antecipar',
+    'por que o repasse veio menor', 'recebi pouco esse mes', 'onde pego o comprovante', 'tenho que pagar boleto?', 'o que é debito remanescente',
+    'quando tem mensalidade', 'quem paga o cupom de desconto', 'tem repasse no feriado', 'quero trocar minha chave pix', 'posso aumentar o preço do cardapio',
+    'meu saldo diminuiu do nada', 'onde vejo a fatura',
+    'como faço pra mudar o horário de funcionamento', 'como cadastro produto novo', 'quanto é a taxa de entrega', 'como mudar a foto da loja',
+    'o app ta travando', 'nota fiscal', 'como imprimir o pedido', 'quero cancelar o contrato', 'quanto custa o plano anual', 'como funciona o marketing',
+  ];
   function gerarDemo() {
     let seed = 20261005;
     const rnd = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -154,6 +164,26 @@
         ev(id, 'treino_concluido', t + 1e3);
         const nota = acertosPrimeira / NPERG;
         if (nota > ACERTO_MIN && rnd() < 0.8) ev(id, 'certificado', t + 6e4, { detalhe: { acertos: Math.round(nota * 100) } });
+        // Dúvidas no assistente (liberado ao concluir), classificadas pelo próprio bot
+        if (Bot) {
+          let td = t + 2 * 3600e3;
+          const nd = Math.floor(rnd() * 5);
+          for (let k = 0; k < nd; k++) {
+            td += (0.5 + rnd() * 6) * DIA;
+            if (rnd() < 0.3) {
+              const x = pick(Bot.intencoes);
+              ev(id, 'duvida_escolha', td, { detalhe: { intencao: x.id, tema: x.tema, origem: pick(['inicio', 'seguinte', 'sugestao']) } });
+              continue;
+            }
+            const texto = pick(DUVIDAS_DEMO), r = Bot.entender(texto);
+            const resultado = r.tipo === 'resposta' ? (r.intencao.id === 'fora' ? 'fora' : 'respondida') : r.tipo === 'sugestao' ? 'sugestao' : 'sem_resposta';
+            ev(id, 'duvida', td, { detalhe: { texto, intencao: r.intencao ? r.intencao.id : null, tema: resultado === 'respondida' ? r.intencao.tema : null, confianca: r.confianca, resultado } });
+            if (resultado === 'respondida' && rnd() < 0.55) {
+              const ruim = ['repasse_menor', 'taxa_servico', 'debitos'].includes(r.intencao.id) ? 0.45 : 0.12;
+              ev(id, 'duvida_feedback', td + 20e3, { detalhe: { intencao: r.intencao.id, tema: r.intencao.tema, util: rnd() > ruim, texto } });
+            }
+          }
+        }
       }
     }
     return { participantes: P, eventos: E.filter((e) => +new Date(e.criado_em) <= agora) };
@@ -385,6 +415,44 @@
     acessos.forEach((e) => { const i = idx.get(diaKey(e.t)); if (i != null) serie[i].acessos++; });
     L.forEach((s) => { if (s.concluiuEm && s.concluiuEm >= desde) { const i = idx.get(diaKey(s.concluiuEm)); if (i != null) serie[i].conclusoes++; } });
 
+    /* ---------- Dúvidas do chat (pela data da pergunta) ---------- */
+    const daCidade = (e) => semCidade || cidadeDe.get(e.participante_id) === f.cidade;
+    const dEv = evs.filter((e) => /^duvida/.test(e.tipo) && e.t >= desde && daCidade(e));
+    const dPerg = dEv.filter((e) => e.tipo === 'duvida'), dEsc = dEv.filter((e) => e.tipo === 'duvida_escolha'), dFb = dEv.filter((e) => e.tipo === 'duvida_feedback');
+    const det = (e) => e.detalhe || {};
+    const temasD = new Map();
+    dPerg.filter((e) => det(e).resultado === 'respondida').concat(dEsc).forEach((e) => { const t = det(e).tema; if (t) temasD.set(t, (temasD.get(t) || 0) + 1); });
+    const semResp = new Map();
+    dPerg.filter((e) => det(e).resultado === 'sem_resposta' || det(e).resultado === 'fora').forEach((e) => {
+      const k = Bot ? Bot.norm(det(e).texto) : det(e).texto;
+      const o = semResp.get(k) || { texto: det(e).texto, fora: det(e).resultado === 'fora', n: 0, ultimo: 0, lojas: new Set() };
+      o.n++; o.ultimo = Math.max(o.ultimo, e.t); o.lojas.add(e.participante_id);
+      semResp.set(k, o);
+    });
+    const ruins = new Map();
+    dFb.forEach((e) => {
+      const id = det(e).intencao; if (!id || id === 'fora') return;
+      const o = ruins.get(id) || { id, nao: 0, tot: 0, exemplos: [] };
+      o.tot++;
+      if (!det(e).util) { o.nao++; if (det(e).texto && o.exemplos.length < 3 && !o.exemplos.includes(det(e).texto)) o.exemplos.push(det(e).texto); }
+      ruins.set(id, o);
+    });
+    const duvidas = {
+      perguntas: dPerg.length,
+      escolhas: dEsc.length,
+      lojas: new Set(dEv.map((e) => e.participante_id)).size,
+      respondidas: dPerg.filter((e) => det(e).resultado === 'respondida').length,
+      sugestao: dPerg.filter((e) => det(e).resultado === 'sugestao').length,
+      sem: dPerg.filter((e) => det(e).resultado === 'sem_resposta').length,
+      fora: dPerg.filter((e) => det(e).resultado === 'fora').length,
+      avaliacoes: dFb.length,
+      uteis: dFb.filter((e) => det(e).util).length,
+      temas: [...temasD.entries()].map(([tema, n]) => ({ tema, n })).sort((a, b) => b.n - a.n),
+      semResposta: [...semResp.values()].sort((a, b) => b.n - a.n || b.ultimo - a.ultimo),
+      naoAjudou: [...ruins.values()].filter((o) => o.nao > 0).sort((a, b) => b.nao - a.nao || b.nao / b.tot - a.nao / a.tot),
+      lista: dPerg.concat(dFb).sort((a, b) => b.t - a.t),
+    };
+
     const uso = {
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
@@ -395,7 +463,7 @@
 
     return {
       kpi: { cadastradas: L.length, comecaram, concluiram, certificadas: sit.certificada, taxa: comecaram ? concluiram / comecaram : null },
-      sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, lojas: L,
+      sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, duvidas, lojas: L,
     };
   }
 
@@ -535,7 +603,7 @@
      TELAS
      ===================================================================== */
   const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
-  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos'], ['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']];
+  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos'], ['duvidas', 'Dúvidas do chat'], ['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']];
 
   function telaLogin(msg) {
     root.innerHTML = `
@@ -601,8 +669,10 @@
     const acoes = [
       SI.contato && ['parado', 'lojas', `<b>${n(SI.contato)} ${SI.contato === 1 ? 'loja precisa' : 'lojas precisam'} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lista'],
       pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver perguntas'],
+      R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta ou fora do treinamento.</b> Veja o que os parceiros perguntaram e ainda não está explicado.`, 'Ver dúvidas'],
       pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${n(pa.pararam)} ${pa.pararam === 1 ? 'loja' : 'lojas'}.`, 'Ver jornada'],
-    ].filter(Boolean);
+    ].filter(Boolean).slice(0, 4);
+    const DV = R.duvidas;
 
     const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, todas: R.lojas.length };
 
@@ -645,6 +715,20 @@
         `)}
 
         ${sec('assuntos', 'Assuntos', 'O que os parceiros entendem de primeira. Abaixo de 60% (com alerta) vale reforçar no atendimento. Toque em um assunto para ver as perguntas e o erro mais comum.', card('', '', assuntosVisual(R)))}
+
+        ${sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente é liberado ao concluir o treinamento.`, `
+          <div class="kpis k3">
+            ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
+            ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}
+            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} 👍👎`, '', 'Respostas marcadas como úteis pelo parceiro.')}
+          </div>
+          <div class="cols">
+            ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? barras(DV.temas, { valor: (x) => x.n, rotulo: (x) => x.tema, fmt: (x) => n(x.n) }) : '<p class="empty">Nenhuma pergunta no período.</p>')}
+            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Todas as perguntas tiveram resposta. 🎉</p>')}
+          </div>
+          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas com 👎. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${n(o.nao)} de ${n(o.tot)} 👎</b></li>`; }).join('')}</ul>`) : ''}
+          <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
+        `)}
 
         ${sec('lojas', 'Lojas para acompanhar', 'Quem precisa de contato e por quê.', card('', '', `
           <div class="lj-top">
@@ -715,15 +799,31 @@
       ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora.' : 'Nenhuma loja com esse filtro.'}</p>`;
   }
 
-  function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Último acesso', 'Cadastro', 'Aparelho'];
+  function baixarCSV(nome, linhas) {
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
-    const csv = '﻿' + [cab].concat(linhas).map((l) => l.map(q).join(';')).join('\r\n');
+    const csv = '\ufeff' + linhas.map((l) => l.map(q).join(';')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = `treinamento-lojas-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${nome}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function exportarDuvidas() {
+    const part = new Map(st.dados.participantes.map((p) => [p.id, p]));
+    const RES = { respondida: 'Respondida', sugestao: 'Você quis dizer', sem_resposta: 'Sem resposta', fora: 'Fora do treinamento' };
+    const linhas = st.R.duvidas.lista.map((e) => {
+      const d = e.detalhe || {}, p = part.get(e.participante_id) || {}, x = Bot && d.intencao ? Bot.porId(d.intencao) : null;
+      return e.tipo === 'duvida'
+        ? [dataHoraBR(e.t), p.loja, p.cidade, 'Pergunta', d.texto, RES[d.resultado] || d.resultado, d.tema || '', x ? x.exemplo : '', '']
+        : [dataHoraBR(e.t), p.loja, p.cidade, 'Avaliação', d.texto, '', d.tema || '', x ? x.exemplo : '', d.util ? 'Ajudou' : 'Não ajudou'];
+    });
+    baixarCSV('treinamento-duvidas', [['Data', 'Loja', 'Cidade', 'Tipo', 'Texto', 'Resultado', 'Assunto', 'Resposta dada', 'Avaliação']].concat(linhas));
+  }
+
+  function exportarCSV() {
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Último acesso', 'Cadastro', 'Aparelho'];
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    baixarCSV('treinamento-lojas', [cab].concat(linhas));
   }
 
   // Destaca na navegação a seção que está na tela
@@ -754,6 +854,7 @@
       if (a.dataset.a === 'atualizar') iniciar();
       else if (a.dataset.a === 'sair') { sessao.sair(); telaLogin(); }
       else if (a.dataset.a === 'csv') exportarCSV();
+      else if (a.dataset.a === 'csv-duvidas') exportarDuvidas();
       return;
     }
     const chip = e.target.closest('[data-st]');
