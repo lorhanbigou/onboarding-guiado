@@ -2,10 +2,10 @@
    MÓDULOS DO TREINAMENTO
    Curva: Relatório → formas de pagamento → Financeiro → fatura (entradas,
    depois deduções) → repasse e antecipação → exercício final.
-   Os módulos 1 a 8 terminam com um "Desafio rápido" (uma pergunta).
+   Os módulos 1 a 9 terminam com um "Desafio rápido" (uma pergunta).
 
    Cada passo define:
-     state   → como a tela deve estar (página, modais abertos, antecipada)
+     state   → como a tela deve estar (página, modais abertos, antecipada, repassado)
      target  → elemento destacado pelo spotlight (data-tour)
      mode    → 'next' (padrão) | 'click' (o parceiro clica) | 'quiz'
    Todos os números vêm de TREINO.calc — nunca são digitados à mão.
@@ -14,7 +14,7 @@
   const F = TREINO.fmt;
   const pl = TREINO.pl;
   const b = (c) => `<b class="tm">${F(c)}</b>`;
-  const S = (page, modals, extra) => Object.assign({ page, modals: modals || [], antecipada: false }, extra || {});
+  const S = (page, modals, extra) => Object.assign({ page, modals: modals || [], antecipada: false, repassado: false }, extra || {});
   const PCT = (p) => String(Math.round(p * 10000) / 100).replace('.', ',') + '%';
 
   TREINO.buildModules = function (d) {
@@ -316,6 +316,8 @@
     };
 
     /* 6 ------------------------------------------------------------------ */
+    const cn = d.canc;
+    const cancTxt = pl(cn.n, 'pedido foi cancelado', 'pedidos foram cancelados');
     const mensalidadeStep = {
       target: 'fl-mensalidade',
       title: 'Mensalidade',
@@ -342,18 +344,17 @@
 
     const m6 = {
       n: 6,
-      titulo: 'Fatura: comissão e taxas',
-      desc: 'O que sai do pagamento online, parte 1.',
+      titulo: 'Fatura: comissão',
+      desc: 'A comissão e os pedidos cancelados por tempo.',
       icone: 'faturaSai',
-      intro: 'Agora, as deduções. Todas saem do valor online que passou pela plataforma, ou seja, do pagamento online.',
-      aprender: ['Os débitos remanescentes', 'A comissão', 'A taxa do pagamento online', 'As taxas de transferência e de antecipação'],
+      intro: 'Agora, as deduções. Todas saem do valor online que passou pela plataforma, ou seja, do pagamento online. Começamos pela comissão.',
+      aprender: ['Os débitos remanescentes', 'Como a comissão é calculada', 'Pedidos cancelados por tempo', 'Onde aceitar os pedidos a tempo'],
       steps: [
         Object.assign({ state: S('financeiro', ['fatura']) }, debitosStep),
         {
           target: 'fl-comissao',
           title: 'Comissão',
           body: `É a parte da plataforma pelas vendas feitas pelo aplicativo: ${b(f.comissao)}.<br>Ela vale para <b>todas</b> as vendas: online, dinheiro e maquininha.`,
-          foot: 'Dica: aceite ou recuse cada pedido em até 15 minutos. Depois disso, ele é cancelado automaticamente e entra no cálculo da sua comissão.',
           countUp: true,
         },
         {
@@ -368,18 +369,35 @@
           state: S('financeiro', ['fatura', 'comissao']),
           target: 'cm-vendas',
           title: 'Todas as vendas entram',
-          body: `A conta começa com as <b>${d.n} vendas</b> do mês, de todas as formas de pagamento: ${b(d.totalBruto)}.`,
+          body: `A conta começa com as <b>${d.n} vendas confirmadas</b> do mês, de todas as formas de pagamento: ${b(d.totalBruto)}.<br>É o mesmo Total Bruto do Relatório.`,
           countUp: true,
         },
         {
-          target: 'cm-taxa',
+          target: 'cm-canceladas',
+          title: 'Venda cancelada por tempo',
+          body: `${cancTxt} porque não ${cn.n === 1 ? 'foi aceito nem recusado' : 'foram aceitos nem recusados'} em até <b>15 minutos</b>.<br>Você <b>não recebeu</b> esse valor, mas ele <b>entra na conta da comissão</b>: ${b(cn.bruto)}.`,
+          countUp: true,
+        },
+        {
+          target: 'cm-bruto',
+          title: 'O total bruto da comissão',
+          body: 'Por isso, aqui o total é maior que o Total Bruto do Relatório.',
+          calc: [
+            { l: 'Vendas confirmadas', v: d.totalBruto },
+            { op: '+', l: pl(cn.n, 'Cancelada por tempo', 'Canceladas por tempo'), v: cn.bruto },
+            { op: '=', l: 'Total bruto da comissão', v: f.brutoComissao, total: true },
+          ],
+          wide: true,
+        },
+        {
+          target: 'cm-taxas',
           title: 'A taxa de serviço sai da conta',
-          body: 'A comissão <b>não</b> considera o valor da taxa de serviço, porque ela foi paga pelo cliente e é da plataforma.',
+          body: 'A comissão <b>não</b> considera a taxa de serviço, porque ela foi paga pelo cliente e é da plataforma.',
         },
         {
           target: 'cm-comissao',
           title: `A comissão é ${PCT(T.comissao)}`,
-          body: 'Sobra o valor dos produtos vendidos. A comissão é uma parte desse valor.',
+          body: 'Sobra o valor dos produtos. A comissão é uma parte desse valor.',
           calc: [
             { l: 'Base de cálculo', v: f.baseComissao },
             { op: '×', l: PCT(T.comissao), txt: PCT(T.comissao) },
@@ -387,6 +405,46 @@
           ],
           countUp: true,
         },
+        {
+          state: S('financeiro', [], { sidebar: true }),
+          target: 'nav-pedidos',
+          mode: 'click',
+          pad: 4,
+          title: 'Como evitar o cancelamento por tempo',
+          body: 'Os pedidos novos chegam na tela <b>Pedidos</b>.<br>Clique em <b>Pedidos</b> no menu.',
+          hint: 'Clique em Pedidos',
+        },
+        {
+          state: S('pedidos'),
+          target: 'pd-aguardando',
+          pad: 2,
+          title: 'Pedido aguardando confirmação',
+          body: 'Quando chega um pedido novo, ele aparece aqui.<br>Você tem até <b>15 minutos</b> para aceitar ou recusar.',
+        },
+        {
+          target: 'pd-head',
+          title: 'Fique de olho nesta tela',
+          body: 'Se o pedido não for aceito nem recusado em 15 minutos, ele é cancelado automaticamente.<br>Você perde a venda e ainda paga a comissão sobre ela.',
+          foot: 'Dica: se não puder atender um pedido, recuse dentro do prazo. Assim ele não entra na comissão.',
+        },
+      ],
+      resumo: [
+        'Débitos remanescentes: deduções que ficaram sem saldo online em uma fatura anterior.',
+        `Comissão: ${PCT(T.comissao)} do valor dos produtos de todas as vendas.`,
+        'Pedido não aceito nem recusado em 15 minutos é cancelado e entra na comissão.',
+        'Acompanhe a tela Pedidos e aceite ou recuse cada pedido a tempo.',
+      ],
+    };
+
+    /* 7 ------------------------------------------------------------------ */
+    const m7 = {
+      n: 7,
+      titulo: 'Fatura: taxas',
+      desc: 'Pagamento online, transferência e antecipação.',
+      icone: 'percent',
+      intro: 'Agora, as taxas da fatura.',
+      aprender: ['A taxa do pagamento online', 'A taxa de transferência', 'A taxa de antecipação'],
+      steps: [
         {
           state: S('financeiro', ['fatura']),
           target: 'fl-taxa-online',
@@ -434,57 +492,81 @@
         },
       ],
       resumo: [
-        'Débitos remanescentes: deduções que ficaram sem saldo online em uma fatura anterior.',
-        `Comissão: ${PCT(T.comissao)} do valor dos produtos de todas as vendas.`,
         `Taxa do pagamento online: ${PCT(T.pagamentoOnline)}, só das vendas online.`,
         `Taxa de transferência: ${F(f.transferencia)}, de despesas bancárias.`,
         `Taxa de antecipação: ${PCT(T.antecipacao)} das vendas online, só se você antecipar.`,
       ],
     };
 
-    /* 7 ------------------------------------------------------------------ */
-    const m7 = {
-      n: 7,
+    /* 8 ------------------------------------------------------------------ */
+    // Um pedido pago em dinheiro, para mostrar a taxa de serviço no caixa da loja
+    const exDin = d.orders.find((o) => o.pag === 'dinheiro');
+    const taxasCaixa = di.taxas + mq.taxas;
+    const m8 = {
+      n: 8,
       titulo: 'Fatura: taxa de serviço e mensalidade',
-      desc: 'O que sai do pagamento online, parte 2.',
+      desc: 'De quem é a taxa de serviço e quando há mensalidade.',
       icone: 'moedas',
-      intro: 'Vamos ver as últimas deduções da fatura e fechar a conta delas.',
-      aprender: ['A taxa de serviço', 'A mensalidade', 'O total das deduções', 'Como não absorver esses custos'],
+      intro: 'Vamos entender a taxa de serviço, a mensalidade e fechar a conta das deduções.',
+      aprender: ['De quem é a taxa de serviço', 'Por que ela aparece como dedução', 'A mensalidade', 'Como não absorver os custos'],
       steps: [
         {
           state: S('financeiro', ['fatura']),
+          target: 'fl-taxa-servico',
+          title: 'Taxa de serviço: de quem é?',
+          body: `Em cada pedido, o cliente paga uma taxa de serviço, além dos produtos: ${taxaTxt}.<br>Essa taxa é <b>da plataforma</b>. Não é um custo seu: quem paga é o cliente.`,
+        },
+        {
+          target: 'fl-taxas-online',
+          title: 'No pagamento online: entra e sai',
+          body: `Nas vendas online, o cliente pagou a taxa pelo aplicativo. Ela entrou na fatura aqui (${b(on.taxas)}) e sai na linha Taxa de serviço.<br>Para você, <b>fica zero</b>.`,
+        },
+        {
           target: 'fl-taxa-servico-info',
           mode: 'click',
           pad: 6,
-          title: 'Taxa de serviço',
-          body: 'É a soma das taxas de serviço pagas pelos clientes. Clique no <b>ⓘ</b> para ver a conta.',
+          title: 'Veja a conta da taxa de serviço',
+          body: 'Clique no <b>ⓘ</b> ao lado de <b>Taxa de serviço</b>.',
           hint: 'Clique no ⓘ destacado',
         },
         {
           state: S('financeiro', ['fatura', 'taxaServico']),
-          target: 'ts-rows',
-          title: 'Uma taxa em cada pedido',
-          body: `O cliente paga ${taxaTxt}, em qualquer forma de pagamento. Esse valor é da plataforma.`,
-        },
-        {
           target: 'ts-offline',
-          title: 'No dinheiro e na maquininha',
-          body: 'Nessas vendas, foi <b>você</b> quem recebeu a taxa junto com o pagamento.<br>Por isso, ela é deduzida aqui, no saldo online.',
+          title: 'No dinheiro e na maquininha: a taxa ficou com você',
+          fala: exDin ? [
+            `Em um pedido pago em dinheiro, o cliente te pagou ${F(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.`,
+            'Essa taxa é da plataforma, mas ficou no seu caixa. Por isso, ela é deduzida aqui.',
+          ] : null,
+          body: (exDin ? `No pedido ${exDin.cod}, pago em dinheiro, o cliente te pagou ${b(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.<br>` : '') +
+            'Essa taxa é da plataforma, mas <b>ficou no seu caixa</b>. Por isso, ela é deduzida aqui.',
+          calc: [
+            { l: 'Taxas recebidas em dinheiro', v: di.taxas },
+            { op: '+', l: 'Taxas recebidas na maquininha', v: mq.taxas },
+            { op: '=', l: 'Ficaram no seu caixa', v: taxasCaixa, total: true },
+          ],
+          wide: true,
         },
         {
           target: 'ts-devolvido',
-          title: 'Um valor devolvido',
-          body: `A maquininha tem uma taxa sobre tudo o que passa nela, inclusive sobre a taxa de serviço. Por isso, a plataforma devolve ${PCT(T.devolucaoMaquininha)}, o mesmo percentual do pagamento online.`,
+          title: 'A taxa da maquininha volta para você',
+          body: `A maquininha cobra uma taxa sobre tudo o que passa nela, inclusive sobre a taxa de serviço.<br>Para você não pagar por isso, a plataforma devolve ${PCT(T.devolucaoMaquininha)}.`,
           calc: [
             { l: 'Taxas pagas na maquininha', v: mq.taxas },
             { op: '×', l: PCT(T.devolucaoMaquininha), txt: PCT(T.devolucaoMaquininha) },
-            { op: '=', l: 'Valor devolvido para você', v: f.devolucao, total: true },
+            { op: '=', l: 'Devolvido para você', v: f.devolucao, total: true },
           ],
         },
         {
           target: 'ts-total',
-          title: 'Valor repassado para a plataforma',
-          body: `${b(f.taxaServico)}. Foi pago pelos <b>clientes</b>. Não sai do valor dos seus produtos.`,
+          title: 'Resumindo a taxa de serviço',
+          body: 'Você só repassa para a plataforma a taxa que o cliente pagou. Ela <b>não sai</b> do valor dos seus produtos.',
+          calc: [
+            { l: 'Paga online (entrou na fatura)', v: on.taxas },
+            { op: '+', l: 'Paga no seu caixa', v: taxasCaixa },
+            { op: '−', l: 'Devolvido da maquininha', v: f.devolucao },
+            { op: '=', l: 'Taxa de serviço', v: f.taxaServico, total: true },
+          ],
+          wide: true,
           countUp: true,
         },
         Object.assign({ state: S('financeiro', ['fatura']) }, mensalidadeStep),
@@ -504,20 +586,22 @@
         },
       ],
       resumo: [
-        'Taxa de serviço: paga pelos clientes, vai para a plataforma.',
+        'Taxa de serviço: paga pelo cliente, é da plataforma.',
+        'No online, ela entra e sai da fatura. No dinheiro e na maquininha, ficou no seu caixa e é deduzida.',
         `Mensalidade: ${valorMens}, só quando a loja atinge o faturamento mínimo (${limite} em Total Bruto).`,
         'Você pode ajustar os preços do seu cardápio para não absorver esses custos.',
       ],
     };
 
-    /* 8 ------------------------------------------------------------------ */
-    const m8 = {
-      n: 8,
+    /* 9 ------------------------------------------------------------------ */
+    const pago = { antecipada: true, repassado: true };
+    const m9 = {
+      n: 9,
       titulo: 'Repasse e antecipação',
       icone: 'foguete',
-      desc: 'Por que o repasse parece menor e como receber antes.',
-      intro: 'Vamos fechar a conta e aprender a receber o repasse antes.',
-      aprender: ['Como o repasse é formado', 'Por que ele parece pequeno', 'Como pedir a antecipação'],
+      desc: 'Por que o repasse parece menor, como receber antes e o comprovante.',
+      intro: 'Vamos fechar a conta, aprender a receber o repasse antes e onde pegar o comprovante.',
+      aprender: ['Como o repasse é formado', 'Por que ele parece pequeno', 'Como pedir a antecipação', 'Onde pegar o comprovante'],
       steps: [
         {
           state: S('financeiro', ['fatura']),
@@ -597,7 +681,21 @@
           body: 'A fatura mudou para <b>ANTECIPADA</b>: o repasse foi solicitado.',
         },
         {
-          state: S('financeiro', [], { antecipada: true }),
+          state: S('financeiro', ['fatura'], pago),
+          target: 'fa-repasse-realizado',
+          title: 'Repasse realizado',
+          body: `No dia da transferência (${d.sc.antecipacaoData}), aparece aqui <b>Repasse realizado</b>, no mesmo lugar onde você pediu a antecipação.<br>No repasse mensal, é igual.`,
+        },
+        {
+          target: 'btn-comprovante',
+          mode: 'click',
+          pad: 6,
+          title: 'Pegue o comprovante',
+          body: 'O comprovante da transferência fica aqui.<br>Clique em <b>Ver comprovante</b>.',
+          hint: 'Clique em Ver comprovante',
+        },
+        {
+          state: S('financeiro', [], pago),
           target: 'fin-repasses',
           title: 'O valor foi para Repasses recebidos',
           body: `Quando o repasse cai na sua conta, o valor sai de <b>Repasse disponível</b> e vai para <b>Repasses recebidos</b>: ${b(f.total)}.`,
@@ -626,138 +724,133 @@
         'Repasse = o que passou pela plataforma − as deduções.',
         'Ele parece pequeno porque o valor das vendas em dinheiro e maquininha já estava com você.',
         'Com a antecipação, você recebe o repasse antes.',
-        'Depois que cai, o valor aparece em Repasses recebidos.',
+        'O comprovante fica na fatura, em Repasse realizado.',
         'Antecipar tudo pode deixar a mensalidade sem saldo: ela vira débito remanescente.',
       ],
     };
 
-    /* 8 ------------------------------------------------------------------ */
+    /* 10 ----------------------------------------------------------------- */
     const nums = [mq.n, on.n, d.n].sort((a, c) => a - c);
-    const m9 = {
-      n: 9,
+    const perguntas = [
+      {
+        state: S('relatorio'),
+        target: 'rp-bruto',
+        q: 'Quanto a loja vendeu no mês, somando tudo?',
+        options: [{ t: F(f.total) }, { t: F(d.totalBruto), ok: true }, { t: F(r.recebidoLoja) }],
+        ok: 'O Total Bruto é a soma de todas as vendas.',
+        no: 'Ainda não. Olhe o valor destacado: é o Total Bruto.',
+      },
+      {
+        state: S('relatorio', ['totalBruto']),
+        target: 'tb-list',
+        q: 'Quantas vendas foram pagas na maquininha?',
+        options: nums.map((x) => ({ t: pl(x, 'venda', 'vendas'), ok: x === mq.n })),
+        ok: `${pl(mq.n, 'venda foi paga', 'vendas foram pagas')} com maquininha de cartão.`,
+        no: 'Quase! Procure o bloco "Total pago com maquininha de cartão".',
+      },
+      {
+        state: S('financeiro', ['fatura']),
+        target: 'fl-comissao',
+        q: 'A comissão é calculada sobre quais vendas?',
+        options: [
+          { t: 'Só as vendas online' },
+          { t: 'Todas as vendas, sem a taxa de serviço', ok: true },
+          { t: 'Só as vendas em dinheiro' },
+        ],
+        ok: 'Online, dinheiro e maquininha entram na conta.',
+        no: 'Quase! Lembre: todas as vendas entram na conta da comissão.',
+      },
+      {
+        state: S('financeiro', ['fatura', 'comissao']),
+        target: 'cm-canceladas',
+        q: 'Por que essa venda cancelada entrou na comissão?',
+        options: [
+          { t: 'Porque o cliente desistiu do pedido' },
+          { t: 'Porque foi paga em dinheiro' },
+          { t: 'Porque o pedido não foi aceito nem recusado em 15 minutos', ok: true },
+        ],
+        ok: 'Aceite ou recuse cada pedido a tempo na tela Pedidos.',
+        no: 'Ainda não. Lembre do prazo para aceitar ou recusar um pedido.',
+      },
+      {
+        state: S('financeiro', ['fatura']),
+        target: 'fl-cobrancas',
+        q: 'Quando existe mensalidade?',
+        options: [
+          { t: 'Todo mês, sempre' },
+          { t: `Quando a loja atinge o faturamento mínimo (${limite} em Total Bruto)`, ok: true },
+          { t: 'Só quando há vendas em dinheiro' },
+        ],
+        ok: `A mensalidade é de ${valorMens}, separada da comissão.`,
+        no: 'Ainda não. A mensalidade depende do Total Bruto do mês.',
+      },
+      {
+        target: 'fl-total',
+        q: `O repasse foi de ${F(f.total)}. Por que ele é menor que o total vendido?`,
+        options: [
+          { t: 'Porque a plataforma ficou com quase tudo' },
+          { t: 'Porque o valor das vendas em dinheiro e maquininha já estava com você, e as deduções saem do valor online', ok: true },
+          { t: 'Porque houve um erro na conta' },
+        ],
+        ok: `${F(caixa)} já estavam no seu caixa.`,
+        no: 'Pense: por onde passou o dinheiro das vendas em dinheiro e maquininha?',
+        wide: true,
+      },
+      {
+        target: 'fl-cobrancas',
+        q: 'O que acontece quando o saldo online não cobre as deduções?',
+        options: [
+          { t: 'Você precisa pagar um boleto na hora' },
+          { t: 'A diferença vai para a próxima fatura como Débitos remanescentes', ok: true },
+          { t: 'A diferença é perdoada' },
+        ],
+        ok: 'Ela aparece na próxima fatura, como primeira dedução.',
+        no: 'Ainda não. Lembre do início das deduções na fatura.',
+      },
+      {
+        state: S('financeiro'),
+        target: 'fin-boxes',
+        q: 'Depois de antecipar, quando o dinheiro cai, para onde vai o valor do repasse?',
+        options: [{ t: 'Repasse disponível' }, { t: 'Repasses recebidos', ok: true }, { t: 'Recebido pela Loja' }],
+        ok: 'Ele sai de Repasse disponível e vai para Repasses recebidos.',
+        no: 'Ainda não. Lembre do que aconteceu depois do CONFIRMAR.',
+      },
+      {
+        target: 'fin-resultado',
+        q: 'Qual é o Resultado da loja no mês?',
+        options: [{ t: F(d.totalBruto) }, { t: F(r.resultado), ok: true }, { t: F(f.total) }],
+        ok: 'Recebido pela Loja + repasses = Resultado.',
+        no: 'Ainda não. O Resultado está em destaque na tela.',
+      },
+      {
+        state: S('financeiro', ['fatura'], pago),
+        target: 'fa-repasse-realizado',
+        q: 'Onde você pega o comprovante do repasse?',
+        options: [
+          { t: 'Na tela Relatório' },
+          { t: 'Na fatura, em Ver comprovante', ok: true },
+          { t: 'Em Boletos' },
+        ],
+        ok: 'Fica no mesmo lugar onde você pede a antecipação.',
+        no: 'Ainda não. Lembre de onde apareceu Repasse realizado.',
+      },
+    ];
+    const m10 = {
+      n: 10,
       titulo: 'Exercício final',
       icone: 'trofeu',
       desc: 'Teste o que você aprendeu.',
       intro: 'Hora de praticar. Responda olhando para a tela.',
-      aprender: ['9 perguntas rápidas', 'Sem pressa: você pode tentar de novo'],
-      steps: [
-        {
-          state: S('relatorio'),
-          target: 'rp-bruto',
-          mode: 'quiz',
-          title: 'Pergunta 1',
-          q: 'Quanto a loja vendeu no mês, somando tudo?',
-          options: [{ t: F(f.total) }, { t: F(d.totalBruto), ok: true }, { t: F(r.recebidoLoja) }],
-          ok: 'O Total Bruto é a soma de todas as vendas.',
-          no: 'Ainda não. Olhe o valor destacado: é o Total Bruto.',
-        },
-        {
-          state: S('relatorio', ['totalBruto']),
-          target: 'tb-list',
-          mode: 'quiz',
-          title: 'Pergunta 2',
-          q: 'Quantas vendas foram pagas na maquininha?',
-          options: nums.map((x) => ({ t: pl(x, 'venda', 'vendas'), ok: x === mq.n })),
-          ok: `${pl(mq.n, 'venda foi paga', 'vendas foram pagas')} com maquininha de cartão.`,
-          no: 'Quase! Procure o bloco "Total pago com maquininha de cartão".',
-        },
-        {
-          state: S('financeiro'),
-          target: 'fin-recebido',
-          mode: 'quiz',
-          title: 'Pergunta 3',
-          q: 'O que é o valor "Recebido pela Loja"?',
-          options: [
-            { t: 'O que a plataforma transferiu para você' },
-            { t: 'O dinheiro das vendas em dinheiro e maquininha, que já está no seu caixa', ok: true },
-            { t: 'Uma dedução da plataforma' },
-          ],
-          ok: 'Esse dinheiro entrou direto no seu caixa.',
-          no: 'Ainda não. Pense: quem pagou esse valor e para quem?',
-        },
-        {
-          state: S('financeiro', ['fatura']),
-          target: 'fl-comissao',
-          mode: 'quiz',
-          title: 'Pergunta 4',
-          q: 'A comissão é calculada sobre quais vendas?',
-          options: [
-            { t: 'Só as vendas online' },
-            { t: 'Todas as vendas, sem a taxa de serviço', ok: true },
-            { t: 'Só as vendas em dinheiro' },
-          ],
-          ok: 'Online, dinheiro e maquininha entram na conta.',
-          no: 'Quase! Lembre: todas as vendas entram na conta da comissão.',
-        },
-        {
-          target: 'fl-cobrancas',
-          mode: 'quiz',
-          title: 'Pergunta 5',
-          q: 'Quando existe mensalidade?',
-          options: [
-            { t: 'Todo mês, sempre' },
-            { t: `Quando a loja atinge o faturamento mínimo (${limite} em Total Bruto)`, ok: true },
-            { t: 'Só quando há vendas em dinheiro' },
-          ],
-          ok: `A mensalidade é de ${valorMens}, separada da comissão.`,
-          no: 'Ainda não. A mensalidade depende do Total Bruto do mês.',
-        },
-        {
-          target: 'fl-total',
-          mode: 'quiz',
-          title: 'Pergunta 6',
-          q: `O repasse foi de ${F(f.total)}. Por que ele é menor que o total vendido?`,
-          options: [
-            { t: 'Porque a plataforma ficou com quase tudo' },
-            { t: 'Porque o valor das vendas em dinheiro e maquininha já estava com você, e as deduções saem do valor online', ok: true },
-            { t: 'Porque houve um erro na conta' },
-          ],
-          ok: `${F(caixa)} já estavam no seu caixa.`,
-          no: 'Pense: por onde passou o dinheiro das vendas em dinheiro e maquininha?',
-          wide: true,
-        },
-        {
-          state: S('financeiro'),
-          target: 'fin-boxes',
-          mode: 'quiz',
-          title: 'Pergunta 7',
-          q: 'Depois de antecipar, quando o dinheiro cai, para onde vai o valor do repasse?',
-          options: [{ t: 'Repasse disponível' }, { t: 'Repasses recebidos', ok: true }, { t: 'Recebido pela Loja' }],
-          ok: 'Ele sai de Repasse disponível e vai para Repasses recebidos.',
-          no: 'Ainda não. Lembre do que aconteceu depois do CONFIRMAR.',
-        },
-        {
-          target: 'fin-resultado',
-          mode: 'quiz',
-          title: 'Pergunta 8',
-          q: 'Qual é o Resultado da loja no mês?',
-          options: [{ t: F(d.totalBruto) }, { t: F(r.resultado), ok: true }, { t: F(f.total) }],
-          ok: 'Recebido pela Loja + repasses = Resultado.',
-          no: 'Ainda não. O Resultado está em destaque na tela.',
-        },
-        {
-          state: S('financeiro', ['fatura']),
-          target: 'fl-cobrancas',
-          mode: 'quiz',
-          title: 'Pergunta 9',
-          q: 'O que acontece quando o saldo online não cobre as deduções?',
-          options: [
-            { t: 'Você precisa pagar um boleto na hora' },
-            { t: 'A diferença vai para a próxima fatura como Débitos remanescentes', ok: true },
-            { t: 'A diferença é perdoada' },
-          ],
-          ok: 'Ela aparece na próxima fatura, como primeira dedução.',
-          no: 'Ainda não. Lembre do início das deduções na fatura.',
-        },
-      ],
+      aprender: [`${perguntas.length} perguntas rápidas`, 'Sem pressa: você pode tentar de novo'],
+      steps: perguntas.map((p, i) => Object.assign({ mode: 'quiz', title: `Pergunta ${i + 1}` }, p)),
       resumo: [
         'Você sabe onde ver o total vendido.',
         'Você sabe separar online, dinheiro e maquininha.',
-        'Você sabe ler a fatura e pedir a antecipação.',
+        'Você sabe ler a fatura, pedir a antecipação e pegar o comprovante.',
       ],
     };
 
-    /* Desafio rápido: uma pergunta de revisão no fim dos módulos 1 a 8 */
+    /* Desafio rápido: uma pergunta de revisão no fim dos módulos 1 a 9 */
     const desafio = (state, target, q, options, ok) => ({ state, target, mode: 'quiz', desafio: true, title: 'Desafio rápido', q, options, ok, no: 'Quase! Pense no que você acabou de ver.' });
     const DESAFIOS = {
       1: desafio(S('relatorio'), 'rp-bruto', 'O Total Bruto é…', [{ t: 'Só o que foi pago online' }, { t: 'A soma de todas as vendas do mês', ok: true }, { t: 'O valor que vai cair na sua conta' }], 'O Total Bruto junta todas as formas de pagamento.'),
@@ -765,12 +858,13 @@
       3: desafio(S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E a maquininha cai direto na conta da sua maquininha.'),
       4: desafio(S('financeiro'), 'fin-boxes', 'Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', [{ t: 'Repasses recebidos' }, { t: 'Repasse disponível', ok: true }, { t: 'Recebido pela Loja' }], 'Ele vira "Repasses recebidos" quando é transferido.'),
       5: desafio(S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom do Bigou?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
-      6: desafio(S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
-      7: desafio(S('financeiro', ['fatura']), 'fl-taxa-servico', 'Quem paga a taxa de serviço?', [{ t: 'Você, com o valor dos seus produtos' }, { t: 'O cliente, em cada pedido', ok: true }, { t: 'Ninguém: é só um valor informativo' }], 'Por isso ela não sai do valor dos seus produtos.'),
-      8: desafio(S('financeiro', [], { antecipada: true }), 'fin-disponivel', 'Se você não antecipar, quando a plataforma transfere o repasse?', [{ t: 'Todos os dias' }, { t: 'Só quando você pedir' }, { t: 'No 2º dia útil do mês seguinte às vendas', ok: true }], 'Antecipar é opcional: sem pedir, o repasse chega no mês seguinte.'),
+      6: desafio(S('pedidos'), 'pd-aguardando', 'Um pedido ficou 15 minutos sem ser aceito nem recusado. O que acontece?', [{ t: 'Ele continua esperando até você abrir' }, { t: 'Ele é cancelado e entra na conta da comissão', ok: true }, { t: 'Ele é aceito automaticamente' }], 'Por isso, aceite ou recuse cada pedido a tempo.'),
+      7: desafio(S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
+      8: desafio(S('financeiro', ['fatura', 'taxaServico']), 'ts-offline', 'Por que a taxa de serviço das vendas em dinheiro aparece como dedução?', [{ t: 'Porque é uma multa' }, { t: 'Porque o cliente pagou a taxa para você, e ela é da plataforma', ok: true }, { t: 'Porque a comissão foi cobrada duas vezes' }], 'Você só repassa o que o cliente pagou para a plataforma.'),
+      9: desafio(S('financeiro', [], pago), 'fin-disponivel', 'Se você não antecipar, quando a plataforma transfere o repasse?', [{ t: 'Todos os dias' }, { t: 'Só quando você pedir' }, { t: 'No 2º dia útil do mês seguinte às vendas', ok: true }], 'Antecipar é opcional: sem pedir, o repasse chega no mês seguinte.'),
     };
 
-    const mods = [m1, m2, m3, m4, m5, m6, m7, m8, m9];
+    const mods = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10];
     mods.forEach((m) => { if (DESAFIOS[m.n]) m.steps.push(DESAFIOS[m.n]); });
     mods.forEach((m) => m.steps.forEach((s) => { s.kicker = s.desafio ? 'Desafio rápido' : m.titulo; }));
     return mods;
@@ -786,9 +880,12 @@
       ['Dinheiro', `${F(p.dinheiro.liquido)}, direto no seu caixa.`],
       ['Maquininha', `${F(p.maquininha.liquido)}, direto na conta da sua maquininha.`],
       ['Comissão', `${F(f.comissao)}: ${pc(T.comissao)} do valor dos produtos de todas as vendas.`],
+      ['Pedidos cancelados por tempo', 'Pedido não aceito nem recusado em 15 minutos é cancelado e entra na comissão.'],
+      ['Taxa de serviço', 'Paga pelo cliente e da plataforma: você só repassa o que o cliente pagou.'],
       ['Mensalidade', f.mensalidade ? `${F(f.mensalidade)}, porque a loja atingiu o faturamento mínimo (${F(MS.acimaDeBruto * 100)} em Total Bruto).` : `Não houve: a loja não atingiu o faturamento mínimo (${F(MS.acimaDeBruto * 100)} em Total Bruto).`],
       ['Débitos remanescentes', 'Deduções sem saldo online vão para a próxima fatura, sem boleto.'],
       ['Antecipação', `${F(f.total)} de repasse, que vai para Repasses recebidos quando cai.`],
+      ['Comprovante', 'Fica na fatura, em Repasse realizado → Ver comprovante.'],
       ['Resultado final', `${F(r.resultado)} = Recebido pela Loja + repasses.`],
     ];
   };

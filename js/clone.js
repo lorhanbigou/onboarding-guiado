@@ -1,5 +1,5 @@
 /* =========================================================================
-   TELA CLONADA — Relatório + Financeiro + modais
+   TELA CLONADA — Pedidos + Relatório + Financeiro + modais
    A tela é totalmente clicável. O estado (página, modais abertos e se a
    fatura já foi antecipada) pode ser definido pelo tour ou pelo parceiro.
    ========================================================================= */
@@ -35,6 +35,9 @@
     ban: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
     tag: '<path d="M3 12.5V4h8.5L21 13.5 12.5 22z" fill="currentColor" stroke="none"/><circle cx="7.5" cy="8" r="1.6" fill="#fff" stroke="none"/>',
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    android: '<path d="M6 10.5a6 6 0 0 1 12 0v.5H6z" fill="currentColor" stroke="none"/><rect x="6" y="12" width="12" height="7.5" rx="1.5" fill="currentColor" stroke="none"/><path d="M8.5 5.5L7 3.5M15.5 5.5L17 3.5"/>',
+    refresh: '<path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M19 4.5V9h-4.5"/>',
+    pessoa: '<circle cx="12" cy="9.5" r="4" fill="currentColor" stroke="none"/><path d="M4.5 21c.8-4 3.8-6.5 7.5-6.5s6.7 2.5 7.5 6.5z" fill="currentColor" stroke="none"/>',
   };
   const ic = (n, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
   TREINO.ic = ic;
@@ -59,7 +62,8 @@
   const mobile = () => window.innerWidth < 900;
 
   Clone.reset = function () {
-    this.st = { page: 'relatorio', modals: [], antecipada: false, sidebar: window.innerWidth >= 1200 };
+    // repassado: a transferência da fatura antecipada já caiu (mostra o comprovante)
+    this.st = { page: 'relatorio', modals: [], antecipada: false, repassado: false, sidebar: window.innerWidth >= 1200 };
     this.prev = [];
   };
 
@@ -111,7 +115,7 @@
         <div class="bx-body">
           ${sidebar(s)}
           <div class="bx-scrim" data-act="toggle-sidebar"></div>
-          <main class="bx-main">${s.page === 'financeiro' ? financeiro(d) : relatorio(d)}</main>
+          <main class="bx-main pg-${s.page}">${s.page === 'financeiro' ? financeiro(d) : s.page === 'pedidos' ? pedidos(d) : relatorio(d)}</main>
         </div>
         ${s.modals.map((m, i) => modal(m, d, i, !this.prev.includes(m))).join('')}
       </div>`;
@@ -137,10 +141,10 @@
 
   function sidebar(s) {
     const items = [
-      ['home', 'Início'], ['cart', 'Pedidos'], ['report', 'Relatório', 'relatorio'], ['mega', 'Marketing', null, 3],
+      ['home', 'Início'], ['cart', 'Pedidos', 'pedidos'], ['report', 'Relatório', 'relatorio'], ['mega', 'Marketing', null, 2],
       ['piggy', 'Financeiro', 'financeiro'], ['star', 'Avaliações'], ['clock', 'Horário de Funcionamento'],
       ['pin', 'Taxa de Entrega'], ['dollar', 'Formas de Pagamento'], ['book', 'Cardápio'], ['bell', 'Notificações'],
-      ['gear', 'Configurações'], ['help', 'Perguntas Frequentes'], ['share', 'Compartilhar'],
+      ['gear', 'Configurações'], ['help', 'Perguntas Frequentes'], ['share', 'Compartilhar'], ['android', 'Baixar App Android'],
     ];
     return `
     <aside class="bx-side" aria-label="Menu">
@@ -160,6 +164,39 @@
           .join('')}
       </nav>
     </aside>`;
+  }
+
+  /* ------------------------------ PEDIDOS ------------------------------ */
+  function pedidos(d) {
+    const lista = d.sc.pedidosHoje || [];
+    const aguardando = lista.filter((p) => p.status === 'confirmacao').length;
+    const ST = { confirmacao: 'AGUARDANDO CONFIRMAÇÃO', entrega: 'AGUARDANDO ENTREGA' };
+    const MSG = {
+      confirmacao: 'No sistema, você abre o pedido para aceitar ou recusar. No treinamento, os pedidos não podem ser abertos.',
+      entrega: 'No treinamento, os pedidos não podem ser abertos.',
+    };
+    return `
+    <div class="pd">
+      <div class="pd-head" data-tour="pd-head">
+        <h2>${aguardando ? pl(aguardando, 'pedido aguardando confirmação', 'pedidos aguardando confirmação') : 'Nenhum pedido aguardando confirmação'}</h2>
+        <button type="button" class="pd-refresh" data-act="toast" data-msg="A lista de pedidos se atualiza sozinha." aria-label="Atualizar">${ic('refresh')}</button>
+      </div>
+      <div class="pd-list" data-tour="pd-list">
+        ${lista.map((p) => `
+        <button type="button" class="pd-row ${p.status === 'confirmacao' ? 'pd-wait' : ''}" data-act="toast" data-msg="${MSG[p.status]}" data-tour="pd-${p.status === 'confirmacao' ? 'aguardando' : p.cod}">
+          <span class="pd-av">${ic('pessoa')}</span>
+          <span class="pd-info"><b>${p.cliente}</b><span>Loja de Treinamento</span><small>Rio Pomba - MG</small><em>Bigou Delivery</em></span>
+          <span class="pd-right">
+            <span class="pd-boxes">
+              <span class="pd-box"><b>PEDIDO: ${p.cod}</b><span>${F(Math.round(p.valor * 100))}</span></span>
+              <span class="pd-box"><b>HORA</b><span>${p.hora}</span></span>
+            </span>
+            <span class="pd-st ${p.status}" data-tour="pd-st-${p.status}">${ST[p.status]}</span>
+          </span>
+          ${ic('chevr', 'pd-chev')}
+        </button>`).join('')}
+      </div>
+    </div>`;
   }
 
   /* ------------------------------ RELATÓRIO ------------------------------ */
@@ -332,22 +369,36 @@
         ${
           f.status === 'VIGENTE'
             ? `<div class="fa-ant"><button type="button" class="fa-ant-link" data-act="open:antecipacao" data-tour="btn-antecipar">Solicitar antecipação ${ic('arrow')}</button></div>`
-            : ''
+            : Clone.st.repassado
+              ? `<div class="fa-pago" data-tour="fa-repasse-realizado"><b>Repasse realizado</b><span>A transferência foi realizada em ${d.sc.antecipacaoData}</span>
+                  <button type="button" class="fa-pago-link" data-act="toast" data-msg="No sistema, aqui abre o comprovante da transferência. No treinamento, não há comprovante real." data-tour="btn-comprovante">Ver comprovante ${ic('arrow')}</button></div>`
+              : ''
         }
       </div>`;
     },
 
     comissao(d) {
-      const f = d.f, a = d.all;
+      const f = d.f, a = d.all, c = d.canc;
+      const vendas = (n) => `<b>${n} ${n === 1 ? 'venda' : 'vendas'}</b>`;
+      const cTxt = `${c.n === 1 ? 'cancelada' : 'canceladas'} por tempo`;
       return `${head('<h3>Cálculo da Comissão</h3>')}
       <div class="md-content">
         <div class="cm-sec">Cálculo do total bruto</div>
-        <div class="cm-grey" data-tour="cm-vendas">
-          <div><span><b>${pl(a.n, 'venda', 'vendas')}</b> confirmadas</span><small>(incluindo: ${a.nCupons} cupons + 0 subsídios + ${a.nTaxas} taxas de serviço)</small></div>
-          <b class="pos">${M(a.bruto, '+ ')}</b>
+        <div class="cm-grey col" data-tour="cm-vendas-box">
+          <div class="cm-gl" data-tour="cm-vendas">
+            <div><span>${vendas(a.n)} confirmadas</span><small>(incluindo: ${a.nCupons} cupons + 0 subsídios + ${a.nTaxas} taxas de serviço)</small></div>
+            <b class="pos">${M(a.bruto, '+ ')}</b>
+          </div>
+          ${c.n ? `<div class="cm-gl" data-tour="cm-canceladas">
+            <div><span>${vendas(c.n)} ${cTxt}</span><small>(incluindo: ${c.nCupons} cupons + 0 subsídios + ${c.nTaxas} taxas de serviço)</small></div>
+            <b class="pos">${M(c.bruto, '+ ')}</b>
+          </div>` : ''}
         </div>
-        <div class="cm-card" data-tour="cm-bruto"><div><b>Total bruto de ${pl(a.n, 'venda', 'vendas')}</b><small>(${a.n} confirmadas)</small></div><b>${F(a.bruto)}</b></div>
-        <div class="cm-card" data-tour="cm-taxa"><b>Taxa de serviço de ${a.nTaxas} vendas confirmadas</b><b>- ${F(a.taxas)}</b></div>
+        <div class="cm-card" data-tour="cm-bruto"><div><b>Total bruto de ${pl(f.nComissao, 'venda', 'vendas')}</b><small>(${a.n} confirmadas${c.n ? ` + ${c.n} ${cTxt}` : ''})</small></div><b>${F(f.brutoComissao)}</b></div>
+        <div class="cm-group" data-tour="cm-taxas">
+          <div class="cm-card" data-tour="cm-taxa"><b>Taxa de serviço de ${a.nTaxas} vendas confirmadas</b><b>- ${F(a.taxas)}</b></div>
+          ${c.n ? `<div class="cm-card" data-tour="cm-taxa-canc"><b>Taxa de serviço de ${pl(c.nTaxas, 'venda', 'vendas')} ${cTxt}</b><b>- ${F(c.taxas)}</b></div>` : ''}
+        </div>
         <div class="cm-card" data-tour="cm-base"><b>Base de cálculo da comissão</b><b>${M(f.baseComissao)}</b></div>
         <div class="cm-card" data-tour="cm-comissao"><b>Comissão</b><b>${M(f.comissao)}</b></div>
       </div>`;

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "treinamento", "runtimeExecutable": "node", "runtimeArgs": ["/Users/financeirobigou/Documents/projetos-bigou/onboarding-guiado/serve.js"], "port": 5178 }
+    { "name": "treinamento", "runtimeExecutable": "node", "runtimeArgs": ["/Users/financeirobigou/Documents/projetos-bigou/onboarding-guiado/serve.js"], "port": 5178, "autoPort": true }
   ]
 }

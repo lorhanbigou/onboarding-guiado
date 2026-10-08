@@ -1,11 +1,11 @@
 /* =========================================================================
    APLICAÇÃO — telas do treinamento, navegação e progresso
    Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/modulo/N/inicio (recomeçar)
-          #/explorar  #/revisao  #/certificado  #/comecar
+          #/explorar  #/dicas  #/revisao  #/certificado  #/comecar
    ========================================================================= */
 (function () {
   const F = TREINO.fmt;
-  const KEY = 'bigou-treino-financeiro-v3';
+  const KEY = 'bigou-treino-financeiro-v4';
   const app = document.getElementById('app');
   const A = { d: null, mods: [], saved: {}, destino: null, ativo: null };
   const An = TREINO.Analytics;
@@ -20,6 +20,32 @@
   const status = (n) => prog()[n] || 'novo';
   function setStatus(n, s) { const p = prog(); if (p[n] === 'done' && s === 'prog') return; p[n] = s; save(); }
   const doneCount = () => A.mods.filter((m) => status(m.n) === 'done').length;
+  // Passos vistos e resultado da 1ª tentativa de cada pergunta (para o certificado)
+  function vistos() { return (A.saved.visto = A.saved.visto || {}); }
+  function respostas() { return (A.saved.quiz = A.saved.quiz || {}); }
+
+  /* ------------------------------ Certificado: requisitos ------------------------------ */
+  // Libera com 100% do conteúdo visto e mais de 70% de acertos na 1ª tentativa
+  const ACERTO_MIN = 0.7;
+  function certStatus() {
+    let passosTot = 0, passosVistos = 0;
+    const perguntas = [];
+    A.mods.forEach((m) => {
+      const v = vistos()[m.n] || [];
+      m.steps.forEach((st, j) => {
+        passosTot++;
+        if (v.includes(j + 1)) passosVistos++;
+        if (st.mode === 'quiz') perguntas.push({ m: m.n, k: `${m.n}:${j + 1}` });
+      });
+    });
+    const R = respostas();
+    const acertos = perguntas.filter((q) => R[q.k] === true).length;
+    const conteudo = doneCount() === A.mods.length ? passosVistos / passosTot : Math.min(passosVistos / passosTot, 0.99);
+    const taxa = perguntas.length ? acertos / perguntas.length : 1;
+    const refazer = [...new Set(perguntas.filter((q) => R[q.k] !== true).map((q) => q.m))];
+    return { conteudo, acertos, perguntas: perguntas.length, taxa, refazer, conteudoOk: conteudo >= 1, acertoOk: taxa > ACERTO_MIN, ok: conteudo >= 1 && taxa > ACERTO_MIN };
+  }
+  const pct = (x) => Math.floor(x * 100) + '%';
   const firstPending = () => (A.mods.find((m) => status(m.n) !== 'done') || A.mods[0]).n;
 
   /* ------------------------------ Tempo estimado ------------------------------ */
@@ -81,6 +107,9 @@
     certificado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 8.5h10M7 11.5h6"/><circle cx="16.5" cy="17" r="2.5"/><path d="M15.2 19.2L14.5 22l2-1 2 1-.7-2.8"/></svg>',
     impressora: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17.5H4.5v-7a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v7H17"/><rect x="7" y="14" width="10" height="7"/></svg>',
     grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+    percent: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18.5 5.5l-13 13"/></svg>',
+    lampada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
+    cadeado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
   };
 
   /* ------------------------------ Narração ------------------------------ */
@@ -122,12 +151,6 @@
   /* ------------------------------ Cadastro da loja ------------------------------ */
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const semAcento = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  function lojaLinha() {
-    const p = An && An.participante();
-    if (!p) return '';
-    return `<p class="h-loja">Loja: <b>${esc(p.loja)}</b> · ${esc(p.cidade)} <a href="#/cadastro" class="h-loja-trocar">trocar</a></p>`;
-  }
 
   function viewCadastro() {
     const p = (An && An.participante()) || {};
@@ -216,8 +239,6 @@
     if (!p.loja) iLoja.focus({ preventScroll: true });
   }
 
-  const storePill = () => `<div class="t-store"><span class="t-dot"></span>Loja de Treinamento - Rio Pomba - MG</div>`;
-
   function progressBlock() {
     const done = doneCount(), total = A.mods.length, p = Math.round((done / total) * 100);
     return `
@@ -235,31 +256,35 @@
   const FASES = [
     { t: 'Vendas e pagamentos', s: 'Relatório e as 3 formas de pagamento', m: [1, 2, 3] },
     { t: 'Tela Financeiro', s: 'Resultado e repasses', m: [4] },
-    { t: 'A fatura', s: 'O que entrou e o que saiu', m: [5, 6, 7] },
-    { t: 'Repasse e prática', s: 'Antecipação e exercício final', m: [8, 9] },
+    { t: 'A fatura', s: 'O que entrou e o que saiu', m: [5, 6, 7, 8] },
+    { t: 'Repasse e prática', s: 'Antecipação e exercício final', m: [9, 10] },
   ];
   const AVISO = 'Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.';
 
   function viewHome() {
-    const started = doneCount() > 0 || A.mods.some((m) => status(m.n) === 'prog');
-    const tudo = doneCount() === A.mods.length;
+    const done = doneCount(), total = A.mods.length;
+    const started = done > 0 || A.mods.some((m) => status(m.n) === 'prog');
+    const tudo = done === total;
     const ret = retomada();
     const loja = lojaNome();
-    const total = minutos(A.mods.reduce((t, m) => t + segundosModulo(m), 0));
-    const cta = tudo
-      ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}Ver meu certificado</a>`
-      : ret
-        ? `<a class="t-btn primary lg" href="#/modulo/${ret.n}">${ICON.play}Continuar · Módulo ${ret.n}, passo ${ret.passo}</a>`
-        : `<a class="t-btn primary lg" href="#/comecar">${ICON.play}${started ? 'Continuar treinamento' : 'Começar treinamento'}</a>`;
-    const mod = (n) => {
-      const m = A.mods.find((x) => x.n === n), st = status(n);
-      return `
-        <li><a class="h-mod s-${st}" href="#/modulo/${n}">
-          <span class="h-mod-n">${st === 'done' ? ICON.check : ICON[m.icone] || n}</span>
-          <span class="h-mod-t"><b><em>${n}.</em> ${m.titulo}</b><small>${m.desc}</small></span>
-          <span class="h-mod-st">${statusLabel[st]} · ${tempoMod(m)}</span>
-        </a></li>`;
-    };
+    const cert = certStatus();
+    const tituloMod = (n) => A.mods.find((m) => m.n === n).titulo;
+
+    // Uma ação principal, sempre a próxima coisa a fazer
+    let main;
+    if (tudo && cert.ok) main = { href: '#/certificado', ic: ICON.certificado, t: 'Ver meu certificado', s: 'Você concluiu o treinamento!' };
+    else if (tudo) main = { href: '#/certificado', ic: ICON.redo, t: 'Liberar meu certificado', s: `Você acertou ${pct(cert.taxa)}. Precisa de mais de 70%.` };
+    else if (ret) main = { href: `#/modulo/${ret.n}`, ic: ICON.play, t: 'Continuar', s: `Módulo ${ret.n} · ${tituloMod(ret.n)}` };
+    else if (started) main = { href: '#/comecar', ic: ICON.play, t: 'Continuar', s: `Módulo ${firstPending()} · ${tituloMod(firstPending())}` };
+    else main = { href: '#/comecar', ic: ICON.play, t: 'Começar o treinamento', s: 'Passo a passo, no seu ritmo.' };
+
+    const tile = (href, ic, t, sub, extra) => `
+      <a class="hm-tile ${extra || ''}" href="${href}">
+        <span class="hm-tile-ic">${ic}</span>
+        <b>${t}</b>
+        <small>${sub}</small>
+      </a>`;
+
     app.innerHTML = `
       <div class="tv tv-home">
         <header class="t-top">
@@ -269,77 +294,52 @@
           </div>
           ${vozToggle('bar')}
         </header>
-        <main class="h-main">
-          <section class="h-hero">
-            <div class="h-hero-card">
-              <div class="h-hero-content">
-                <div class="h-hero-top">
-                  ${storePill()}
-                  <ul class="h-meta">
-                    <li>${ICON.clock}≈ ${total} min no total</li>
-                    <li>${ICON.grid}${A.mods.length} módulos</li>
-                  </ul>
-                </div>
-                ${loja ? `<p class="h-ola">${tudo ? 'Parabéns' : started ? 'Que bom te ver de novo' : 'Olá'}, <b>${esc(loja)}</b>!</p>` : ''}
-                <h1>${tudo ? 'Você concluiu o treinamento!' : 'Vamos entender suas vendas?'}</h1>
-                <p class="t-lead">${tudo ? 'Seu certificado está pronto. Você pode rever qualquer módulo quando quiser.' : 'Em poucos minutos, você vai entender como os valores da sua loja aparecem no sistema.'}</p>
-                <div class="h-cta">
-                  ${cta}
-                  <a class="t-btn ghost lg" href="#/modulos">${ICON.grid}${tudo ? 'Rever módulos' : 'Ver módulos'}</a>
-                </div>
-                ${lojaLinha()}
-                <div class="h-hero-voz">
-                  ${vozToggle('home')}
-                </div>
-              </div>
-              <div class="h-hero-side">
-                ${started ? progressBlock() : `
-                  <div class="h-quick-card">
-                    <div class="h-quick-ic">${ICON.grid}</div>
-                    <div>
-                      <b>100% Interativo</b>
-                      <p>Aprenda com telas reais e explicações simples passo a passo.</p>
-                    </div>
-                  </div>
-                `}
-                <aside class="h-aviso" role="note">
-                  <span class="h-aviso-ic">${ICON.info}</span>
-                  <div><b>Treinamento ilustrativo</b><p>${AVISO}</p></div>
-                </aside>
-              </div>
-            </div>
-          </section>
+        <main class="hm">
+          <h1 class="hm-ola">${tudo ? 'Parabéns' : 'Olá'}${loja ? `, <span>${esc(loja)}</span>` : ''}!</h1>
+          <p class="hm-sub">${tudo ? 'Você pode rever qualquer módulo quando quiser.' : 'Aprenda como funcionam suas vendas, taxas e repasses.'}</p>
 
-          <section class="h-sec h-trilha" aria-labelledby="h-trilha-t">
-            <div class="h-sec-head">
-              <h2 id="h-trilha-t">Sua trilha de aprendizado</h2>
-              <p class="h-sub">Do mais simples ao mais completo. Você pode começar por qualquer módulo.</p>
-            </div>
-            <div class="h-fases">
-              ${FASES.map((fz, i) => `
-                <div class="h-fase">
-                  <div class="h-fase-h">${fz.m.every((n) => status(n) === 'done') ? `<span class="h-fase-n medal" title="Fase concluída">${ICON.medalha}</span>` : `<span class="h-fase-n">${i + 1}</span>`}<div><b>${fz.t}</b><small>${fz.s}</small></div></div>
-                  <ol class="h-mods">${fz.m.map(mod).join('')}</ol>
-                </div>`).join('')}
-            </div>
-          </section>
+          <a class="hm-main" href="${main.href}">
+            <span class="hm-main-ic">${main.ic}</span>
+            <span class="hm-main-t"><b>${main.t}</b><small>${main.s}</small></span>
+            ${ICON.arrowR}
+            ${started && !tudo ? `<span class="hm-main-bar" aria-label="${done} de ${total} módulos concluídos"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
+          </a>
 
-          <section class="h-sec h-dicas" aria-labelledby="h-dicas-t">
-            <div class="h-sec-head">
-              <h2 id="h-dicas-t">Dicas importantes</h2>
-              <p class="h-sub">Toque em um assunto para expandir as orientações.</p>
-            </div>
-            <div class="h-dicas-list">
-              ${(TREINO.dicas || []).map((dc, i) => `
-                <details class="h-dica">
-                  <summary><span class="h-dica-n">${i + 1}</span><b>${dc.t}</b><span class="h-dica-chev" aria-hidden="true"></span></summary>
-                  <div class="h-dica-c">
-                    ${dc.p.map((x) => `<p>${x}</p>`).join('')}
-                    ${dc.passos ? `<div class="h-dica-passos"><small>Como solicitar</small><ol>${dc.passos.map((x) => `<li>${x}</li>`).join('')}</ol></div>` : ''}
-                  </div>
-                </details>`).join('')}
-            </div>
-          </section>
+          <nav class="hm-grid" aria-label="Atalhos">
+            ${tile('#/modulos', ICON.grid, 'Módulos', started ? `${done} de ${total} concluídos` : `${total} módulos curtos`)}
+            ${tile('#/dicas', ICON.lampada, 'Dicas', 'Orientações rápidas')}
+            ${tile('#/explorar', ICON.cursor, 'Explorar a tela', 'Clique à vontade')}
+            ${tile('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, 'Certificado', cert.ok ? 'Pronto para baixar' : 'Veja o que falta', cert.ok ? 'ok' : 'lock')}
+          </nav>
+
+          <p class="hm-aviso">${ICON.info}<span><b>Treinamento ilustrativo.</b> ${AVISO}</span></p>
+          ${loja ? `<p class="hm-loja">Não é a sua loja? <a href="#/cadastro">Trocar loja</a></p>` : ''}
+        </main>
+      </div>`;
+  }
+
+  /* ------------------------------ Dicas ------------------------------ */
+  function viewDicas() {
+    app.innerHTML = `
+      <div class="tv tv-dicas">
+        <header class="t-top">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="dc">
+          <h1>Dicas importantes</h1>
+          <p class="hm-sub">Toque em um assunto para ver as orientações.</p>
+          <div class="h-dicas-list">
+            ${(TREINO.dicas || []).map((dc, i) => `
+              <details class="h-dica">
+                <summary><span class="h-dica-n">${i + 1}</span><b>${dc.t}</b><span class="h-dica-chev" aria-hidden="true"></span></summary>
+                <div class="h-dica-c">
+                  ${dc.p.map((x) => `<p>${x}</p>`).join('')}
+                  ${dc.passos ? `<div class="h-dica-passos"><small>Como solicitar</small><ol>${dc.passos.map((x) => `<li>${x}</li>`).join('')}</ol></div>` : ''}
+                </div>
+              </details>`).join('')}
+          </div>
         </main>
       </div>`;
   }
@@ -357,8 +357,7 @@
         <main class="t-mods">
           <div class="t-mods-head">
             <div>
-              ${storePill()}
-              <h1>Treinamento</h1>
+              <h1>Módulos</h1>
               <p class="t-lead sm">Escolha qualquer módulo. Você pode repetir quando quiser.</p>
             </div>
             ${progressBlock()}
@@ -386,7 +385,7 @@
               <span><b>Explorar a tela livremente</b><small>Clique onde quiser na tela, sem explicações.</small></span>
               ${ICON.arrowR}
             </a>
-            ${allDone ? `<a class="t-extra-card destaque" href="#/certificado">
+            ${allDone && certStatus().ok ? `<a class="t-extra-card destaque" href="#/certificado">
               <span class="t-extra-ic">${ICON.certificado}</span>
               <span><b>Seu certificado</b><small>Baixe ou imprima o certificado de conclusão.</small></span>
               ${ICON.arrowR}
@@ -431,7 +430,7 @@
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
     setStatus(n, 'prog');
     refreshDots(n);
-    A.ativo = { n, inicio: Date.now(), passo: 0, tPasso: Date.now(), concluido: false };
+    A.ativo = { n, inicio: Date.now(), passo: 0, tPasso: Date.now(), concluido: false, respondidas: new Set() };
     ev('modulo_inicio', { modulo: n });
 
     // Cada passo herda o estado do anterior quando não define um
@@ -498,7 +497,12 @@
         const line = document.getElementById('pb-line');
         if (line) line.style.width = (i / (all.length - 1)) * 100 + '%';
         const at = A.ativo, agora = Date.now();
-        if (item.kind === 'step') { passos()[n] = i; save(); }
+        if (item.kind === 'step') {
+          passos()[n] = i;
+          const v = (vistos()[n] = vistos()[n] || []);
+          if (!v.includes(i)) v.push(i);
+          save();
+        }
         if (at && item.kind === 'step') {
           // "anterior"/"ms": quanto tempo a pessoa ficou no passo de antes
           ev('passo', { modulo: n, passo: i, alvo: item.target, detalhe: { titulo: item.title, anterior: at.passo, ms: agora - at.tPasso } });
@@ -524,7 +528,12 @@
         }
       },
       onSkip: (i, item) => ev('passo_pulado', { modulo: n, passo: i, alvo: item.target, detalhe: { titulo: item.title } }),
-      onQuiz: (i, item, r) => ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao } }),
+      onQuiz: (i, item, r) => {
+        // Vale a 1ª tentativa de cada pergunta nesta passada pelo módulo (refazer o módulo pode melhorar a nota)
+        const at = A.ativo;
+        if (at && !at.respondidas.has(i)) { at.respondidas.add(i); respostas()[`${n}:${i}`] = !!r.acertou; save(); }
+        ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao } });
+      },
       onAction: (a) => {
         if (a === 'continue') location.hash = next ? '#/modulo/' + next.n : '#/revisao';
         else if (a === 'repeat') route();
@@ -563,13 +572,12 @@
         <main class="t-review">
           <div class="t-review-badge">${ICON.check}</div>
           <h1>O que você aprendeu?</h1>
-          ${storePill()}
           <ul class="t-review-list">
             ${items.map(([t, s], i) => `<li style="animation-delay:${i * 70}ms"><span class="t-rv-ic">${ICON.check}</span><span><b>${t}</b><small>${s}</small></span></li>`).join('')}
           </ul>
           <p class="t-review-msg">Agora você já consegue entender de onde vêm os valores apresentados.</p>
           <div class="t-cta center">
-            ${doneCount() === A.mods.length ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}Ver meu certificado</a>` : ''}
+            ${doneCount() === A.mods.length ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}${certStatus().ok ? 'Ver meu certificado' : 'Ver o que falta para o certificado'}</a>` : ''}
             <a class="t-btn ${doneCount() === A.mods.length ? 'ghost' : 'primary'} lg" href="#/modulos">Voltar aos módulos</a>
             <a class="t-btn ghost lg" href="#/explorar">${ICON.cursor}Explorar a tela</a>
           </div>
@@ -610,18 +618,46 @@
   }
 
   /* ------------------------------ Certificado ------------------------------ */
+  function viewRequisitos(c) {
+    const item = (ok, t, valor, sub) => `
+      <li class="${ok ? 'ok' : ''}">
+        <span class="cr-ic">${ok ? ICON.check : ICON.x}</span>
+        <span class="cr-t"><b>${t}</b><small>${sub}</small></span>
+        <b class="cr-v">${valor}</b>
+      </li>`;
+    const proximo = A.mods.find((m) => status(m.n) !== 'done');
+    app.innerHTML = `
+      <div class="tv tv-req">
+        <header class="t-top">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="cr">
+          <div class="cr-badge">${ICON.cadeado}</div>
+          <h1>Seu certificado</h1>
+          <p class="hm-sub">Para liberar, você precisa cumprir as duas condições:</p>
+          <ul class="cr-list">
+            ${item(c.conteudoOk, 'Ver todo o conteúdo', pct(c.conteudo), `${doneCount()} de ${A.mods.length} módulos concluídos`)}
+            ${item(c.acertoOk, 'Acertar mais de 70% das perguntas', pct(c.taxa), `${c.acertos} de ${c.perguntas} certas na primeira tentativa`)}
+          </ul>
+          ${proximo
+            ? `<a class="t-btn primary lg cr-cta" href="#/modulo/${proximo.n}">${ICON.play}Continuar · Módulo ${proximo.n}</a>`
+            : `<p class="cr-dica">Refaça os módulos abaixo para melhorar seus acertos. Vale a primeira resposta de cada pergunta.</p>
+               <ul class="cr-refazer">${c.refazer.map((n) => { const m = A.mods.find((x) => x.n === n); return `<li><a href="#/modulo/${n}/inicio"><span class="cr-n">${ICON[m.icone] || n}</span><span><small>Módulo ${n}</small><b>${m.titulo}</b></span>${ICON.redo}</a></li>`; }).join('')}</ul>`}
+        </main>
+      </div>`;
+  }
+
   function viewCertificado() {
-    if (doneCount() < A.mods.length) {
-      TREINO.toast('O certificado é liberado ao concluir todos os módulos.');
-      location.replace('#/modulos');
-      return;
-    }
+    const c = certStatus();
+    if (!c.ok) { viewRequisitos(c); return; }
     const p = (An && An.participante()) || {};
     const k = 'bigou-treino-concluido-em';
     let quando = null;
     try { quando = localStorage.getItem(k); if (!quando) { quando = new Date().toISOString(); localStorage.setItem(k, quando); } } catch (e) { quando = new Date().toISOString(); }
     const data = new Date(quando).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-    ev('certificado');
+    ev('certificado', { detalhe: { acertos: Math.round(c.taxa * 100) } });
     app.innerHTML = `
       <div class="tv tv-cert">
         <header class="t-top no-print">
@@ -641,7 +677,7 @@
               <div class="cert-rodape">
                 <div><small>Concluído em</small><b>${data}</b></div>
                 <div class="cert-selo">${ICON.medalha}</div>
-                <div><small>Carga</small><b>≈ ${minutos(A.mods.reduce((t, m) => t + segundosModulo(m), 0))} min</b></div>
+                <div><small>Acertos</small><b>${pct(c.taxa)}</b></div>
               </div>
               <p class="cert-nota">Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.</p>
             </div>
@@ -688,6 +724,7 @@
     }
     else if (view === 'certificado') viewCertificado();
     else if (view === 'explorar') viewExplore();
+    else if (view === 'dicas') viewDicas();
     else if (view === 'revisao') viewReview();
     else if (view === 'comecar') { location.replace('#/modulo/' + firstPending()); return; }
     else viewHome();

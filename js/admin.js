@@ -91,10 +91,10 @@
     const hora = () => { const r = rnd(); return r < 0.4 ? 9 + Math.floor(rnd() * 3) : r < 0.8 ? 14 + Math.floor(rnd() * 4) : 7 + Math.floor(rnd() * 15); };
     const quando = (base) => { const d = new Date(base); d.setHours(hora(), Math.floor(rnd() * 60), Math.floor(rnd() * 60)); return d.getTime(); };
 
-    const continua = [0.94, 0.93, 0.92, 0.82, 0.89, 0.74, 0.86, 0.85, 0.92];   // chance de concluir cada módulo
-    const gargaloPasso = { 4: 1, 6: 9, 8: 9 };                                 // passos onde mais gente para
-    const acertoFinal = [0.86, 0.78, 0.74, 0.71, 0.62, 0.44, 0.69, 0.8, 0.52];
-    const acertoDesafio = [0.9, 0.82, 0.88, 0.7, 0.76, 0.58, 0.8, 0.66];
+    const continua = [0.94, 0.93, 0.92, 0.82, 0.89, 0.78, 0.9, 0.8, 0.85, 0.92];   // chance de concluir cada módulo
+    const gargaloPasso = { 4: 1, 6: 9, 8: 4, 9: 11 };                               // passos onde mais gente para
+    const acertoFinal = [0.86, 0.78, 0.71, 0.66, 0.62, 0.44, 0.52, 0.69, 0.8, 0.83];
+    const acertoDesafio = [0.9, 0.82, 0.88, 0.7, 0.76, 0.64, 0.6, 0.58, 0.66];
 
     const P = [], E = [];
     const ev = (pid, tipo, t, x) => E.push(Object.assign({ participante_id: pid, tipo, modulo: null, passo: null, alvo: null, detalhe: null, criado_em: new Date(t).toISOString() }, x || {}));
@@ -247,7 +247,7 @@
       const ini = L.filter((s) => s.ini.has(m)).length, fim = L.filter((s) => s.fim.has(m)).length;
       funil.push({ m, ini, fim, taxa: ini ? fim / ini : null });
     }
-    // Etapas: cadastro → concluiu M1 → … → concluiu M9
+    // Etapas: cadastro → concluiu M1 → … → concluiu o último módulo
     const etapas = [{ nome: 'Cadastraram', curto: 'Cadastro', v: L.length }].concat(funil.map((x) => ({ nome: `Concluíram o Módulo ${x.m}`, curto: `M${x.m}`, m: x.m, v: x.fim })));
     let maiorQueda = null;
     for (let i = 1; i < etapas.length; i++) {
@@ -494,7 +494,7 @@
     root.innerHTML = `
       <main class="lg">
         <form class="lg-card" id="lg-form">
-          <img src="assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
           <h1>Painel do Treinamento</h1>
           <p>Acesso restrito à equipe Bigou.</p>
           <label><span>Senha</span><input id="lg-senha" type="password" autocomplete="current-password" required></label>
@@ -516,7 +516,7 @@
 
   function telaCarregando() {
     root.innerHTML = `
-      <div class="hd"><div class="hd-l"><img src="assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
+      <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
       <main class="pg" aria-busy="true">
         <div class="sk sk-hero"></div>
         <div class="kpis">${'<div class="sk sk-kpi"></div>'.repeat(8)}</div>
@@ -567,7 +567,7 @@
 
     root.innerHTML = `
       <header class="hd">
-        <div class="hd-l"><img src="assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small><span class="hd-sub">Treinamento Financeiro</span>${demo ? '<span class="demo">Dados de demonstração</span>' : ''}</small></div></div>
+        <div class="hd-l"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small><span class="hd-sub">Treinamento Financeiro</span>${demo ? '<span class="demo">Dados de demonstração</span>' : ''}</small></div></div>
         <div class="hd-r">
           <button class="btn ic" data-a="atualizar" title="Atualizar">${IC.atualizar}<span>Atualizar</span></button>
           ${demo ? '' : `<button class="btn ic" data-a="sair" title="Sair">${IC.sair}<span>Sair</span></button>`}

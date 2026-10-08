@@ -50,6 +50,8 @@ TREINO.config = {
      - Taxa de transferência: R$ 2,50 por repasse (despesas bancárias)
      - Mensalidade: R$ 59,90 quando o Total Bruto do mês passa de R$ 500,00
        (deduzida na virada do último dia do mês)
+     - Pedido não aceito nem recusado em 15 minutos: cancelado por tempo.
+       Não gera valor para a loja, mas entra na base da comissão.
      - Débitos remanescentes: quando o saldo online não cobre as deduções, a
        diferença vai para a próxima fatura (não gera boleto) */
   taxas: {
@@ -106,5 +108,16 @@ TREINO.dados = {
     O(9200111, 15, 'maquininha', 14.5, 0, 25, '18:47'),
     O(9200112, 16, 'online', 35.6, 0, 26, '19:15'),
     O(9200113, 17, 'online', 47.0, 0, 27, '20:02'),
+  ],
+  // Pedido que não foi aceito nem recusado em 15 minutos: cancelado por tempo.
+  // A loja não recebe o valor, mas ele entra no cálculo da comissão.
+  canceladosPorTempo: [
+    O(9200114, 18, 'online', 36.0, 0, 21, '20:47'),
+  ],
+  // Tela Pedidos (pedidos de hoje; não entram na fatura, que vai até ontem)
+  pedidosHoje: [
+    { cod: 9200117, cliente: CLIENTES[3], valor: 38.49, hora: '19:52', status: 'confirmacao' },
+    { cod: 9200116, cliente: CLIENTES[1], valor: 46.49, hora: '19:31', status: 'entrega' },
+    { cod: 9200115, cliente: CLIENTES[19], valor: 35.49, hora: '19:08', status: 'entrega' },
   ],
 };

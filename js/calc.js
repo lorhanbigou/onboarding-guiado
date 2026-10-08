@@ -38,10 +38,14 @@
     const antecipada = !!(opts && opts.antecipada);
 
     // Pedido: Valor Bruto = produtos + taxa de serviço; Valor Líquido = Bruto − cupom do Bigou
-    const orders = sc.orders.map((o) => {
+    const norm = (o) => {
       const itens = C(o.itens), taxa = C(o.taxa), cupom = C(o.cupom);
       return Object.assign({}, o, { itens, taxa, cupom, bruto: itens + taxa, liquido: itens + taxa - cupom });
-    });
+    };
+    const orders = sc.orders.map(norm);
+    // Cancelados por tempo: fora das vendas (a loja não recebe), mas dentro da comissão
+    const cancelados = (sc.canceladosPorTempo || []).map(norm);
+    const canc = soma(cancelados);
 
     const pay = {
       online: soma(orders.filter((o) => o.pag === 'online')),
@@ -68,7 +72,9 @@
 
     // Cobranças
     f.brutoTotal = all.bruto;
-    f.baseComissao = all.bruto - all.taxas;
+    f.brutoComissao = all.bruto + canc.bruto;
+    f.nComissao = all.n + canc.n;
+    f.baseComissao = all.bruto - all.taxas + canc.bruto - canc.taxas;
     f.comissao = pct(f.baseComissao, T.comissao);
 
     f.brutoOnline = on.bruto;
@@ -111,7 +117,7 @@
     }
 
     return {
-      sc, orders, pay, all, f, r,
+      sc, orders, pay, all, f, r, cancelados, canc,
       n: all.n,
       totalBruto: all.bruto,
       totalLiquido: all.liquido,

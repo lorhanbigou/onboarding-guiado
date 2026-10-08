@@ -15,9 +15,14 @@ function getNetworkIp() {
   return '127.0.0.1';
 }
 
+// Painel admin: abre em /admin ou na raiz de qualquer endereço que comece com "admin."
+// (ex.: admin.localhost:5178 ou o subdomínio admin do site publicado)
 const server = http.createServer((req, res) => {
   const p = path.normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[\/\\])+/, '');
-  const file = path.join(root, p === '/' ? 'index.html' : p);
+  const ehAdmin = /^admin\./i.test(req.headers.host || '');
+  if (p === '/admin') { res.writeHead(301, { Location: '/admin/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '') }); return res.end(); }
+  const pagina = p === '/' ? (ehAdmin ? 'admin/index.html' : 'index.html') : p.endsWith('/') ? p + 'index.html' : p;
+  const file = path.join(root, pagina);
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('Não encontrado'); }
@@ -40,6 +45,7 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Treinamento rodando em:`);
   console.log(`  - Local:   http://localhost:${port}`);
   console.log(`  - Rede:    http://${netIp}:${port}`);
+  console.log(`Painel admin: http://admin.localhost:${port}  (ou http://localhost:${port}/admin)`);
 });
 
 
