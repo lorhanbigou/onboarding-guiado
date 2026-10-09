@@ -42,7 +42,8 @@ Só aparecem telas que existem no sistema: Pedidos, Relatório, Total Bruto, Fin
 - **Tempo estimado:** cada módulo mostra quanto leva (≈ 12 s por passo de leitura e 25 s por passo de clique ou pergunta), na lista de módulos.
 - **Ícones, medalhas e celebração:** cada módulo tem um ícone. Ao fechar uma fase, aparece a medalha "Fase concluída". Confete curto ao concluir um módulo, maior ao terminar tudo (desligado para quem prefere menos movimento).
 - **Nome da loja:** saudação na tela inicial e "Mandou bem, {loja}!" no fim de cada módulo.
-- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta e quais módulos refazer; refazer um módulo substitui as respostas dele. Mostra o nome da loja, a cidade, a data e os módulos concluídos (a nota não aparece no certificado). "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
+- **Avaliação** (`#/avaliacao`): ao concluir os 10 módulos, antes do certificado, a loja responde "Esse treinamento te ajudou?" (Sim/Não), dá de 1 a 5 estrelas e pode deixar um comentário. Aparece uma vez e vai para o painel (seção Uso).
+- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta e quais módulos refazer; refazer um módulo substitui as respostas dele. Mostra o nome da loja, a cidade, a data e "Bigou Delivery" (a nota não aparece no certificado). "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
 
 ## Cadastro da loja e painel admin (analytics)
 
@@ -60,7 +61,7 @@ O painel responde a três perguntas: o treinamento está funcionando, o que os p
 - **Assuntos:** acerto de primeira por assunto (campo `tema` das perguntas em `js/modules.js`), do pior para o melhor. Ao abrir, mostra as perguntas e a resposta errada mais escolhida;
 - **Lojas para acompanhar:** situação de cada loja com o motivo. "Precisam de contato" junta as paradas (começaram e estão há 7 dias sem atividade), as que não começaram (cadastradas há 3 dias ou mais) e as que concluíram sem certificado (até 70% de acerto). Tem busca, ordenação e CSV com situação, motivo, acerto e assunto com mais erro;
 - **Cidades:** lojas, conclusão, certificadas e contatos pendentes por cidade;
-- **Uso:** tempo para concluir, % no celular, % que usou a narração e o gráfico diário de acessos e conclusões.
+- **Uso:** tempo para concluir, % no celular, % que usou a narração, a avaliação do treinamento (ajudou, estrelas e comentários) e o gráfico diário de acessos e conclusões.
 
 O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou todo o período). Os limites de 7 e 3 dias ficam em `PARADA_DIAS` e `SEM_INICIO_DIAS` (`js/admin.js`).
 
@@ -77,6 +78,8 @@ Enquanto o Supabase não estiver configurado, o painel abre com **dados de demon
 Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
 
 ## Assistente de dúvidas (chat)
+
+**Desligado no momento** (`TREINO.config.recursos.assistente = false` em `js/data.js`). Com ele desligado, o botão não aparece e o painel esconde a seção "Dúvidas do chat". Para religar, troque para `true`.
 
 Botão flutuante no canto da tela, liberado quando a loja **conclui os 10 módulos** (antes disso aparece com cadeado e mostra quantos módulos faltam). Não aparece dentro dos módulos guiados nem no cadastro.
 
@@ -140,8 +143,9 @@ Estas taxas ficam em `TREINO.config` (`js/data.js`):
 - **Taxa de serviço (fatura)** = todas as taxas de serviço − 4% das taxas pagas na maquininha. Online, a taxa entra e sai da fatura; em dinheiro e maquininha, ela ficou no caixa da loja e é deduzida aqui.
 - **Taxa de transferência** = R$2,50 (despesas bancárias do envio).
 - **Mensalidade** = R$59,90, cobrada apenas quando a loja atinge o faturamento mínimo (R$500,00 em Total Bruto). É deduzida na virada do último dia do mês.
-- **Débitos remanescentes** = deduções que o saldo online não cobriu. Passam para a próxima fatura como primeira dedução (`debitoRemanescente` em `TREINO.dados`). Pode aparecer um boleto, mas ele só deve ser considerado se a loja ficar três meses seguidos sem saldo online suficiente.
+- **Débitos remanescentes** = deduções que o saldo online não cobriu. Passam para a próxima fatura como primeira dedução (`debitoRemanescente` em `TREINO.dados`). Também pode aparecer um boleto em Financeiro → Boletos: ele deve ser pago caso a loja fique sem saldo online suficiente no pagamento online.
 - **Repasse mensal** = sem antecipação, o saldo positivo é enviado no 2º dia útil do mês seguinte às vendas. Não há repasse automático durante o mês, nem em fins de semana e feriados (nacionais ou de Rio Pomba - MG).
+- **Feriados** ficam em `TREINO.feriados` (`js/data.js`): os fixos valem todo ano (MM-DD) e os móveis são informados por ano (AAAA-MM-DD; em 2026, Paixão de Cristo e Corpus Christi). A data da antecipação (próximo dia útil) e do repasse mensal (2º dia útil do mês seguinte) já pulam fins de semana e feriados. Para 2027, inclua os feriados móveis do ano.
 - **Repasse** = líquido online + reembolso dos incentivos + taxas de serviço online − todas as deduções. Se der negativo, a diferença vai para a próxima fatura como débito remanescente.
 - **Resultado** = Recebido pela Loja (dinheiro + maquininha) + Repasses recebidos + Repasse disponível.
 - **Antecipação**: todas as faturas começam VIGENTE (valor em "Repasse disponível"). Ao CONFIRMAR, a fatura vira ANTECIPADA e o valor vai para "Repasses recebidos". O Resultado não muda.

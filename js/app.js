@@ -1,7 +1,7 @@
 /* =========================================================================
    APLICAÇÃO — telas do treinamento, navegação e progresso
    Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/modulo/N/inicio (recomeçar)
-          #/explorar  #/dicas  #/revisao  #/certificado  #/comecar
+          #/explorar  #/dicas  #/revisao  #/avaliacao  #/certificado  #/comecar
    ========================================================================= */
 (function () {
   const F = TREINO.fmt;
@@ -472,7 +472,7 @@
           ${fechaFase ? `<div class="tr-fase">${ICON.medalha}<span><small>Fase concluída</small><b>${fase.t}</b></span></div>` : ''}
           <ul class="tr-sum-list">${m.resumo.map((x) => `<li>${ICON.check}<span>${x}</span></li>`).join('')}</ul>
           <div class="tr-actions col">
-            <button type="button" class="tr-next" data-tr="cb:continue">${next ? 'Continuar' : 'Ver o que aprendi'}</button>
+            <button type="button" class="tr-next" data-tr="cb:continue">${next ? 'Continuar' : 'Concluir'}</button>
             <div class="tr-row">
               <button type="button" class="tr-back" data-tr="back">Voltar</button>
               <button type="button" class="tr-back" data-tr="cb:repeat">Repetir módulo</button>
@@ -535,7 +535,7 @@
         ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao } });
       },
       onAction: (a) => {
-        if (a === 'continue') location.hash = next ? '#/modulo/' + next.n : '#/revisao';
+        if (a === 'continue') location.hash = next ? '#/modulo/' + next.n : doneCount() === A.mods.length && !A.saved.avaliacao ? '#/avaliacao' : '#/revisao';
         else if (a === 'repeat') route();
         else if (a === 'modules') location.hash = '#/modulos';
       },
@@ -560,6 +560,11 @@
 
   /* ------------------------------ Revisão ------------------------------ */
   function viewReview() {
+    if (doneCount() < A.mods.length) {
+      TREINO.toast('“O que você aprendeu” é liberado ao concluir todos os módulos.');
+      location.replace('#/modulos');
+      return;
+    }
     const items = TREINO.buildReview(A.d);
     ev('revisao');
     app.innerHTML = `
@@ -649,7 +654,87 @@
       </div>`;
   }
 
+  /* ------------------------------ Avaliação (antes do certificado) ------------------------------ */
+  const ROTULO_ESTRELAS = ['Ruim', 'Regular', 'Bom', 'Muito bom', 'Excelente'];
+  const limparTexto = (t) => (TREINO.Bot ? TREINO.Bot.limpar(t) : String(t || '').slice(0, 300));
+
+  function viewAvaliacao() {
+    if (doneCount() < A.mods.length || A.saved.avaliacao) { location.replace('#/certificado'); return; }
+    const estrela = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/></svg>';
+    app.innerHTML = `
+      <div class="tv tv-req">
+        <header class="t-top">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="av">
+          <div class="av-badge">${estrela}</div>
+          <h1>Antes do seu certificado</h1>
+          <p class="hm-sub">Sua opinião ajuda a melhorar o treinamento.</p>
+          <form id="av-form" novalidate>
+            <fieldset class="av-q">
+              <legend>Esse treinamento te ajudou?</legend>
+              <div class="av-sn">
+                <button type="button" class="av-op" data-sn="sim" aria-pressed="false">Sim</button>
+                <button type="button" class="av-op" data-sn="nao" aria-pressed="false">Não</button>
+              </div>
+            </fieldset>
+            <fieldset class="av-q">
+              <legend id="av-est-t">Como você avalia o treinamento?</legend>
+              <div class="av-est" role="radiogroup" aria-labelledby="av-est-t">
+                ${ROTULO_ESTRELAS.map((r, i) => `<button type="button" role="radio" aria-checked="false" aria-label="${i + 1} ${i ? 'estrelas' : 'estrela'}: ${r}" data-e="${i + 1}" tabindex="${i ? -1 : 0}">${estrela}</button>`).join('')}
+              </div>
+              <p class="av-est-l" id="av-est-l" aria-live="polite">Toque nas estrelas</p>
+            </fieldset>
+            <label class="av-q av-com">
+              <span>Quer contar algo? <small>(opcional)</small></span>
+              <textarea id="av-com" maxlength="300" rows="3" placeholder="O que foi útil, o que ficou confuso…"></textarea>
+            </label>
+            <button type="submit" class="t-btn primary lg av-ok" disabled>Enviar avaliação</button>
+          </form>
+        </main>
+      </div>`;
+
+    const form = document.getElementById('av-form');
+    const ok = form.querySelector('.av-ok');
+    const estrelas = [...form.querySelectorAll('[data-e]')];
+    let sn = null, nota = 0;
+    const pronto = () => { ok.disabled = !(sn && nota); };
+    form.querySelectorAll('[data-sn]').forEach((b) => b.addEventListener('click', () => {
+      sn = b.dataset.sn;
+      form.querySelectorAll('[data-sn]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      pronto();
+    }));
+    function marcar(v, foco) {
+      nota = v;
+      estrelas.forEach((b, i) => { b.setAttribute('aria-checked', i + 1 === v); b.classList.toggle('on', i < v); b.tabIndex = i + 1 === v ? 0 : -1; });
+      document.getElementById('av-est-l').textContent = ROTULO_ESTRELAS[v - 1];
+      if (foco) estrelas[v - 1].focus();
+      pronto();
+    }
+    estrelas.forEach((b) => {
+      b.addEventListener('click', () => marcar(+b.dataset.e));
+      b.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); marcar(Math.min(5, (nota || 0) + 1), true); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); marcar(Math.max(1, (nota || 2) - 1), true); }
+      });
+    });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!sn || !nota) return;
+      const comentario = limparTexto(document.getElementById('av-com').value.trim()) || null;
+      A.saved.avaliacao = { ajudou: sn === 'sim', estrelas: nota, em: new Date().toISOString() };
+      save();
+      ev('avaliacao', { detalhe: { ajudou: sn === 'sim', estrelas: nota, comentario } });
+      TREINO.toast('Obrigado pela avaliação!');
+      location.hash = '#/certificado';
+    });
+  }
+
   function viewCertificado() {
+    // Quem concluiu avalia o treinamento antes de ver o certificado
+    if (doneCount() === A.mods.length && !A.saved.avaliacao) { location.replace('#/avaliacao'); return; }
     const c = certStatus();
     if (!c.ok) { viewRequisitos(c); return; }
     const p = (An && An.participante()) || {};
@@ -677,7 +762,7 @@
               <div class="cert-rodape">
                 <div><small>Concluído em</small><b>${data}</b></div>
                 <div class="cert-selo">${ICON.medalha}</div>
-                <div><small>Módulos</small><b>${A.mods.length} de ${A.mods.length} concluídos</b></div>
+                <div class="cert-emissor"><b>Bigou Delivery</b></div>
               </div>
               <p class="cert-nota">Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.</p>
             </div>
@@ -709,7 +794,7 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const view = parts[0];
     // Pede o cadastro da loja antes de começar
-    if (['comecar', 'modulo', 'modulos', 'certificado'].includes(view) && An && !An.participante()) {
+    if (['comecar', 'modulo', 'modulos', 'certificado', 'avaliacao'].includes(view) && An && !An.participante()) {
       A.destino = location.hash;
       location.replace('#/cadastro');
       return;
@@ -725,12 +810,14 @@
     else if (view === 'certificado') viewCertificado();
     else if (view === 'explorar') viewExplore();
     else if (view === 'dicas') viewDicas();
+    else if (view === 'avaliacao') viewAvaliacao();
     else if (view === 'revisao') viewReview();
     else if (view === 'comecar') { location.replace('#/modulo/' + firstPending()); return; }
     else viewHome();
     if (view !== 'modulo') window.scrollTo(0, 0);
     // Assistente de dúvidas: liberado ao concluir os módulos; some dentro dos módulos guiados e do cadastro
-    if (TREINO.Bot) TREINO.Bot.atualizar({ liberado: doneCount() === A.mods.length, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome(), restantes: A.mods.length - doneCount() });
+    const recursos = TREINO.config.recursos || {};
+    if (recursos.assistente && TREINO.Bot) TREINO.Bot.atualizar({ liberado: doneCount() === A.mods.length, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome(), restantes: A.mods.length - doneCount() });
   }
 
   /* ------------------------------ Início ------------------------------ */

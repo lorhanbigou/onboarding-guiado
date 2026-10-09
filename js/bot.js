@@ -103,7 +103,7 @@
       id: 'repasse_menor', tema: 'Pagamento online', rever: 9, exemplo: 'Por que o repasse veio menor?',
       k3: ['repasse menor', 'repasse pequeno', 'veio pouco', 'veio menos', 'veio menor', 'recebi pouco', 'recebi menos', 'valor baixo', 'nao bate', 'menor que vendi', 'menos que vendi', 'sumiu dinheiro', 'ficou com dinheiro'],
       k2: ['menor', 'menos', 'pouco', 'pequeno', 'baixo', 'errado', 'errada', 'erro'], k1: ['repasse', 'vendi', 'valor'],
-      r: () => 'Porque as deduções de <b>todas</b> as vendas (comissão e taxas) saem <b>só</b> do valor que passou pela plataforma, o pagamento online.<br>O dinheiro das vendas em dinheiro e maquininha <b>já estava com você</b>. Somando esse valor com o repasse, você chega ao <b>Resultado</b> do mês.',
+      r: () => 'Porque as deduções de <b>todas</b> as vendas (comissão e taxas) saem <b>só</b> do valor que passou pela plataforma, o pagamento online.<br>O valor das vendas em dinheiro e maquininha <b>já estava com você</b>. Somando esse valor com o repasse, você chega ao <b>Resultado</b> do mês.',
       seguintes: ['resultado', 'comissao', 'cardapio'],
     },
     {
@@ -139,7 +139,7 @@
     {
       id: 'boleto', tema: 'Mensalidade e débitos', rever: 4, exemplo: 'Vou ter que pagar boleto?',
       k3: ['boleto', 'boletos', 'pagar boleto'], k1: ['pagar'],
-      r: () => 'Pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. Mas o valor normalmente passa para o mês seguinte como <b>Débitos remanescentes</b>.<br>O boleto só deve ser considerado se a loja ficar <b>três meses seguidos</b> sem saldo suficiente no pagamento online. Os boletos ficam em Financeiro → <b>Boletos</b>.',
+      r: () => 'Pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. O valor também passa para o mês seguinte como <b>Débitos remanescentes</b>.<br>O boleto deve ser pago caso a loja fique sem saldo online suficiente no pagamento online. Para pagar, acesse Financeiro → <b>Boletos</b>.',
       seguintes: ['debitos', 'pagamento_online'],
     },
     {
@@ -175,7 +175,7 @@
     {
       id: 'cupons', tema: 'Cupons', rever: 5, exemplo: 'Quem paga o cupom de desconto?',
       k3: ['cupom', 'cupons', 'cupon', 'reembolso', 'incentivo', 'incentivos', 'desconto'], k1: ['cliente', 'paga'],
-      r: () => 'Quando o cupom é do Bigou, quem paga o desconto é a <b>plataforma</b>, não você. Aceite o pedido normalmente: o valor volta na sua fatura como <b>Reembolso dos incentivos</b>.',
+      r: () => 'Quando o Bigou oferece o cupom para o cliente, quem paga o desconto é a <b>plataforma</b>, não você. Você só paga se você criar o cupom. Aceite o pedido normalmente: o valor volta na sua fatura como <b>Reembolso dos incentivos</b>.',
       seguintes: ['pagamento_online', 'fatura'],
     },
     {

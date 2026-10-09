@@ -68,7 +68,7 @@
         {
           target: 'tb-total',
           title: 'Todas são vendas',
-          body: '<b>Todas são vendas. Mas o valor chegou por caminhos diferentes.</b>',
+          body: 'Mas o valor chegou por caminhos diferentes.',
           calc: [
             { l: 'Pagamento online', v: on.bruto },
             { op: '+', l: 'Dinheiro', v: di.bruto },
@@ -190,7 +190,7 @@
           state: S('financeiro'),
           target: 'fin-resultado',
           title: 'Resultado',
-          body: `É tudo o que ficou com você no mês: ${b(r.resultado)}.<br>Ele é a soma dos 3 quadros ao lado.`,
+          body: `É tudo o que ficou com você no mês depois das deduções: ${b(r.resultado)}.<br>Ele é a soma dos 3 quadros ao lado.`,
           countUp: true,
         },
         {
@@ -212,7 +212,7 @@
         {
           target: 'fin-disponivel',
           title: 'Repasse disponível',
-          body: `É o valor disponível para repasse: ${b(r.repasseDisponivel)}. Se você não antecipar, a plataforma transfere no 2º dia útil do mês seguinte às suas vendas.<br>Esse é o valor das vendas online, após a dedução da comissão e das taxas.`,
+          body: `É o valor disponível para repasse: ${b(r.repasseDisponivel)}. Se você não antecipar, a plataforma transfere no 2º dia útil do mês seguinte às suas vendas (${TREINO.periodo.repasseMensal}).<br>Esse é o valor das vendas online, após a dedução da comissão e das taxas.`,
           countUp: true,
         },
         {
@@ -233,7 +233,7 @@
         {
           target: 'fin-botoes',
           title: 'Boletos e Repasses',
-          body: 'Em <b>Repasses</b>, ficam as transferências feitas para você.<br>Em <b>Boletos</b>, pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. Não se preocupe: o valor passa para o mês seguinte como Débitos remanescentes.',
+          body: 'Em <b>Repasses</b>, ficam as transferências feitas para você.<br>Em <b>Boletos</b>, pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. Nesse caso, basta acessá-lo e pagar.',
         },
         {
           target: 'fin-faturas',
@@ -287,7 +287,7 @@
         {
           target: 'fl-incentivos',
           title: 'Reembolso dos incentivos',
-          body: `Em algumas vendas, foram utilizados cupons do Bigou. Quando o Bigou oferece o cupom, quem paga esse desconto é a plataforma, não você.<br>Aqui ela devolve esse valor: ${b(f.reembolso)}.`,
+          body: `Em algumas vendas, foram utilizados cupons do Bigou. Quando o Bigou oferece o cupom para o cliente, quem paga esse desconto é a plataforma, não você. Você só paga se você criar o cupom.<br>Aqui ela devolve esse valor: ${b(f.reembolso)}.`,
           foot: 'Dica: quando chegar um pedido com cupom de desconto, aceite normalmente.',
         },
         {
@@ -328,7 +328,7 @@
       target: 'fl-debitos',
       title: 'Débitos remanescentes',
       body: `Na virada do mês passado, a mensalidade foi deduzida, mas não havia saldo online suficiente para receber, porque todos os valores online foram antecipados durante o mês.<br>O valor veio para esta fatura: ${b(f.debitoRemanescente)}.`,
-      foot: 'Dica: o boleto só deve ser considerado se a loja ficar três meses seguidos sem saldo suficiente no pagamento online.',
+      foot: 'Dica: o boleto deve ser pago caso a loja fique sem saldo online suficiente no pagamento online.',
       countUp: true,
     };
     const cobrancasCalc = [
@@ -477,7 +477,7 @@
           state: S('financeiro', ['fatura']),
           target: 'fl-transferencia',
           title: 'Taxa de transferência',
-          body: `${b(f.transferencia)}. É referente a despesas bancárias.<br>Cobrada uma única vez no dia do repasse mensal ou toda vez que você antecipar.`,
+          body: `${b(f.transferencia)}. É referente a despesas bancárias.<br>É cobrada uma única vez no dia do repasse mensal ou toda vez que você antecipar.`,
         },
         {
           target: 'fl-antecipacao',
@@ -519,7 +519,7 @@
         {
           target: 'fl-taxas-online',
           title: 'No pagamento online: entra e sai',
-          body: `Nas vendas online, o cliente pagou a taxa pelo aplicativo. Ela entrou na fatura aqui (${b(on.taxas)}) e sai na linha Taxa de serviço.<br>Para você, <b>fica zero</b>.`,
+          body: `Nas vendas online, o cliente pagou a taxa pelo aplicativo. Ela entrou na fatura aqui (${b(on.taxas)}) e sai na linha Taxa de serviço.<br>Você não paga comissão nem taxas sobre o valor da taxa de serviço.`,
         },
         {
           target: 'fl-taxa-servico-info',
@@ -534,10 +534,10 @@
           target: 'ts-offline',
           title: 'No dinheiro e na maquininha: a taxa ficou com você',
           fala: exDin ? [
-            `Em um pedido pago em dinheiro, o cliente te pagou ${F(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.`,
+            `Em um pedido pago em dinheiro, o cliente pagou ${F(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.`,
             'Essa taxa é da plataforma, mas ficou no seu caixa. Por isso, ela é deduzida aqui.',
           ] : null,
-          body: (exDin ? `No pedido ${exDin.cod}, pago em dinheiro, o cliente te pagou ${b(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.<br>` : '') +
+          body: (exDin ? `No pedido ${exDin.cod}, pago em dinheiro, o cliente pagou ${b(exDin.bruto)}: ${F(exDin.itens)} dos produtos e ${F(exDin.taxa)} de taxa de serviço.<br>` : '') +
             'Essa taxa é da plataforma, mas <b>ficou no seu caixa</b>. Por isso, ela é deduzida aqui.',
           calc: [
             { l: 'Taxas recebidas em dinheiro', v: di.taxas },
@@ -821,8 +821,8 @@
         target: 'fl-cobrancas',
         q: 'O que acontece quando o saldo online não cobre as deduções?',
         options: [
-          { t: 'Você precisa pagar um boleto na hora' },
-          { t: 'A diferença vai para a próxima fatura como Débitos remanescentes', ok: true },
+          { t: 'Sou obrigado a pagar o boleto na hora' },
+          { t: 'A diferença vai para a próxima fatura como Débitos remanescentes, mas posso pagar o boleto também', ok: true },
           { t: 'A diferença é perdoada' },
         ],
         ok: 'Ela aparece na próxima fatura, como primeira dedução.',
@@ -879,9 +879,9 @@
     const DESAFIOS = {
       1: desafio(TEMA.bruto, S('relatorio'), 'rp-bruto', 'O Total Bruto é…', [{ t: 'Só o que foi pago online' }, { t: 'A soma de todas as vendas do mês', ok: true }, { t: 'O valor que vai cair na sua conta' }], 'O Total Bruto junta todas as formas de pagamento.'),
       2: desafio(TEMA.online, S('relatorio', ['totalBruto']), 'tb-online', 'Do valor do pagamento online, a plataforma deduz…', [{ t: 'Só a comissão das vendas online' }, { t: 'Nada: o valor vai inteiro para você' }, { t: 'A comissão e as taxas de todas as vendas', ok: true }], 'Por isso o repasse é menor que o valor online.'),
-      3: desafio(TEMA.bruto, S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E a maquininha cai direto na conta da sua maquininha.'),
+      3: desafio(TEMA.bruto, S('relatorio', ['totalBruto']), 'tb-list', 'Uma venda paga em dinheiro…', [{ t: 'Entra direto no seu caixa', ok: true }, { t: 'Passa pela plataforma antes de chegar a você' }, { t: 'Não conta como venda' }], 'E o valor da maquininha cai direto na conta dela.'),
       4: desafio(TEMA.financeiro, S('financeiro'), 'fin-boxes', 'Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', [{ t: 'Repasses recebidos' }, { t: 'Repasse disponível', ok: true }, { t: 'Recebido pela Loja' }], 'Ele vira "Repasses recebidos" quando é transferido.'),
-      5: desafio(TEMA.cupons, S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom do Bigou?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
+      5: desafio(TEMA.cupons, S('financeiro', ['fatura']), 'fl-incentivos', 'Quem paga o desconto de um cupom oferecido pelo Bigou para os clientes?', [{ t: 'Você' }, { t: 'O cliente, depois' }, { t: 'A plataforma, que devolve o valor na fatura', ok: true }], 'Ele volta como "Reembolso dos incentivos".'),
       6: desafio(TEMA.cancelados, S('pedidos'), 'pd-aguardando', 'Um pedido ficou 15 minutos sem ser aceito nem recusado. O que acontece?', [{ t: 'Ele continua esperando até você abrir' }, { t: 'Ele é cancelado e entra na conta da comissão', ok: true }, { t: 'Ele é aceito automaticamente' }], 'Por isso, aceite ou recuse cada pedido a tempo.'),
       7: desafio(TEMA.taxas, S('financeiro', ['fatura']), 'fl-antecipacao', 'Quando a taxa de antecipação é aplicada?', [{ t: 'Só se você pedir a antecipação', ok: true }, { t: 'Em todas as faturas' }, { t: 'Só nas vendas em dinheiro' }], 'Sem antecipar, ela não é cobrada.'),
       8: desafio(TEMA.servico, S('financeiro', ['fatura', 'taxaServico']), 'ts-offline', 'Por que a taxa de serviço das vendas em dinheiro aparece como dedução?', [{ t: 'Porque é uma multa' }, { t: 'Porque o cliente pagou a taxa para você, e ela é da plataforma', ok: true }, { t: 'Porque a comissão foi cobrada duas vezes' }], 'Você só repassa o que o cliente pagou para a plataforma.'),
@@ -907,7 +907,7 @@
       ['Pedidos cancelados por tempo', 'Pedido não aceito nem recusado em 15 minutos é cancelado e entra na comissão.'],
       ['Taxa de serviço', 'Paga pelo cliente e da plataforma: você só repassa o que o cliente pagou.'],
       ['Mensalidade', f.mensalidade ? `${F(f.mensalidade)}, porque a loja atingiu o faturamento mínimo (${F(MS.acimaDeBruto * 100)} em Total Bruto).` : `Não houve: a loja não atingiu o faturamento mínimo (${F(MS.acimaDeBruto * 100)} em Total Bruto).`],
-      ['Débitos remanescentes', 'Deduções sem saldo online vão para a próxima fatura, sem boleto.'],
+      ['Débitos remanescentes', 'Deduções sem saldo online vão para a próxima fatura. Se aparecer um boleto, basta pagá-lo.'],
       ['Antecipação', `${F(f.total)} de repasse, que vai para Repasses recebidos quando cai.`],
       ['Comprovante', 'Fica na fatura, em Repasse realizado → Ver comprovante.'],
       ['Resultado final', `${F(r.resultado)} = Recebido pela Loja + repasses.`],

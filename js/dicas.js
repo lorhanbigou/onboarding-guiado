@@ -7,7 +7,7 @@ TREINO.dicas = [
     t: 'Cupons de desconto',
     p: [
       'Quando chegar um pedido com cupom de desconto, aceite normalmente.',
-      'O valor do desconto concedido volta na sua fatura como “Reembolso dos incentivos”.',
+      'Quando o cupom é oferecido pelo Bigou, o valor do desconto volta na sua fatura como “Reembolso dos incentivos”. Se o cupom foi criado por você, o desconto é por sua conta.',
     ],
   },
   {
@@ -36,9 +36,9 @@ TREINO.dicas = [
   {
     t: 'Boleto',
     p: [
-      'Se aparecer um boleto na sua tela, não se preocupe.',
-      'Ele só é gerado quando o saldo do pagamento online não cobre totalmente a comissão e as taxas. Nesses casos, o sistema passa o valor pendente para o mês seguinte, para ser deduzido do saldo online disponível. Esse valor aparece na sua fatura como “Débitos remanescentes”.',
-      'O boleto só deve ser considerado se a loja ficar três meses seguidos sem saldo suficiente no pagamento online.',
+      'O boleto aparece quando o saldo do pagamento online não cobre totalmente a comissão e as taxas.',
+      'O valor pendente também passa para o mês seguinte, para ser deduzido do saldo online disponível. Ele aparece na sua fatura como “Débitos remanescentes”.',
+      'O boleto deve ser pago caso a loja fique sem saldo online suficiente no pagamento online. Para pagar, acesse Financeiro → Boletos.',
     ],
   },
   {

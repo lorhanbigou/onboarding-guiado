@@ -21,22 +21,48 @@ TREINO.hoje = (function () {
   return new Date(n.getFullYear(), n.getMonth(), n.getDate());
 })();
 
+/* Feriados sem repasse: nacionais e municipais de Rio Pomba - MG (sede da empresa).
+   Fixos valem todo ano (MM-DD); os móveis são informados por ano (AAAA-MM-DD). */
+TREINO.feriados = {
+  fixos: {
+    '01-01': 'Confraternização Universal', '04-21': 'Tiradentes', '05-01': 'Dia Mundial do Trabalho',
+    '09-07': 'Independência do Brasil', '10-12': 'Nossa Senhora Aparecida', '11-02': 'Finados',
+    '11-15': 'Proclamação da República', '11-20': 'Dia Nacional de Zumbi e da Consciência Negra', '12-25': 'Natal',
+    // Rio Pomba - MG
+    '04-09': 'Dia da Lola', '06-17': 'Dia de São Manoel', '08-25': 'Emancipação Política de Rio Pomba',
+  },
+  moveis: {
+    '2026-04-03': 'Paixão de Cristo',
+    '2026-06-04': 'Corpus Christi',
+  },
+};
+TREINO.feriadoEm = (d) => TREINO.feriados.fixos[`${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`] || TREINO.feriados.moveis[`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`] || null;
+TREINO.ehDiaUtil = (d) => d.getDay() !== 0 && d.getDay() !== 6 && !TREINO.feriadoEm(d);
+
 TREINO.periodo = (function (hoje) {
   const ano = hoje.getFullYear(), mes = hoje.getMonth();
   const fimDia = Math.max(1, hoje.getDate() - 1);              // do dia 1 até ontem
-  const prox = new Date(ano, mes, hoje.getDate() + 1);          // próximo dia útil (sem sábado e domingo)
-  while (prox.getDay() === 0 || prox.getDay() === 6) prox.setDate(prox.getDate() + 1);
+  const prox = new Date(ano, mes, hoje.getDate() + 1);          // antecipação: próximo dia útil
+  while (!TREINO.ehDiaUtil(prox)) prox.setDate(prox.getDate() + 1);
+  const mensal = new Date(ano, mes + 1, 1);                     // repasse mensal: 2º dia útil do mês seguinte
+  for (let uteis = TREINO.ehDiaUtil(mensal) ? 1 : 0; uteis < 2 || !TREINO.ehDiaUtil(mensal);) {
+    mensal.setDate(mensal.getDate() + 1);
+    if (TREINO.ehDiaUtil(mensal)) uteis++;
+  }
   return {
     ano, mes, fimDia,
     inicio: fmtData(new Date(ano, mes, 1)),
     fim: fmtData(new Date(ano, mes, fimDia)),
     proximoDiaUtil: fmtData(prox),
+    repasseMensal: fmtData(mensal),
     nomeMes: MESES[mes],
   };
 })(TREINO.hoje);
 
 TREINO.config = {
   loja: { nome: 'Loja de Treinamento', cidade: 'Rio Pomba - MG' },
+  // Recursos que podem ser ligados e desligados
+  recursos: { assistente: false },   // assistente de dúvidas (chat): desligado no 1º teste com lojas reais
   mes: `${TREINO.periodo.nomeMes.toUpperCase()} ${TREINO.periodo.ano}`,
   mesExtenso: `${TREINO.periodo.nomeMes} de ${TREINO.periodo.ano}`,
 

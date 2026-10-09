@@ -78,6 +78,10 @@
      DADOS DE DEMONSTRAÇÃO (fixos, mesma estrutura do banco)
      ===================================================================== */
   const Bot = TREINO.Bot;
+  const COMENTARIOS_DEMO = [
+    'Agora entendi por que o repasse vem menor.', 'Muito bom, explicação simples.', 'A parte da taxa de serviço ainda ficou confusa.',
+    'Gostei de poder clicar na tela.', 'Poderia ser mais curto.', 'Não sabia do prazo de 15 minutos!', 'Ajudou bastante com a antecipação.',
+  ];
   const DUVIDAS_DEMO = [
     'quando cai meu repasse?', 'qnd vou receber o dinheiro do app', 'pq paguei comissão de pedido cancelado', 'pedido cancelou sozinho',
     'o que é a taxa de serviço', 'por que desconta taxa de servico se o cliente pagou em dinheiro', 'como antecipar', 'quanto custa antecipar',
@@ -162,6 +166,10 @@
       }
       if (concluidos === NMOD) {
         ev(id, 'treino_concluido', t + 1e3);
+        if (rnd() < 0.85) {
+          const est = rnd() < 0.55 ? 5 : rnd() < 0.7 ? 4 : rnd() < 0.6 ? 3 : 2;
+          ev(id, 'avaliacao', t + 3e4, { detalhe: { ajudou: est >= 3 || rnd() < 0.3, estrelas: est, comentario: rnd() < 0.3 ? pick(COMENTARIOS_DEMO) : null } });
+        }
         const nota = acertosPrimeira / NPERG;
         if (nota > ACERTO_MIN && rnd() < 0.8) ev(id, 'certificado', t + 6e4, { detalhe: { acertos: Math.round(nota * 100) } });
         // Dúvidas no assistente (liberado ao concluir), classificadas pelo próprio bot
@@ -251,7 +259,7 @@
     const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e)).filter((e) => e.t <= agora);
 
     // Resumo por participante
-    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {} }]));
+    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {}, aval: null }]));
     for (const e of evs) {
       const s = S.get(e.participante_id);
       if (!s) continue;
@@ -262,6 +270,7 @@
       else if (e.tipo === 'modulo_saida') s.saidas.push(e);
       else if (e.tipo === 'voz' && e.detalhe && e.detalhe.ligada) s.voz = true;
       else if (e.tipo === 'certificado') s.cert = true;
+      else if (e.tipo === 'avaliacao' && e.detalhe) s.aval = Object.assign({ t: e.t }, e.detalhe);
     }
     const L = [...S.values()];
     L.forEach((s) => {
@@ -453,6 +462,16 @@
       lista: dPerg.concat(dFb).sort((a, b) => b.t - a.t),
     };
 
+    /* ---------- Avaliação do treinamento (Sim/Não + estrelas) ---------- */
+    const avs = L.filter((s) => s.aval).map((s) => Object.assign({ loja: s.p.loja, cidade: s.p.cidade }, s.aval));
+    const avaliacao = {
+      n: avs.length,
+      ajudou: avs.filter((a) => a.ajudou).length,
+      media: avs.length ? avs.reduce((t, a) => t + (a.estrelas || 0), 0) / avs.length : null,
+      dist: [1, 2, 3, 4, 5].map((e) => ({ e, n: avs.filter((a) => a.estrelas === e).length })).reverse(),
+      comentarios: avs.filter((a) => a.comentario).sort((a, b) => b.t - a.t),
+    };
+
     const uso = {
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
@@ -463,7 +482,7 @@
 
     return {
       kpi: { cadastradas: L.length, comecaram, concluiram, certificadas: sit.certificada, taxa: comecaram ? concluiram / comecaram : null },
-      sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, duvidas, lojas: L,
+      sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, duvidas, avaliacao, lojas: L,
     };
   }
 
@@ -603,7 +622,9 @@
      TELAS
      ===================================================================== */
   const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
-  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos'], ['duvidas', 'Dúvidas do chat'], ['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']];
+  // Assistente de dúvidas desligado em TREINO.config.recursos: a seção do chat some do painel
+  const CHAT = !!(TREINO.config.recursos && TREINO.config.recursos.assistente);
+  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos']].concat(CHAT ? [['duvidas', 'Dúvidas do chat']] : [], [['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']]);
 
   function telaLogin(msg) {
     root.innerHTML = `
@@ -652,6 +673,38 @@
     </section>`;
   const card = (titulo, desc, corpo, cls) => `<div class="card ${cls || ''}">${titulo ? `<div class="card-h"><h3>${titulo}</h3>${desc ? `<p>${desc}</p>` : ''}</div>` : ''}${corpo}</div>`;
 
+  // Seção "Dúvidas do chat" (só com o assistente ligado)
+  function secDuvidas(R, DV, periodoTxt, f) {
+    return sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente é liberado ao concluir o treinamento.`, `
+          <div class="kpis k3">
+            ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
+            ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}
+            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} 👍👎`, '', 'Respostas marcadas como úteis pelo parceiro.')}
+          </div>
+          <div class="cols">
+            ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? barras(DV.temas, { valor: (x) => x.n, rotulo: (x) => x.tema, fmt: (x) => n(x.n) }) : '<p class="empty">Nenhuma pergunta no período.</p>')}
+            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Todas as perguntas tiveram resposta. 🎉</p>')}
+          </div>
+          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas com 👎. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${n(o.nao)} de ${n(o.tot)} 👎</b></li>`; }).join('')}</ul>`) : ''}
+          <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
+        `);
+  }
+
+  // Avaliação do treinamento: feita antes do certificado
+  function avaliacaoCard(AV) {
+    if (!AV.n) return card('Avaliação do treinamento', 'Feita ao concluir, antes do certificado.', '<p class="empty">Nenhuma avaliação ainda.</p>');
+    const mx = Math.max(1, ...AV.dist.map((d) => d.n));
+    return card('Avaliação do treinamento', `${n(AV.n)} ${AV.n === 1 ? 'loja avaliou' : 'lojas avaliaram'} ao concluir, antes do certificado.`, `
+      <div class="avl">
+        <div class="avl-num">
+          <div><b>${pct(AV.ajudou, AV.n)}</b><small>disseram que o treinamento ajudou</small></div>
+          <div><b>${AV.media.toFixed(1).replace('.', ',')} <span class="avl-st">★</span></b><small>média das estrelas</small></div>
+        </div>
+        <div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span>${d.e} ★</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f2b51d"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>
+      </div>
+      ${AV.comentarios.length ? `<h4 class="avl-h">Comentários</h4><ul class="dv">${AV.comentarios.slice(0, 8).map((a) => `<li><span>“${esc(a.comentario)}”<small class="avl-q">${esc(a.loja)} · ${a.estrelas} ★ · ${a.ajudou ? 'ajudou' : 'não ajudou'}</small></span><small>${relativo(a.t)}</small></li>`).join('')}</ul>` : ''}`);
+  }
+
   function render() {
     const f = st.filtros;
     const R = (st.R = calcular(st.dados, f));
@@ -669,7 +722,7 @@
     const acoes = [
       SI.contato && ['parado', 'lojas', `<b>${n(SI.contato)} ${SI.contato === 1 ? 'loja precisa' : 'lojas precisam'} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lista'],
       pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver perguntas'],
-      R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta ou fora do treinamento.</b> Veja o que os parceiros perguntaram e ainda não está explicado.`, 'Ver dúvidas'],
+      CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta ou fora do treinamento.</b> Veja o que os parceiros perguntaram e ainda não está explicado.`, 'Ver dúvidas'],
       pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${n(pa.pararam)} ${pa.pararam === 1 ? 'loja' : 'lojas'}.`, 'Ver jornada'],
     ].filter(Boolean).slice(0, 4);
     const DV = R.duvidas;
@@ -716,19 +769,7 @@
 
         ${sec('assuntos', 'Assuntos', 'O que os parceiros entendem de primeira. Abaixo de 60% (com alerta) vale reforçar no atendimento. Toque em um assunto para ver as perguntas e o erro mais comum.', card('', '', assuntosVisual(R)))}
 
-        ${sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente é liberado ao concluir o treinamento.`, `
-          <div class="kpis k3">
-            ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
-            ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}
-            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} 👍👎`, '', 'Respostas marcadas como úteis pelo parceiro.')}
-          </div>
-          <div class="cols">
-            ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? barras(DV.temas, { valor: (x) => x.n, rotulo: (x) => x.tema, fmt: (x) => n(x.n) }) : '<p class="empty">Nenhuma pergunta no período.</p>')}
-            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Todas as perguntas tiveram resposta. 🎉</p>')}
-          </div>
-          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas com 👎. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${n(o.nao)} de ${n(o.tot)} 👎</b></li>`; }).join('')}</ul>`) : ''}
-          <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
-        `)}
+        ${CHAT ? secDuvidas(R, DV, periodoTxt, f) : ''}
 
         ${sec('lojas', 'Lojas para acompanhar', 'Quem precisa de contato e por quê.', card('', '', `
           <div class="lj-top">
@@ -746,6 +787,7 @@
             ${kpi('olho', 'No celular', pct(R.uso.celular, K.cadastradas), `${n(R.uso.acessos)} acessos no período`, '', 'Lojas que fizeram o treinamento pelo celular.')}
             ${kpi('raio', 'Usaram a narração', pct(R.uso.voz, K.cadastradas), 'das cadastradas', '', 'Lojas que ligaram a narração por voz.')}
           </div>
+          ${avaliacaoCard(R.avaliacao)}
           ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
         `)}
       </main>`;
@@ -821,8 +863,8 @@
   }
 
   function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Último acesso', 'Cadastro', 'Aparelho'];
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Ajudou', 'Estrelas', 'Comentário', 'Último acesso', 'Cadastro', 'Aparelho'];
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', s.aval ? (s.aval.ajudou ? 'Sim' : 'Não') : '', s.aval ? s.aval.estrelas : '', s.aval ? s.aval.comentario || '' : '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
     baixarCSV('treinamento-lojas', [cab].concat(linhas));
   }
 
