@@ -513,3 +513,13 @@ body.fx-on { overflow: hidden; }
 .pf-r b { text-align: right; font-variant-numeric: tabular-nums; }
 .lj-act .btn span { display: inline; }
 .ic-st svg { width: 20px; height: 20px; fill: none; stroke: #2a78d6; stroke-width: 2; stroke-linecap: round; display: block; }
+
+/* Conteúdo ocupa toda a largura disponível (sem coluna espremida à esquerda) */
+.pg { max-width: none; width: 100%; }
+.pq { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)) !important; }
+.ex { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)) !important; }
+.lj-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.lj-top .chips { flex: 1 1 600px; }
+.lj-act { flex: 0 1 320px; }
+.lj-act .busca { width: 100%; }
+@media (min-width: 1400px) { .kpis.k4 { gap: 16px; } .cols { gap: 16px; } }
