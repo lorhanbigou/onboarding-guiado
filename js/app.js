@@ -532,7 +532,7 @@
         // Vale a 1ª tentativa de cada pergunta nesta passada pelo módulo (refazer o módulo pode melhorar a nota)
         const at = A.ativo;
         if (at && !at.respondidas.has(i)) { at.respondidas.add(i); respostas()[`${n}:${i}`] = !!r.acertou; save(); }
-        ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao } });
+        ev('quiz', { modulo: n, passo: i, alvo: item.target, detalhe: { id: item.id, versao: item.versao, pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao, resposta: item.options[r.opcao] ? item.options[r.opcao].t : null } });
       },
       onAction: (a) => {
         if (a === 'continue') location.hash = next ? '#/modulo/' + next.n : doneCount() === A.mods.length && !A.saved.avaliacao ? '#/avaliacao' : '#/revisao';

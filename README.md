@@ -67,6 +67,16 @@ O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou 
 
 Enquanto o Supabase não estiver configurado, o painel abre com **dados de demonstração** (ou force com `?demo=1`).
 
+### Perguntas: versões e rastreabilidade
+
+Cada pergunta tem um id fixo (`d1`…`d9` nos desafios, `f1`…`f10` no exercício final) e uma versão (`versao`, hoje **2**, reescritas em 10/2026 para não induzir ao erro). O evento `quiz` envia `id`, `versao`, o enunciado e a alternativa escolhida. Respostas antigas (versão 1, sem id) são ligadas à pergunta pela posição (módulo e passo), que não muda; os textos da versão 1 ficam em `QUIZ_V1` (`js/admin.js`). No painel, o acerto atual conta só a versão nova e cada pergunta mostra "Antes da mudança". Se reescrever as perguntas de novo, suba `QV` em `js/modules.js` e guarde os textos antigos.
+
+### Anotações da equipe (ficha da loja)
+
+Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, perguntas que ela errou (com a resposta escolhida), avaliação e **anotações da equipe** (criar, editar e excluir; cada anotação tem assunto, texto, autor e data). Para salvar no Supabase, rode **uma vez** o arquivo `supabase/anotacoes.sql` no SQL Editor (cria a tabela `treino_anotacoes`, que só o admin lê e escreve). Sem isso, a ficha mostra um aviso. Na demonstração, as anotações ficam no navegador.
+
+**Exportações:** "Lojas (CSV)" e "Dúvidas e anotações (CSV)", com uma linha por erro em pergunta, comentário da avaliação e anotação da equipe — a base para o plano de ação de melhorias.
+
 ### Como ligar o Supabase (uma vez)
 
 1. Crie um projeto em <https://supabase.com> (plano grátis).
@@ -126,6 +136,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/analytics.js` | Fila e envio dos eventos do treinamento |
 | `admin/index.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
 | `supabase/schema.sql` | Tabelas e regras de segurança do banco |
+| `supabase/anotacoes.sql` | Tabela das anotações da equipe (rodar uma vez) |
 | `js/voz.js` | Narração: escolhe a voz pt-BR, transforma valores e datas em fala e lê o balão |
 | `js/tour.js` | Motor do spotlight / balões / passos de clique / quiz |
 | `js/app.js` | Tela inicial, dicas, lista de módulos, modo livre, revisão, certificado e progresso |

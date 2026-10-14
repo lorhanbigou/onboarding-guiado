@@ -22,6 +22,43 @@
   const tituloPasso = (m, p) => { const s = passoDe(m, p); return s ? (s.desafio ? 'Desafio rápido' : s.title) : 'Passo ' + p; };
   const semValor = (t) => String(t || '').replace(/R\$[\d.,]+/g, 'R$…');
   const NPERG = MODS.reduce((t, m) => t + m.steps.filter((x) => x.mode === 'quiz').length, 0);
+  const POUCOS = 5;              // abaixo disso, a % é mostrada como "poucos dados"
+  const plural = (x, um, varios) => `${n(x)} ${x === 1 ? um : varios}`;
+
+  /* Perguntas da versão 1 (até 10/2026). As respostas antigas não têm id:
+     são ligadas à pergunta atual pela posição (módulo e passo), que não mudou.
+     Guardamos o texto antigo para mostrar a resposta que a loja escolheu. */
+  const QUIZ_V1 = {
+    d1: ['O Total Bruto é…', ['Só o que foi pago online', 'A soma de todas as vendas do mês', 'O valor que vai cair na sua conta']],
+    d2: ['Do valor do pagamento online, a plataforma deduz…', ['Só a comissão das vendas online', 'Nada: o valor vai inteiro para você', 'A comissão e as taxas de todas as vendas']],
+    d3: ['Uma venda paga em dinheiro…', ['Entra direto no seu caixa', 'Passa pela plataforma antes de chegar a você', 'Não conta como venda']],
+    d4: ['Antes de antecipar, onde aparece o valor que a plataforma vai transferir?', ['Repasses recebidos', 'Repasse disponível', 'Recebido pela Loja']],
+    d5: ['Quem paga o desconto de um cupom oferecido pelo Bigou para os clientes?', ['Você', 'O cliente, depois', 'A plataforma, que devolve o valor na fatura']],
+    d6: ['Um pedido ficou 15 minutos sem ser aceito nem recusado. O que acontece?', ['Ele continua esperando até você abrir', 'Ele é cancelado e entra na conta da comissão', 'Ele é aceito automaticamente']],
+    d7: ['Quando a taxa de antecipação é aplicada?', ['Só se você pedir a antecipação', 'Em todas as faturas', 'Só nas vendas em dinheiro']],
+    d8: ['Por que a taxa de serviço das vendas em dinheiro aparece como dedução?', ['Porque é uma multa', 'Porque o cliente pagou a taxa para você, e ela é da plataforma', 'Porque a comissão foi cobrada duas vezes']],
+    d9: ['Se você não antecipar, quando a plataforma transfere o repasse?', ['Todos os dias', 'Só quando você pedir', 'No 2º dia útil do mês seguinte às vendas']],
+    f1: ['Quanto a loja vendeu no mês, somando tudo?', ['R$201,99', 'R$728,87', 'R$271,94']],
+    f2: ['Quantas vendas foram pagas na maquininha?', ['3 vendas', '7 vendas', '13 vendas']],
+    f3: ['A comissão é calculada sobre quais vendas?', ['Só as vendas online', 'Todas as vendas, sem a taxa de serviço', 'Só as vendas em dinheiro']],
+    f4: ['Por que essa venda cancelada entrou na comissão?', ['Porque o cliente desistiu do pedido', 'Porque foi paga em dinheiro', 'Porque o pedido não foi aceito nem recusado em 15 minutos']],
+    f5: ['Quando existe mensalidade?', ['Todo mês, sempre', 'Quando a loja atinge o faturamento mínimo (R$500,00 em Total Bruto)', 'Só quando há vendas em dinheiro']],
+    f6: ['O repasse foi de R$201,99. Por que ele é menor que o total vendido?', ['Porque a plataforma ficou com quase tudo', 'Porque o valor das vendas em dinheiro e maquininha já estava com você, e as deduções saem do valor online', 'Porque houve um erro na conta']],
+    f7: ['O que acontece quando o saldo online não cobre as deduções?', ['Sou obrigado a pagar o boleto na hora', 'A diferença vai para a próxima fatura como Débitos remanescentes, mas posso pagar o boleto também', 'A diferença é perdoada']],
+    f8: ['Depois de antecipar, quando o dinheiro cai, para onde vai o valor do repasse?', ['Repasse disponível', 'Repasses recebidos', 'Recebido pela Loja']],
+    f9: ['Qual é o Resultado da loja no mês?', ['R$728,87', 'R$473,93', 'R$201,99']],
+    f10: ['Onde você pega o comprovante do repasse?', ['Na tela Relatório', 'Na fatura, em Ver comprovante', 'Em Boletos']],
+  };
+  // Dados de uma resposta: pergunta (id fixo), versão, enunciado e a alternativa escolhida
+  function lerResposta(e) {
+    const d = e.detalhe || {}, st = passoDe(e.modulo, e.passo);
+    const id = d.id || (st && st.id) || `${e.modulo}:${e.passo}`;
+    const v = d.versao || 1;
+    const antigo = QUIZ_V1[id];
+    const q = v >= 2 && st ? st.q : d.q || (antigo && antigo[0]) || (st && st.q) || 'Pergunta';
+    const ops = v >= 2 && st ? st.options.map((o) => o.t) : antigo ? antigo[1] : st ? st.options.map((o) => o.t) : [];
+    return { id, v, st, q: semValor(q), resposta: d.resposta || (d.opcao != null ? ops[d.opcao] : null), tema: st ? st.tema : 'Outro' };
+  }
   const ACERTO_MIN = 0.7;        // certificado: mais de 70% de acerto (igual ao treinamento)
   const PARADA_DIAS = 7;         // começou e está sem atividade há 7 dias ou mais
   const SEM_INICIO_DIAS = 3;     // cadastrou há 3 dias ou mais e não abriu nenhum módulo
@@ -153,7 +190,9 @@
               const ok = rnd() < base + (tent - 1) * 0.25;
               // O erro se concentra numa alternativa (o equívoco mais comum)
               const opcao = ok ? certa : erradas[rnd() < 0.7 ? 0 : erradas.length - 1];
-              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: { pergunta: st.title, acertou: ok, tentativa: tent, opcao } });
+              // Respostas com mais de 10 dias simulam a versão 1 das perguntas (sem id)
+              const nova = t > agora - 10 * DIA;
+              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: Object.assign({ pergunta: st.title, acertou: ok, tentativa: tent, opcao }, nova ? { id: st.id, versao: st.versao, resposta: st.options[opcao].t } : {}) });
               if (tent === 1 && ok) acertosPrimeira++;
               if (ok) break;
             }
@@ -236,13 +275,64 @@
   }
 
   async function carregar() {
-    if (demo) return gerarDemo();
-    const [participantes, eventos] = await Promise.all([
+    if (demo) { const D = gerarDemo(); D.anotacoes = Notas.demo(D); return D; }
+    const [participantes, eventos, anotacoes] = await Promise.all([
       lerTudo('treino_participantes', 'id,loja,cidade,dispositivo,navegador,criado_em', 'criado_em.asc'),
       lerTudo('treino_eventos', 'participante_id,tipo,modulo,passo,alvo,detalhe,criado_em', 'id.asc'),
+      // Tabela criada pelo supabase/anotacoes.sql. Se ainda não existir, o painel avisa na ficha da loja.
+      lerTudo('treino_anotacoes', 'id,participante_id,assunto,texto,autor,criado_em,atualizado_em', 'criado_em.asc').catch((err) => { if (err.auth) throw err; Notas.semTabela = true; return []; }),
     ]);
-    return { participantes, eventos };
+    return { participantes, eventos, anotacoes };
   }
+
+  /* ------------------------------ Anotações da equipe ------------------------------ */
+  // Real: tabela treino_anotacoes (só o admin lê e escreve). Demonstração: guardadas neste navegador.
+  const Notas = {
+    semTabela: false,
+    chaveDemo: 'bigou-admin-anotacoes-demo',
+    demo(D) {
+      try { const salvas = JSON.parse(localStorage.getItem(this.chaveDemo)); if (Array.isArray(salvas)) return salvas; } catch (e) { /* */ }
+      // Alguns exemplos para a demonstração
+      const ex = [
+        ['Taxa de serviço', 'Ligamos para a loja: achava que a taxa de serviço era descontada do valor dos produtos. Explicamos que é paga pelo cliente.'],
+        ['Pagamento online', 'Parceiro perguntou por que o repasse veio menor que o total vendido. Mostramos o Recebido pela Loja.'],
+        ['Plataforma', 'Sugere mostrar a data do repasse mensal direto na tela Financeiro.'],
+      ];
+      return D.participantes.slice().sort((a, b) => +new Date(b.criado_em) - +new Date(a.criado_em)).slice(2, 5).map((p, i) => ({ id: 'demo-' + i, participante_id: p.id, assunto: ex[i][0], texto: ex[i][1], autor: 'Equipe Financeiro', criado_em: new Date(Date.now() - (i + 1) * 864e5).toISOString(), atualizado_em: null }));
+    },
+    salvarDemo() { try { localStorage.setItem(this.chaveDemo, JSON.stringify(st.dados.anotacoes)); } catch (e) { /* */ } },
+    async req(metodo, filtro, corpo) {
+      const s = sessao.get();
+      if (!s) throw Object.assign(new Error('Sessão expirada. Entre de novo.'), { auth: true });
+      const r = await fetch(`${base()}/rest/v1/treino_anotacoes${filtro || ''}`, {
+        method: metodo,
+        headers: { apikey: CFG.anonKey, Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: corpo ? JSON.stringify(corpo) : undefined,
+      });
+      if (r.status === 401) throw Object.assign(new Error('Sessão expirada. Entre de novo.'), { auth: true });
+      if (r.status === 404) { this.semTabela = true; throw new Error('A tabela de anotações ainda não existe. Rode o SQL supabase/anotacoes.sql no Supabase.'); }
+      if (!r.ok) throw new Error('Não foi possível salvar (' + r.status + ').');
+      return metodo === 'DELETE' ? null : (await r.json())[0];
+    },
+    async criar(participante_id, assunto, texto, autor) {
+      const nova = { participante_id, assunto, texto, autor, criado_em: new Date().toISOString(), atualizado_em: null };
+      const salva = demo ? Object.assign({ id: 'demo-' + Date.now() }, nova) : await this.req('POST', '', { participante_id, assunto, texto, autor });
+      st.dados.anotacoes.push(salva);
+      if (demo) this.salvarDemo();
+    },
+    async editar(id, assunto, texto, autor) {
+      const a = st.dados.anotacoes.find((x) => x.id === id);
+      const mudou = { assunto, texto, autor, atualizado_em: new Date().toISOString() };
+      if (!demo) Object.assign(mudou, await this.req('PATCH', `?id=eq.${encodeURIComponent(id)}`, mudou));
+      Object.assign(a, mudou);
+      if (demo) this.salvarDemo();
+    },
+    async excluir(id) {
+      if (!demo) await this.req('DELETE', `?id=eq.${encodeURIComponent(id)}`);
+      st.dados.anotacoes = st.dados.anotacoes.filter((x) => x.id !== id);
+      if (demo) this.salvarDemo();
+    },
+  };
 
   /* =====================================================================
      CÁLCULO DE TODOS OS INDICADORES
@@ -259,7 +349,7 @@
     const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e)).filter((e) => e.t <= agora);
 
     // Resumo por participante
-    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {}, aval: null }]));
+    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {}, aval: null, erros: [], notas: [] }]));
     for (const e of evs) {
       const s = S.get(e.participante_id);
       if (!s) continue;
@@ -295,44 +385,57 @@
 
     /* ---------- Perguntas: nota por loja e entendimento por assunto ---------- */
     // Nota da loja: última 1ª tentativa de cada pergunta (igual à regra do certificado no treinamento)
-    // Assuntos: primeira resposta de cada loja em cada pergunta (o entendimento "de primeira")
-    const primeira = new Map();
+    // Assuntos: primeira resposta de cada loja em cada pergunta, separada por versão da pergunta
+    const primeira = new Map(), ultimaDaLoja = new Map();
     evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.tentativa === 1).forEach((e) => {
-      const s = S.get(e.participante_id), k = chave(e.modulo, e.passo);
-      s.notaQ[k] = !!e.detalhe.acertou;
-      const kk = e.participante_id + '|' + k;
-      if (!primeira.has(kk)) primeira.set(kk, e);
+      const s = S.get(e.participante_id), r = lerResposta(e);
+      s.notaQ[chave(e.modulo, e.passo)] = !!e.detalhe.acertou;
+      const kk = `${e.participante_id}|${r.id}|${r.v}`;
+      if (!primeira.has(kk)) primeira.set(kk, { e, r });
+      ultimaDaLoja.set(`${e.participante_id}|${r.id}`, { e, r });
     });
+    // Erros de cada loja (a última 1ª tentativa errada em cada pergunta): são as dúvidas do parceiro
+    ultimaDaLoja.forEach(({ e, r }) => { if (!e.detalhe.acertou) S.get(e.participante_id).erros.push({ id: r.id, v: r.v, tema: r.tema, q: r.q, resposta: r.resposta, t: e.t }); });
     const porPergunta = new Map();
-    primeira.forEach((e) => {
-      const k = chave(e.modulo, e.passo);
-      const o = porPergunta.get(k) || { m: e.modulo, p: e.passo, ok: 0, tot: 0, erradas: {} };
-      o.tot++;
-      if (e.detalhe.acertou) o.ok++;
-      else if (e.detalhe.opcao != null) o.erradas[e.detalhe.opcao] = (o.erradas[e.detalhe.opcao] || 0) + 1;
-      porPergunta.set(k, o);
+    primeira.forEach(({ e, r }) => {
+      const o = porPergunta.get(r.id) || { id: r.id, m: e.modulo, p: e.passo, st: r.st, tema: r.tema, v: { 1: { ok: 0, tot: 0, erradas: {} }, 2: { ok: 0, tot: 0, erradas: {} } } };
+      const b = o.v[r.v >= 2 ? 2 : 1];
+      b.tot++;
+      if (e.detalhe.acertou) b.ok++;
+      else if (r.resposta) b.erradas[r.resposta] = (b.erradas[r.resposta] || 0) + 1;
+      porPergunta.set(r.id, o);
     });
     const temas = new Map();
     porPergunta.forEach((o) => {
-      const st = passoDe(o.m, o.p);
-      if (!st) return;
-      const [opErr, nErr] = Object.entries(o.erradas).sort((a, b) => b[1] - a[1])[0] || [];
+      const comum = (b) => { const [t, c] = Object.entries(b.erradas).sort((x, y) => y[1] - x[1])[0] || []; return t ? { t: semValor(t), n: c } : null; };
       Object.assign(o, {
-        taxa: o.ok / o.tot,
-        q: semValor(st.q),
-        onde: st.desafio ? `Desafio do Módulo ${o.m}` : `Exercício final, ${st.title}`,
-        erroComum: opErr != null && st.options[opErr] ? { t: semValor(st.options[opErr].t), n: nErr } : null,
+        q: o.st ? semValor(o.st.q) : (QUIZ_V1[o.id] || ['Pergunta'])[0],
+        qAntiga: QUIZ_V1[o.id] ? semValor(QUIZ_V1[o.id][0]) : null,
+        onde: o.st && o.st.desafio ? `Desafio do Módulo ${o.m}` : `Exercício final, ${o.st ? o.st.title : 'pergunta'}`,
+        ok: o.v[2].ok, tot: o.v[2].tot, taxa: o.v[2].tot ? o.v[2].ok / o.v[2].tot : null, erroComum: comum(o.v[2]),
+        antes: o.v[1].tot ? { ok: o.v[1].ok, tot: o.v[1].tot, taxa: o.v[1].ok / o.v[1].tot, erroComum: comum(o.v[1]) } : null,
       });
-      const t = temas.get(st.tema) || { tema: st.tema, ok: 0, tot: 0, perguntas: [] };
-      t.ok += o.ok; t.tot += o.tot; t.perguntas.push(o);
-      temas.set(st.tema, t);
+      const t = temas.get(o.tema) || { tema: o.tema, ok: 0, tot: 0, okAntes: 0, totAntes: 0, perguntas: [] };
+      t.ok += o.v[2].ok; t.tot += o.v[2].tot; t.okAntes += o.v[1].ok; t.totAntes += o.v[1].tot; t.perguntas.push(o);
+      temas.set(o.tema, t);
     });
-    const assuntos = [...temas.values()].map((t) => Object.assign(t, { taxa: t.ok / t.tot, perguntas: t.perguntas.sort((a, b) => a.taxa - b.taxa) })).sort((a, b) => a.taxa - b.taxa);
+    // Do pior para o melhor; assuntos com poucos dados vão para o fim
+    const peso = (t) => (t.tot >= POUCOS ? t.taxa : 2 + (t.tot ? t.taxa : 1));
+    const assuntos = [...temas.values()].map((t) => Object.assign(t, {
+      taxa: t.tot ? t.ok / t.tot : null, taxaAntes: t.totAntes ? t.okAntes / t.totAntes : null,
+      perguntas: t.perguntas.sort((a, b) => (a.taxa == null ? 2 : a.taxa) - (b.taxa == null ? 2 : b.taxa)),
+    })).sort((a, b) => peso(a) - peso(b));
+
+    /* ---------- Anotações da equipe ---------- */
+    (D.anotacoes || []).forEach((a) => { const s = S.get(a.participante_id); if (s) s.notas.push(a); });
+    L.forEach((s) => s.notas.sort((a, b) => +new Date(b.criado_em) - +new Date(a.criado_em)));
 
     /* ---------- Situação de cada loja ---------- */
     L.forEach((s) => {
       const ks = Object.keys(s.notaQ);
-      s.nota = ks.filter((k) => s.notaQ[k]).length / NPERG;
+      s.respondidas = ks.length;
+      s.certas = ks.filter((k) => s.notaQ[k]).length;
+      s.nota = s.certas / NPERG;                       // regra do certificado: sobre as 19 perguntas
       const erros = {};
       ks.filter((k) => !s.notaQ[k]).forEach((k) => { const [m, p] = k.split(':').map(Number); const st = passoDe(m, p); if (st) erros[st.tema] = (erros[st.tema] || 0) + 1; });
       s.erroTema = (Object.entries(erros).sort((a, b) => b[1] - a[1])[0] || [])[0] || null;
@@ -495,7 +598,7 @@
   // Comparação com o período anterior. menor=true quando cair é bom.
   function delta(atual, anterior, menor) {
     if (anterior == null || atual == null || !isFinite(anterior)) return '';
-    if (anterior === 0) return atual ? '<span class="dl neutro">novo</span>' : '';
+    if (!anterior) return '';   // sem base no período anterior: não compara
     const v = (atual - anterior) / anterior;
     if (Math.abs(v) < 0.005) return '<span class="dl neutro">= período anterior</span>';
     const bom = menor ? v < 0 : v > 0;
@@ -541,18 +644,20 @@
     }).join('')}</div>`;
   }
 
-  // Jornada em 5 marcos: barra única por marco, com a perda entre eles
+  // Jornada em 5 marcos: cartões em sequência, com a perda entre eles
   function jornadaVisual(R) {
     const J = R.jornada, base = Math.max(1, J[0].v);
     let pior = null;
-    for (let i = 1; i < J.length; i++) { const a = J[i - 1].v; if (a >= 5) { const q = (a - J[i].v) / a; if (!pior || q > pior.q) pior = { i, q }; } }
+    for (let i = 1; i < J.length; i++) { const a = J[i - 1].v; if (a >= POUCOS) { const q = (a - J[i].v) / a; if (q > 0 && (!pior || q > pior.q)) pior = { i, q }; } }
     return `<ol class="jr">${J.map((e, i) => {
-      const a = i ? J[i - 1].v : null, perda = i ? a - e.v : 0, g = pior && pior.i === i && perda > 0;
-      return `${i ? `<li class="jr-perda ${g ? 'is-g' : ''}" aria-hidden="true"><span>${perda > 0 ? `−${n(perda)} lojas (${pct(perda, a)})` : 'sem perda'}${g ? ' · maior perda' : ''}</span></li>` : ''}
-        <li class="jr-st ${g ? 'is-g' : ''}">
-          <span class="jr-l"><b>${e.nome}</b>${e.sub ? `<small>${e.sub}</small>` : ''}</span>
-          <span class="jr-bar"><i style="width:${Math.max(2, (e.v / base) * 100)}%"></i></span>
-          <span class="jr-v">${n(e.v)}<small>${pct(e.v, base)}</small></span>
+      const a = i ? J[i - 1].v : null, perda = i ? a - e.v : 0, g = pior && pior.i === i;
+      return `${i ? `<li class="jr-seta ${g ? 'is-g' : ''}" aria-hidden="true"><span>${perda > 0 ? `−${n(perda)}` : '='}</span></li>` : ''}
+        <li class="jr-c ${g ? 'is-g' : ''}" ${tipAttr(`<b>${e.nome}</b>${e.sub ? `<br>${e.sub}` : ''}<br>${plural(e.v, 'loja', 'lojas')} · ${pct(e.v, base)} das cadastradas${perda > 0 ? `<br>Perda: ${plural(perda, 'loja', 'lojas')} (${pct(perda, a)})` : ''}`)}>
+          <b class="jr-v">${n(e.v)}</b>
+          <span class="jr-n">${e.nome}</span>
+          <span class="jr-bar"><i style="width:${Math.max(3, (e.v / base) * 100)}%"></i></span>
+          <small>${pct(e.v, base)}</small>
+          ${g ? '<em class="jr-g">maior perda</em>' : ''}
         </li>`;
     }).join('')}</ol>`;
   }
@@ -572,19 +677,29 @@
       </div>`).join('')}</div>`;
   }
 
-  // Assuntos do pior para o melhor; ao abrir, as perguntas e a resposta errada mais escolhida
+  // Situação de uma % de acerto (com poucos dados, não alarma)
+  const nivel = (taxa, tot) => (!tot ? 'vazio' : tot < POUCOS ? 'poucos' : taxa < 0.6 ? 'ruim' : taxa < 0.8 ? 'medio' : 'bom');
+  const ROT_NIVEL = { vazio: 'sem respostas', poucos: 'poucos dados', ruim: 'reforçar', medio: 'atenção', bom: 'bem entendido' };
+
+  // Assuntos do pior para o melhor; ao abrir, as perguntas, o erro mais comum e a versão anterior
   function assuntosVisual(R) {
     if (!R.assuntos.length) return '<p class="empty">Ninguém respondeu as perguntas ainda.</p>';
     return `<div class="as">${R.assuntos.map((t) => {
-      const al = t.taxa < 0.6, v = Math.round(t.taxa * 100);
-      return `<details class="as-i ${al ? 'al' : ''}">
+      const nv = nivel(t.taxa, t.tot), v = t.taxa == null ? null : Math.round(t.taxa * 100);
+      return `<details class="as-i nv-${nv}">
         <summary>
-          <span class="as-t">${al ? `<span class="st-crit" title="Pouco entendido">${IC.alerta}</span>` : ''}<b>${esc(t.tema)}</b><small>${t.perguntas.length} ${t.perguntas.length === 1 ? 'pergunta' : 'perguntas'} · ${n(t.tot)} respostas</small></span>
-          <span class="as-bar"><i style="width:${Math.max(1, v)}%"></i></span>
-          <span class="as-v">${v}%<small>acertam de primeira</small></span>
+          <span class="as-t"><b>${esc(t.tema)}</b><small>${plural(t.perguntas.length, 'pergunta', 'perguntas')} · ${plural(t.tot, 'resposta', 'respostas')}${t.totAntes ? ` · ${plural(t.totAntes, 'resposta antiga', 'respostas antigas')}` : ''}</small></span>
+          <span class="as-bar"><i style="width:${v == null ? 0 : Math.max(2, v)}%"></i></span>
+          <span class="as-v">${v == null ? '—' : v + '%'}<em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em></span>
         </summary>
         <ul class="as-q">${t.perguntas.map((q) => `
-          <li><div><small>${esc(q.onde)}</small><b>${esc(q.q)}</b>${q.erroComum ? `<span class="as-err">Erro mais comum: “${esc(q.erroComum.t)}” (${pct(q.erroComum.n, q.tot)})</span>` : ''}</div><b class="as-qv">${pct(q.ok, q.tot)}</b></li>`).join('')}</ul>
+          <li>
+            <div><small>${esc(q.onde)}</small><b>${esc(q.q)}</b>
+              ${q.erroComum ? `<span class="as-err">Erro mais comum: “${esc(q.erroComum.t)}” (${pct(q.erroComum.n, q.tot)})</span>` : ''}
+              ${q.antes ? `<span class="as-antes">Antes da mudança: ${pct(q.antes.ok, q.antes.tot)} de ${plural(q.antes.tot, 'resposta', 'respostas')}${q.qAntiga && q.qAntiga !== q.q ? ` · “${esc(q.qAntiga)}”` : ''}</span>` : ''}
+            </div>
+            <b class="as-qv">${q.tot ? pct(q.ok, q.tot) : '—'}<small>${plural(q.tot, 'resposta', 'respostas')}</small></b>
+          </li>`).join('')}</ul>
       </details>`;
     }).join('')}</div>`;
   }
@@ -727,7 +842,7 @@
     ].filter(Boolean).slice(0, 4);
     const DV = R.duvidas;
 
-    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, todas: R.lojas.length };
+    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
 
     root.innerHTML = `
       <header class="hd">
@@ -756,25 +871,30 @@
             ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`)}
             ${kpi('ok', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas. É quem realmente entendeu.', 'hl')}
           </div>
-          <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
+          <div class="status">
+            <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null && KP.comecaram >= POUCOS ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
+            ${R.avaliacao.n ? `<div class="status-l"><span class="estrela">★</span><span><b>${R.avaliacao.media.toFixed(1).replace('.', ',')}</b> de média · <b>${pct(R.avaliacao.ajudou, R.avaliacao.n)}</b> disseram que o treinamento ajudou <small>(${plural(R.avaliacao.n, 'avaliação', 'avaliações')})</small></span></div>` : ''}
+          </div>
           ${acoes.length ? card('O que fazer agora', '', `<ul class="ac">${acoes.map(([i, s, t, l]) => `<li><span class="ac-ic ${i}">${IC[i]}</span><span class="ac-t">${t}</span><a href="#s-${s}" class="ac-a" data-ir="${s}">${l} →</a></li>`).join('')}</ul>`, 'ac-card') : ''}
         `)}
 
         ${sec('jornada', 'Jornada', 'Até onde as lojas chegam e onde ficam pelo caminho.', `
-          <div class="cols j2">
-            ${card('Até onde chegam', '', jornadaVisual(R))}
-            ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}
-          </div>
+          ${card('Até onde chegam', 'Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R))}
+          ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}
         `)}
 
-        ${sec('assuntos', 'Assuntos', 'O que os parceiros entendem de primeira. Abaixo de 60% (com alerta) vale reforçar no atendimento. Toque em um assunto para ver as perguntas e o erro mais comum.', card('', '', assuntosVisual(R)))}
+        ${sec('assuntos', 'Assuntos', `O que os parceiros acertam de primeira, nas perguntas atuais. Com menos de ${POUCOS} respostas, mostramos "poucos dados". Toque em um assunto para ver as perguntas, o erro mais comum e como era antes da mudança.`, card('', '', assuntosVisual(R)))}
 
         ${CHAT ? secDuvidas(R, DV, periodoTxt, f) : ''}
 
-        ${sec('lojas', 'Lojas para acompanhar', 'Quem precisa de contato e por quê.', card('', '', `
+        ${sec('lojas', 'Lojas para acompanhar', 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.', card('', '', `
           <div class="lj-top">
-            <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
-            <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"><button class="btn ic" data-a="csv">${IC.baixar}<span>Exportar CSV</span></button></div>
+            <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
+            <div class="lj-act">
+              <input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}">
+              <button class="btn ic" data-a="csv">${IC.baixar}<span>Lojas (CSV)</span></button>
+              <button class="btn ic primary" data-a="csv-plano">${IC.baixar}<span>Dúvidas e anotações (CSV)</span></button>
+            </div>
           </div>
           <div class="tb-wrap" id="lj"></div>`))}
 
@@ -821,10 +941,10 @@
   };
   function linhasLojas() {
     const b = st.busca.trim().toLowerCase();
-    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
+    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'notas' ? s.notas.length > 0 : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
     const rows = st.R.lojas.filter((s) => filtro(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
     const k = st.ordem.k, d = st.ordem.dir;
-    const val = (s) => (k === 'loja' ? s.p.loja : k === 'cidade' ? s.p.cidade : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : s.ultimo);
+    const val = (s) => (k === 'loja' ? s.p.loja : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : k === 'erros' ? s.erros.length : k === 'notas' ? s.notas.length : s.ultimo);
     return rows.sort((a, c) => { const x = val(a), y = val(c); return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * d; });
   }
 
@@ -833,13 +953,141 @@
     if (!el) return;
     const todas = linhasLojas(), rows = todas.slice(0, 300);
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    el.innerHTML = rows.length ? `<table class="tb"><thead><tr>${th('loja', 'Loja')}${th('cidade', 'Cidade')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('ultimo', 'Último acesso')}</tr></thead>
-      <tbody>${rows.map((s) => `<tr><td><b class="lj-n">${esc(s.p.loja)}</b></td><td>${esc(s.p.cidade)}</td>
+    el.innerHTML = rows.length ? `<table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('ultimo', 'Último acesso')}</tr></thead>
+      <tbody>${rows.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
+        <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
         <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
         <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span><small>${esc(s.motivo)}</small></td>
+        <td class="num">${s.erros.length ? `<b class="ct">${n(s.erros.length)}</b>` : '<span class="mut">0</span>'}</td>
+        <td class="num">${s.notas.length ? `<span class="nt">${n(s.notas.length)}</span>` : '<span class="mut">—</span>'}</td>
         <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td></tr>`).join('')}</tbody></table>
-      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora.' : 'Nenhuma loja com esse filtro.'}</p>`;
+      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : 'Nenhuma loja com esse filtro.'}</p>`;
   }
+
+  /* ------------------------------ Ficha da loja ------------------------------ */
+  const ASSUNTOS_NOTA = [...new Set(MODS.flatMap((m) => m.steps.filter((x) => x.tema).map((x) => x.tema)))].concat(['Plataforma', 'Atendimento', 'Outro']);
+  const autorSalvo = () => { try { return localStorage.getItem('bigou-admin-autor') || ''; } catch (e) { return ''; } };
+  const fx = document.createElement('div');
+  fx.className = 'fx-wrap';
+  fx.hidden = true;
+  document.body.appendChild(fx);
+  let fxId = null, fxEditando = null;
+
+  function abrirFicha(id) {
+    const s = st.R.lojas.find((x) => x.p.id === id);
+    if (!s) return fecharFicha();
+    fxId = id;
+    const acerto = s.respondidas ? Math.round((s.certas / s.respondidas) * 100) : null;
+    const dots = MODS.map((m) => `<li class="${s.fim.has(m.n) ? 'ok' : s.ini.has(m.n) ? 'meio' : ''}" title="Módulo ${m.n}: ${esc(m.titulo)} · ${s.fim.has(m.n) ? 'concluído' : s.ini.has(m.n) ? 'começou' : 'não abriu'}">${m.n}</li>`).join('');
+    const opcoes = (sel) => ASSUNTOS_NOTA.map((a) => `<option ${a === sel ? 'selected' : ''}>${esc(a)}</option>`).join('');
+    const form = (a) => `
+      <form class="fx-form" data-fx-form="${a ? esc(a.id) : 'nova'}">
+        <div class="fx-row">
+          <label><span>Assunto</span><select name="assunto">${opcoes(a ? a.assunto : (s.erros[0] && s.erros[0].tema) || ASSUNTOS_NOTA[0])}</select></label>
+          <label><span>Seu nome</span><input name="autor" maxlength="60" value="${esc(a ? a.autor || '' : autorSalvo())}" placeholder="Quem está anotando" required></label>
+        </div>
+        <label><span>${a ? 'Editar anotação' : 'Nova anotação'}</span><textarea name="texto" rows="3" maxlength="2000" required placeholder="Qual foi a dúvida do parceiro? O que foi explicado? O que poderia melhorar?">${a ? esc(a.texto) : ''}</textarea></label>
+        <div class="fx-btns">${a ? '<button type="button" class="btn" data-fx="cancelar">Cancelar</button>' : ''}<button type="submit" class="btn primary">${a ? 'Salvar alterações' : 'Adicionar anotação'}</button></div>
+        <p class="fx-err" role="alert"></p>
+      </form>`;
+    const anot = s.notas.map((a) => fxEditando === a.id ? `<li class="fx-nota ed">${form(a)}</li>` : `
+      <li class="fx-nota">
+        <div class="fx-nota-h"><span class="tag">${esc(a.assunto || 'Outro')}</span><small>${esc(a.autor || 'Equipe')} · ${dataHoraBR(+new Date(a.criado_em))}${a.atualizado_em ? ' · editada' : ''}</small></div>
+        <p>${esc(a.texto)}</p>
+        <div class="fx-nota-a"><button type="button" class="lnk" data-fx="editar" data-id="${esc(a.id)}">Editar</button><button type="button" class="lnk del" data-fx="excluir" data-id="${esc(a.id)}">Excluir</button></div>
+      </li>`).join('');
+    fx.innerHTML = `
+      <div class="fx-scrim" data-fx="fechar"></div>
+      <aside class="fx" role="dialog" aria-modal="true" aria-labelledby="fx-t">
+        <header class="fx-h">
+          <div><h2 id="fx-t">${esc(s.p.loja)}</h2><small>${esc(s.p.cidade)} · cadastrada ${relativo(+new Date(s.p.criado_em))} · último acesso ${relativo(s.ultimo)}</small></div>
+          <button type="button" class="fx-x" data-fx="fechar" aria-label="Fechar">✕</button>
+        </header>
+        <div class="fx-b">
+          <div class="fx-sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span><span>${esc(s.motivo)}</span></div>
+
+          <section class="fx-s">
+            <h3>Progresso</h3>
+            <ol class="fx-dots">${dots}</ol>
+            <div class="fx-nums">
+              <div><b>${s.fim.size}/${NMOD}</b><small>módulos concluídos</small></div>
+              <div><b>${acerto == null ? '—' : acerto + '%'}</b><small>${s.respondidas ? `acerto de primeira (${s.certas} de ${s.respondidas})` : 'ainda sem respostas'}</small></div>
+              <div><b>${s.certificada ? 'Sim' : 'Não'}</b><small>certificada</small></div>
+            </div>
+          </section>
+
+          <section class="fx-s">
+            <h3>Dúvidas nas perguntas <small>${plural(s.erros.length, 'erro', 'erros')} na 1ª tentativa</small></h3>
+            ${s.erros.length ? `<ul class="fx-erros">${s.erros.sort((a, b) => b.t - a.t).map((x) => `
+              <li><span class="tag">${esc(x.tema)}</span>${x.v < 2 ? '<span class="tag cinza">versão anterior</span>' : ''}
+                <b>${esc(x.q)}</b>${x.resposta ? `<span>Respondeu: “${esc(semValor(x.resposta))}”</span>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Nenhum erro registrado.</p>'}
+          </section>
+
+          <section class="fx-s">
+            <h3>Avaliação do treinamento</h3>
+            ${s.aval ? `<div class="fx-av"><span class="estrelas" aria-label="${s.aval.estrelas} de 5 estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span><span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
+          </section>
+
+          <section class="fx-s">
+            <h3>Anotações da equipe <small>${plural(s.notas.length, 'anotação', 'anotações')}</small></h3>
+            ${Notas.semTabela && !demo ? '<p class="fx-aviso">Para salvar anotações, rode uma vez o arquivo <b>supabase/anotacoes.sql</b> no SQL Editor do Supabase.</p>' : ''}
+            ${fxEditando ? '' : form(null)}
+            ${s.notas.length ? `<ul class="fx-notas">${anot}</ul>` : ''}
+          </section>
+        </div>
+      </aside>`;
+    if (fx.hidden) { fx.hidden = false; document.body.classList.add('fx-on'); requestAnimationFrame(() => fx.classList.add('in')); fx.querySelector('.fx-x').focus(); }
+  }
+
+  function fecharFicha() {
+    fxId = null; fxEditando = null;
+    fx.classList.remove('in');
+    document.body.classList.remove('fx-on');
+    setTimeout(() => { if (!fxId) { fx.hidden = true; fx.innerHTML = ''; } }, 200);
+  }
+
+  // Depois de criar, editar ou excluir: recalcula e mantém a ficha aberta
+  function atualizarDepois(id) {
+    const y = scrollY;
+    render();
+    scrollTo(0, y);
+    abrirFicha(id);
+  }
+
+  fx.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-fx]');
+    if (!b) return;
+    const a = b.dataset.fx;
+    if (a === 'fechar') fecharFicha();
+    else if (a === 'editar') { fxEditando = b.dataset.id; abrirFicha(fxId); }
+    else if (a === 'cancelar') { fxEditando = null; abrirFicha(fxId); }
+    else if (a === 'excluir') {
+      if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
+      try { await Notas.excluir(b.dataset.id); atualizarDepois(fxId); } catch (err) { alert(err.message); }
+    }
+  });
+  fx.addEventListener('submit', async (e) => {
+    const f = e.target.closest('[data-fx-form]');
+    if (!f) return;
+    e.preventDefault();
+    const dados = { assunto: f.assunto.value, texto: f.texto.value.trim(), autor: f.autor.value.trim() };
+    const erro = f.querySelector('.fx-err');
+    if (!dados.texto || !dados.autor) { erro.textContent = 'Preencha o seu nome e a anotação.'; return; }
+    try { localStorage.setItem('bigou-admin-autor', dados.autor); } catch (err) { /* */ }
+    const bt = f.querySelector('[type=submit]');
+    bt.disabled = true; bt.textContent = 'Salvando…';
+    try {
+      if (f.dataset.fxForm === 'nova') await Notas.criar(fxId, dados.assunto, dados.texto, dados.autor);
+      else await Notas.editar(f.dataset.fxForm, dados.assunto, dados.texto, dados.autor);
+      fxEditando = null;
+      atualizarDepois(fxId);
+    } catch (err) {
+      erro.textContent = err.message;
+      bt.disabled = false; bt.textContent = 'Tentar de novo';
+      if (err.auth) { sessao.sair(); }
+    }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fx.hidden) fecharFicha(); });
 
   function baixarCSV(nome, linhas) {
     const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
@@ -863,9 +1111,23 @@
   }
 
   function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto', 'Assunto com mais erro', 'Ajudou', 'Estrelas', 'Comentário', 'Último acesso', 'Cadastro', 'Aparelho'];
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, Object.keys(s.notaQ).length ? Math.round(s.nota * 100) + '%' : '', s.erroTema || '', s.aval ? (s.aval.ajudou ? 'Sim' : 'Não') : '', s.aval ? s.aval.estrelas : '', s.aval ? s.aval.comentario || '' : '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Motivo', 'Acerto (das respondidas)', 'Dúvidas (erros)', 'Assunto com mais erro', 'Anotações', 'Ajudou', 'Estrelas', 'Comentário', 'Último acesso', 'Cadastro', 'Aparelho'];
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.motivo, s.respondidas ? `${Math.round((s.certas / s.respondidas) * 100)}% (${s.certas} de ${s.respondidas})` : '', s.erros.length, s.erroTema || '', s.notas.length, s.aval ? (s.aval.ajudou ? 'Sim' : 'Não') : '', s.aval ? s.aval.estrelas : '', s.aval ? s.aval.comentario || '' : '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
     baixarCSV('treinamento-lojas', [cab].concat(linhas));
+  }
+
+  // Uma linha por dúvida: erros nas perguntas, comentários da avaliação e anotações da equipe.
+  // É a base para o plano de ação de melhorias na plataforma e no treinamento.
+  function exportarPlano() {
+    const cab = ['Tipo', 'Loja', 'Cidade', 'Situação', 'Acerto da loja (das respondidas)', 'Assunto', 'Pergunta ou texto', 'Resposta escolhida / avaliação', 'Versão da pergunta', 'Autor', 'Data', 'Editado em'];
+    const linhas = [];
+    linhasLojas().forEach((s) => {
+      const base = [s.p.loja, s.p.cidade, SIT[s.sit][0], s.respondidas ? `${Math.round((s.certas / s.respondidas) * 100)}% (${s.certas} de ${s.respondidas})` : ''];
+      s.erros.forEach((x) => linhas.push(['Erro em pergunta'].concat(base, [x.tema, x.q, x.resposta ? semValor(x.resposta) : '', x.v < 2 ? 'Anterior (1)' : 'Atual (2)', '', dataHoraBR(x.t), ''])));
+      if (s.aval && s.aval.comentario) linhas.push(['Comentário da avaliação'].concat(base, ['', s.aval.comentario, `${s.aval.estrelas} estrelas · ${s.aval.ajudou ? 'ajudou' : 'não ajudou'}`, '', '', dataHoraBR(s.aval.t), '']));
+      s.notas.forEach((a) => linhas.push(['Anotação da equipe'].concat(base, [a.assunto || '', a.texto, '', '', a.autor || '', dataHoraBR(+new Date(a.criado_em)), a.atualizado_em ? dataHoraBR(+new Date(a.atualizado_em)) : ''])));
+    });
+    baixarCSV('treinamento-duvidas-e-anotacoes', [cab].concat(linhas));
   }
 
   // Destaca na navegação a seção que está na tela
@@ -897,6 +1159,7 @@
       else if (a.dataset.a === 'sair') { sessao.sair(); telaLogin(); }
       else if (a.dataset.a === 'csv') exportarCSV();
       else if (a.dataset.a === 'csv-duvidas') exportarDuvidas();
+      else if (a.dataset.a === 'csv-plano') exportarPlano();
       return;
     }
     const chip = e.target.closest('[data-st]');
@@ -913,6 +1176,8 @@
       if (alvo) window.scrollTo({ top: alvo.getBoundingClientRect().top + scrollY - document.querySelector('.bar').offsetHeight - 70, behavior: 'smooth' });
       return;
     }
+    const row = e.target.closest('.lj-row');
+    if (row) { abrirFicha(row.dataset.loja); return; }
     const th = e.target.closest('th.sort');
     if (th) { const k = th.dataset.k; st.ordem = { k, dir: st.ordem.k === k ? -st.ordem.dir : k === 'loja' || k === 'cidade' ? 1 : -1 }; desenharLojas(); }
   });
@@ -936,6 +1201,7 @@
   });
   root.addEventListener('focusin', (e) => { const el = e.target.closest('[data-tip]'); if (el) { const r = el.getBoundingClientRect(); mostrarTip(el.dataset.tip, r.left + r.width / 2, r.top); } });
   root.addEventListener('focusout', esconderTip);
+  root.addEventListener('keydown', (e) => { const row = e.target.closest && e.target.closest('.lj-row'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(row.dataset.loja); } });
   root.addEventListener('touchstart', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); else { const el = e.target.closest('[data-tip]'); if (el) mostrarTip(el.dataset.tip, e.touches[0].clientX, e.touches[0].clientY); else esconderTip(); } }, { passive: true });
   root.addEventListener('touchmove', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); }, { passive: true });
   window.addEventListener('scroll', () => {
@@ -967,6 +1233,6 @@
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (st.R) desenharLinha(); }, 150); });
 
   // Exposto para testes
-  window.ADMIN = { calcular, gerarDemo, estado: st };
+  window.ADMIN = { calcular, gerarDemo, estado: st, abrirFicha };
   iniciar();
 })();

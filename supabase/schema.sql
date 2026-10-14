@@ -67,6 +67,9 @@ drop policy if exists "admin le admins" on public.treino_admins;
 create policy "admin le admins" on public.treino_admins
   for select to authenticated using (public.treino_eh_admin());
 
+-- Anotações da equipe sobre cada loja: ver supabase/anotacoes.sql
+-- (pode rodar os dois arquivos; o segundo cria a tabela treino_anotacoes)
+
 -- ------------------------------ Admin ------------------------------
 -- Troque pelo e-mail do usuário criado em Authentication → Users
 insert into public.treino_admins (email) values ('admin@bigou.app')
