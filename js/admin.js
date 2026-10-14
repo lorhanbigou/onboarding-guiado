@@ -11,6 +11,8 @@
   const tip = document.getElementById('adm-tip');
   const DIA = 864e5;
   const COR = { a: '#2a78d6', b: '#eb6834' };            // validados (dataviz): série 1 e 2
+  const SEQ = ['#f1f6fd', '#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+  const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const demo = /[?&]demo=1/.test(location.search) || !(CFG.url && CFG.anonKey && CFG.adminEmail);
 
@@ -82,6 +84,17 @@
     sair: sv('<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/>'),
     atualizar: sv('<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/>'),
     baixar: sv('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+    casa: sv('<path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/>'),
+    rota: sv('<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>'),
+    lista: sv('<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3"/><circle cx="4.5" cy="12" r="1.3"/><circle cx="4.5" cy="18" r="1.3"/>'),
+    livro: sv('<path d="M12 6.5C10.5 5.3 8.5 5 4 5v13c4.5 0 6.5.3 8 1.5 1.5-1.2 3.5-1.5 8-1.5V5c-4.5 0-6.5.3-8 1.5zM12 6.5v13"/>'),
+    pergunta: sv('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 1 1 3.6 2.4c-.7.3-1.1.9-1.1 1.6v.7M12 17h.01"/>'),
+    nota: sv('<path d="M5 4h10l4 4v12H5z"/><path d="M14.5 4v4.5H19M8.5 12.5h7M8.5 16h5"/>'),
+    estrela: sv('<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/>'),
+    cidade: sv('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+    grafico: sv('<path d="M4 20h16"/><path d="M7 16v-4M11 16V8M15 16v-6M19 16V5"/>'),
+    chat: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/>'),
+    menu: sv('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   };
 
   /* ------------------------------ Formatação ------------------------------ */
@@ -398,12 +411,21 @@
     ultimaDaLoja.forEach(({ e, r }) => { if (!e.detalhe.acertou) S.get(e.participante_id).erros.push({ id: r.id, v: r.v, tema: r.tema, q: r.q, resposta: r.resposta, t: e.t }); });
     const porPergunta = new Map();
     primeira.forEach(({ e, r }) => {
-      const o = porPergunta.get(r.id) || { id: r.id, m: e.modulo, p: e.passo, st: r.st, tema: r.tema, v: { 1: { ok: 0, tot: 0, erradas: {} }, 2: { ok: 0, tot: 0, erradas: {} } } };
+      const o = porPergunta.get(r.id) || { id: r.id, m: e.modulo, p: e.passo, st: r.st, tema: r.tema, v: { 1: { ok: 0, tot: 0, erradas: {}, escolhas: {} }, 2: { ok: 0, tot: 0, erradas: {}, escolhas: {} } } };
       const b = o.v[r.v >= 2 ? 2 : 1];
       b.tot++;
+      if (r.resposta) b.escolhas[r.resposta] = (b.escolhas[r.resposta] || 0) + 1;
       if (e.detalhe.acertou) b.ok++;
       else if (r.resposta) b.erradas[r.resposta] = (b.erradas[r.resposta] || 0) + 1;
       porPergunta.set(r.id, o);
+    });
+    // Tentativas até acertar (versão atual)
+    const tentativas = new Map();
+    evP.filter((e) => e.tipo === 'quiz' && e.detalhe && e.detalhe.acertou).forEach((e) => {
+      const r = lerResposta(e);
+      if (r.v < 2) return;
+      if (!tentativas.has(r.id)) tentativas.set(r.id, []);
+      tentativas.get(r.id).push(e.detalhe.tentativa || 1);
     });
     const temas = new Map();
     porPergunta.forEach((o) => {
@@ -510,10 +532,46 @@
     }
     paradas.sort((a, b) => b.pararam - a.pararam || b.taxa - a.taxa);
 
+    /* ---------- Dados completos: por módulo, por passo e por pergunta ---------- */
+    const modulos = MODS.map((md) => {
+      const m = md.n, ini = L.filter((s) => s.ini.has(m)).length, fim = L.filter((s) => s.fim.has(m)).length;
+      const pararam = L.filter((s) => (s.sit === 'parada' || s.sit === 'andamento') && s.parou && s.parou.m === m && !s.parou.proximo).length;
+      const ms = L.map((s) => s.msMod[m]).filter((x) => x > 0);
+      const sai = [...passosAband.entries()].filter(([k]) => +k.split(':')[0] === m).sort((a, b) => b[1] - a[1])[0];
+      return { m, titulo: md.titulo, ini, fim, taxa: ini ? fim / ini : null, pararam, tempo: mediana(ms), passoSai: sai ? { p: +sai[0].split(':')[1], c: sai[1] } : null };
+    });
+    const TIPO = { click: 'Clique', quiz: 'Pergunta' };
+    const passos = [];
+    MODS.forEach((md) => md.steps.forEach((stp, j) => {
+      const k = chave(md.n, j + 1), tm = tempos.get(k);
+      const vi = viram.has(k) ? viram.get(k).size : 0;
+      passos.push({ m: md.n, p: j + 1, titulo: tituloPasso(md.n, j + 1), tipo: TIPO[stp.mode] || 'Leitura', viram: vi, sairam: passosAband.get(k) || 0, pulos: pul.get(k) || 0, tempo: tm && tm.length ? mediana(tm) : null, amostra: tm ? tm.length : 0 });
+    }));
+    // Todas as perguntas, mesmo as ainda sem resposta, com a distribuição por alternativa
+    const perguntasTodas = [];
+    MODS.forEach((md) => md.steps.forEach((stp, j) => {
+      if (stp.mode !== 'quiz') return;
+      const o = porPergunta.get(stp.id) || { v: { 1: { ok: 0, tot: 0, escolhas: {} }, 2: { ok: 0, tot: 0, escolhas: {} } } };
+      const tt = tentativas.get(stp.id) || [];
+      const antigo = QUIZ_V1[stp.id];
+      perguntasTodas.push({
+        id: stp.id, m: md.n, p: j + 1, tema: stp.tema, desafio: !!stp.desafio,
+        onde: stp.desafio ? `Desafio do Módulo ${md.n}` : `Exercício final, ${stp.title}`,
+        q: semValor(stp.q),
+        opcoes: stp.options.map((op) => ({ t: semValor(op.t), ok: !!op.ok, n: o.v[2].escolhas[op.t] || 0 })),
+        ok: o.v[2].ok, tot: o.v[2].tot, taxa: o.v[2].tot ? o.v[2].ok / o.v[2].tot : null,
+        tentativas: tt.length ? tt.reduce((a, b) => a + b, 0) / tt.length : null,
+        antes: o.v[1].tot ? {
+          ok: o.v[1].ok, tot: o.v[1].tot, q: antigo ? semValor(antigo[0]) : null,
+          opcoes: antigo ? antigo[1].map((t) => ({ t: semValor(t), n: o.v[1].escolhas[t] || 0 })) : [],
+        } : null,
+      });
+    }));
+
     /* ---------- Cidades ---------- */
     const cid = new Map();
-    const C = (c) => { if (!cid.has(c)) cid.set(c, { cidade: c, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0 }); return cid.get(c); };
-    L.forEach((s) => { const o = C(s.p.cidade); o.lojas++; if (s.comecou) o.comecaram++; if (s.concluiu) o.concluiram++; if (s.certificada) o.certificadas++; if (s.contato) o.contato++; });
+    const C = (c) => { if (!cid.has(c)) cid.set(c, { cidade: c, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0, certas: 0, respondidas: 0 }); return cid.get(c); };
+    L.forEach((s) => { const o = C(s.p.cidade); o.lojas++; if (s.comecou) o.comecaram++; if (s.concluiu) o.concluiram++; if (s.certificada) o.certificadas++; if (s.contato) o.contato++; o.certas += s.certas; o.respondidas += s.respondidas; });
     const cidades = [...cid.values()].sort((a, b) => b.lojas - a.lojas || b.contato - a.contato);
     const semCadastro = f.cidade ? [] : TREINO.cidades.filter((c) => !cid.has(c));
 
@@ -575,6 +633,17 @@
       comentarios: avs.filter((a) => a.comentario).sort((a, b) => b.t - a.t),
     };
 
+    // Mapa de calor (dia da semana × hora) dos acessos e perfil de uso
+    const calor = Array.from({ length: 7 }, () => Array(24).fill(0));
+    acessos.forEach((e) => { const d = new Date(e.t); calor[d.getDay()][d.getHours()]++; });
+    const contar = (arr) => { const m = new Map(); arr.forEach((x) => m.set(x, (m.get(x) || 0) + 1)); return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+    const perfil = {
+      dispositivo: contar(parts.map((p) => p.dispositivo || 'desconhecido')),
+      navegador: contar(parts.map((p) => p.navegador || 'Outro')),
+      dicas: contar(evs.filter((e) => e.tipo === 'dica' && e.t >= desde && ids.has(e.participante_id)).map((e) => (e.detalhe && e.detalhe.dica) || '?')),
+    };
+    L.forEach((s) => { s.tempoTotal = Object.values(s.msMod).reduce((a, b) => a + b, 0); });
+
     const uso = {
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
@@ -586,6 +655,7 @@
     return {
       kpi: { cadastradas: L.length, comecaram, concluiram, certificadas: sit.certificada, taxa: comecaram ? concluiram / comecaram : null },
       sit, jornada, paradas, assuntos, cidades, semCadastro, serie, uso, duvidas, avaliacao, lojas: L,
+      modulos, passos, perguntas: perguntasTodas, calor, perfil,
     };
   }
 
@@ -704,6 +774,24 @@
     }).join('')}</div>`;
   }
 
+  // Mapa de calor: sequencial azul, do claro (pouco) ao escuro (muito)
+  function graficoCalor(R) {
+    const mx = Math.max(1, ...R.calor.flat());
+    const cor = (v) => (v ? SEQ[Math.min(SEQ.length - 1, 1 + Math.floor((v / mx) * (SEQ.length - 2)))] : SEQ[0]);
+    return `
+      <div class="hm" role="table" aria-label="Acessos por dia da semana e hora">
+        <div class="hm-row hm-head"><span></span>${Array.from({ length: 24 }, (_, h) => `<span>${h % 3 === 0 ? h + 'h' : ''}</span>`).join('')}</div>
+        ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<div class="hm-row"><span class="hm-d">${SEMANA[d]}</span>${R.calor[d].map((v, h) => `<i style="background:${cor(v)}" ${tipAttr(`<b>${SEMANA[d]}, ${h}h–${h + 1}h</b><br>${plural(v, 'acesso', 'acessos')}`)}></i>`).join('')}</div>`).join('')}
+        <div class="hm-scale"><small>Menos</small>${SEQ.slice(1).map((c) => `<i style="background:${c}"></i>`).join('')}<small>Mais</small></div>
+      </div>`;
+  }
+
+  function perfilBloco(titulo, lista, total, absoluto) {
+    if (!lista.length) return `<div class="pf-b"><h3>${titulo}</h3><p class="empty">Sem dados.</p></div>`;
+    const mx = Math.max(...lista.map((x) => x[1]));
+    return `<div class="pf-b"><h3>${titulo}</h3>${lista.slice(0, 8).map(([k, v]) => `<div class="pf-r"><span>${esc(k)}</span><span class="hb-track"><i style="width:${(v / mx) * 100}%;background:${COR.a}"></i></span><b>${absoluto ? n(v) : pct(v, total)}</b></div>`).join('')}</div>`;
+  }
+
   // Linha diária: acessos e conclusões (mesma unidade, um eixo)
   function graficoLinha(R, largura) {
     const S = R.serie, W = Math.max(300, largura), H = 220, pl = 36, pr = 12, pt = 12, pb = 26;
@@ -736,10 +824,13 @@
   /* =====================================================================
      TELAS
      ===================================================================== */
-  const st = { dados: null, filtros: { dias: 28, cidade: '' }, busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 }, R: null, P: null };
+  const st = {
+    dados: null, filtros: { dias: 28, cidade: '' }, R: null, P: null, menu: false,
+    busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
+    pag: {}, fModulo: '', fTema: '', fBaixo: false, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
+  };
   // Assistente de dúvidas desligado em TREINO.config.recursos: a seção do chat some do painel
   const CHAT = !!(TREINO.config.recursos && TREINO.config.recursos.assistente);
-  const SECOES = [['resumo', 'Resumo'], ['jornada', 'Jornada'], ['assuntos', 'Assuntos']].concat(CHAT ? [['duvidas', 'Dúvidas do chat']] : [], [['lojas', 'Lojas para acompanhar'], ['cidades', 'Cidades'], ['uso', 'Uso']]);
 
   function telaLogin(msg) {
     root.innerHTML = `
@@ -820,119 +911,280 @@
       ${AV.comentarios.length ? `<h4 class="avl-h">Comentários</h4><ul class="dv">${AV.comentarios.slice(0, 8).map((a) => `<li><span>“${esc(a.comentario)}”<small class="avl-q">${esc(a.loja)} · ${a.estrelas} ★ · ${a.ajudou ? 'ajudou' : 'não ajudou'}</small></span><small>${relativo(a.t)}</small></li>`).join('')}</ul>` : ''}`);
   }
 
+  /* ------------------------------ Páginas da sidebar ------------------------------ */
+  const PAGINAS = [
+    { id: 'visao', t: 'Visão geral', ic: 'casa', d: (ctx) => `Lojas que se cadastraram ${ctx.periodoTxt}${ctx.f.cidade ? ` em ${esc(ctx.f.cidade)}` : ''}.` },
+    { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, módulo por módulo, e onde ficam pelo caminho.' },
+    { id: 'passos', t: 'Passo a passo', ic: 'lista', d: () => 'Cada passo de cada módulo: quantas lojas viram, onde saem, o que pulam e quanto tempo levam.' },
+    { id: 'assuntos', t: 'Assuntos', ic: 'livro', d: () => `Acerto de primeira por assunto, nas perguntas atuais. Com menos de ${POUCOS} respostas, mostramos "poucos dados".` },
+    { id: 'perguntas', t: 'Perguntas', ic: 'pergunta', d: () => 'As 19 perguntas com a distribuição completa das respostas, a atual e a de antes da mudança.' },
+  ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
+    { id: 'lojas', t: 'Lojas', ic: 'loja', d: () => 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.' },
+    { id: 'anotacoes', t: 'Anotações', ic: 'nota', d: () => 'Tudo o que a equipe registrou sobre as dúvidas dos parceiros.' },
+    { id: 'avaliacoes', t: 'Avaliações', ic: 'estrela', d: () => 'O que as lojas acharam do treinamento, respondido antes do certificado.' },
+    { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Desempenho e contatos pendentes por cidade.' },
+    { id: 'uso', t: 'Uso', ic: 'grafico', d: () => 'Quando e como o treinamento é usado.' },
+    { id: 'exportar', t: 'Exportar', ic: 'baixar', d: () => 'Baixe os dados completos em CSV. Eles são a base para o plano de melhorias.' },
+  ]);
+  const paginaAtual = () => { const h = location.hash.replace('#', ''); return PAGINAS.some((p) => p.id === h) ? h : 'visao'; };
+
+  /* ------------------------------ Paginação (25 por página) ------------------------------ */
+  const POR_PAG = 25;
+  function paginar(chave, rows) {
+    const tot = rows.length, pgs = Math.max(1, Math.ceil(tot / POR_PAG));
+    const p = Math.min(Math.max(1, st.pag[chave] || 1), pgs);
+    st.pag[chave] = p;
+    const ini = (p - 1) * POR_PAG;
+    let ctrl = '';
+    if (tot > POR_PAG) {
+      const nums = [];
+      for (let i = 1; i <= pgs; i++) if (i === 1 || i === pgs || Math.abs(i - p) <= 1) nums.push(i); else if (nums[nums.length - 1] !== '…') nums.push('…');
+      ctrl = `<nav class="pgn" aria-label="Paginação" data-pgn="${chave}">
+        <span class="pgn-i">${n(ini + 1)}–${n(Math.min(tot, ini + POR_PAG))} de ${n(tot)}</span>
+        <div class="pgn-b">
+          <button class="pgn-btn" data-ir="${p - 1}" ${p === 1 ? 'disabled' : ''} aria-label="Página anterior">‹</button>
+          ${nums.map((x) => (x === '…' ? '<span class="pgn-gap">…</span>' : `<button class="pgn-btn ${x === p ? 'on' : ''}" data-ir="${x}" ${x === p ? 'aria-current="page"' : ''}>${x}</button>`)).join('')}
+          <button class="pgn-btn" data-ir="${p + 1}" ${p === pgs ? 'disabled' : ''} aria-label="Próxima página">›</button>
+        </div>
+      </nav>`;
+    } else if (tot) ctrl = `<p class="pgn-i solo">${plural(tot, 'item', 'itens')}</p>`;
+    return { itens: rows.slice(ini, ini + POR_PAG), ctrl };
+  }
+  const TABELAS = {};   // chave → função que redesenha só a tabela (mantém o foco na busca)
+  const redesenhar = (chave) => { const el = document.getElementById('t-' + chave); if (el && TABELAS[chave]) el.innerHTML = TABELAS[chave](); };
+
   function render() {
     const f = st.filtros;
     const R = (st.R = calcular(st.dados, f));
-    // Período anterior, de mesmo tamanho (só quando há período definido)
     const P = (st.P = f.dias ? calcular(st.dados, Object.assign({}, f, { ate: Date.now() - f.dias * DIA })) : null);
-    const K = R.kpi, KP = P && P.kpi, SI = R.sit;
-    const dl = (k, menor) => (KP ? delta(K[k], KP[k], menor) : '');
+    const pg = paginaAtual();
+    const ctx = { R, P, f, periodoTxt: f.dias ? `nos últimos ${f.dias} dias` : 'desde o início' };
+    const cont = { lojas: R.sit.contato, anotacoes: (st.dados.anotacoes || []).filter((a) => R.lojas.some((s) => s.p.id === a.participante_id)).length, avaliacoes: R.avaliacao.n };
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const sd = saude(K.taxa);
-    const deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
-    const periodoTxt = f.dias ? `nos últimos ${f.dias} dias` : 'desde o início';
-
-    // O que fazer agora: no máximo 3 ações, cada uma levando à seção
-    const pa = R.paradas[0], pior = R.assuntos.find((t) => t.tot >= 5 && t.taxa < 0.7);
-    const acoes = [
-      SI.contato && ['parado', 'lojas', `<b>${n(SI.contato)} ${SI.contato === 1 ? 'loja precisa' : 'lojas precisam'} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lista'],
-      pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver perguntas'],
-      CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta ou fora do treinamento.</b> Veja o que os parceiros perguntaram e ainda não está explicado.`, 'Ver dúvidas'],
-      pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${n(pa.pararam)} ${pa.pararam === 1 ? 'loja' : 'lojas'}.`, 'Ver jornada'],
-    ].filter(Boolean).slice(0, 4);
-    const DV = R.duvidas;
-
-    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
+    const atual = PAGINAS.find((p) => p.id === pg);
 
     root.innerHTML = `
-      <header class="hd">
-        <div class="hd-l"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small><span class="hd-sub">Treinamento Financeiro</span>${demo ? '<span class="demo">Dados de demonstração</span>' : ''}</small></div></div>
-        <div class="hd-r">
-          <button class="btn ic" data-a="atualizar" title="Atualizar">${IC.atualizar}<span>Atualizar</span></button>
-          ${demo ? '' : `<button class="btn ic" data-a="sair" title="Sair">${IC.sair}<span>Sair</span></button>`}
-        </div>
-      </header>
-
-      <div class="bar">
-        <div class="flt" role="group" aria-label="Filtros">
-          <label><span>Cadastradas</span><select data-f="dias">
-            ${[[7, 'Últimos 7 dias'], [14, 'Últimos 14 dias'], [28, 'Últimos 28 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
-          </select></label>
-          <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
-        </div>
-        <nav class="nav" aria-label="Seções">${SECOES.map(([id, t]) => `<a href="#s-${id}" data-sec="${id}">${t}</a>`).join('')}</nav>
-      </div>
-
-      <main class="pg">
-        ${sec('resumo', 'Resumo', `Lojas que se cadastraram ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}.`, `
-          <div class="kpis k4">
-            ${kpi('loja', 'Cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
-            ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.')}
-            ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`)}
-            ${kpi('ok', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas. É quem realmente entendeu.', 'hl')}
+      <div class="ad ${st.menu ? 'menu-on' : ''}">
+        <aside class="sb" aria-label="Menu do painel">
+          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
+          ${demo ? '<span class="sb-demo">Dados de demonstração</span>' : ''}
+          <nav class="sb-nav">${PAGINAS.map((p) => `<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
+          <div class="sb-pe">
+            <button class="sb-a" data-a="atualizar">${IC.atualizar}<span>Atualizar dados</span></button>
+            ${demo ? '' : `<button class="sb-a" data-a="sair">${IC.sair}<span>Sair</span></button>`}
           </div>
-          <div class="status">
-            <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null && KP.comecaram >= POUCOS ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
-            ${R.avaliacao.n ? `<div class="status-l"><span class="estrela">★</span><span><b>${R.avaliacao.media.toFixed(1).replace('.', ',')}</b> de média · <b>${pct(R.avaliacao.ajudou, R.avaliacao.n)}</b> disseram que o treinamento ajudou <small>(${plural(R.avaliacao.n, 'avaliação', 'avaliações')})</small></span></div>` : ''}
-          </div>
-          ${acoes.length ? card('O que fazer agora', '', `<ul class="ac">${acoes.map(([i, s, t, l]) => `<li><span class="ac-ic ${i}">${IC[i]}</span><span class="ac-t">${t}</span><a href="#s-${s}" class="ac-a" data-ir="${s}">${l} →</a></li>`).join('')}</ul>`, 'ac-card') : ''}
-        `)}
-
-        ${sec('jornada', 'Jornada', 'Até onde as lojas chegam e onde ficam pelo caminho.', `
-          ${card('Até onde chegam', 'Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R))}
-          ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}
-        `)}
-
-        ${sec('assuntos', 'Assuntos', `O que os parceiros acertam de primeira, nas perguntas atuais. Com menos de ${POUCOS} respostas, mostramos "poucos dados". Toque em um assunto para ver as perguntas, o erro mais comum e como era antes da mudança.`, card('', '', assuntosVisual(R)))}
-
-        ${CHAT ? secDuvidas(R, DV, periodoTxt, f) : ''}
-
-        ${sec('lojas', 'Lojas para acompanhar', 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.', card('', '', `
-          <div class="lj-top">
-            <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
-            <div class="lj-act">
-              <input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}">
-              <button class="btn ic" data-a="csv">${IC.baixar}<span>Lojas (CSV)</span></button>
-              <button class="btn ic primary" data-a="csv-plano">${IC.baixar}<span>Dúvidas e anotações (CSV)</span></button>
+        </aside>
+        <div class="sb-scrim" data-a="menu"></div>
+        <div class="ad-main">
+          <header class="ph">
+            <button class="sb-btn" data-a="menu" aria-label="Abrir menu">${IC.menu}</button>
+            <div class="ph-t"><h1>${atual.t}</h1><p>${atual.d(ctx)}</p></div>
+            <div class="flt" role="group" aria-label="Filtros">
+              <label><span>Cadastradas</span><select data-f="dias">
+                ${[[7, 'Últimos 7 dias'], [14, 'Últimos 14 dias'], [28, 'Últimos 28 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
+              </select></label>
+              <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
             </div>
-          </div>
-          <div class="tb-wrap" id="lj"></div>`))}
-
-        ${sec('cidades', 'Cidades', 'Conclusão e contatos pendentes por cidade.', card('', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div class="tb-wrap" id="cid-tb"></div>
-          ${R.semCadastro.length ? `<details class="sem"><summary>${n(R.semCadastro.length)} cidades ainda sem nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`))}
-
-        ${sec('uso', 'Uso', 'Como e quando o treinamento é usado.', `
-          <div class="kpis k3">
-            ${kpi('tempo', 'Tempo para concluir', dur(R.uso.tempoAtivo), `de tela · ${dias(R.uso.tempoCal)}`, '', 'Mediana de quem concluiu: tempo de tela somado e dias entre o primeiro e o último módulo.')}
-            ${kpi('olho', 'No celular', pct(R.uso.celular, K.cadastradas), `${n(R.uso.acessos)} acessos no período`, '', 'Lojas que fizeram o treinamento pelo celular.')}
-            ${kpi('raio', 'Usaram a narração', pct(R.uso.voz, K.cadastradas), 'das cadastradas', '', 'Lojas que ligaram a narração por voz.')}
-          </div>
-          ${avaliacaoCard(R.avaliacao)}
-          ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
-        `)}
-      </main>`;
-
-    desenharLinha();
-    desenharCidades();
-    desenharLojas();
-    observarSecoes();
+          </header>
+          <main class="pg">${PG[pg](ctx)}</main>
+        </div>
+      </div>`;
+    if (document.getElementById('linha')) desenharLinha();
   }
+
+  const PG = {};
+
+  /* Visão geral */
+  PG.visao = ({ R, P }) => {
+    const K = R.kpi, KP = P && P.kpi, SI = R.sit;
+    const dl = (k, menor) => (KP ? delta(K[k], KP[k], menor) : '');
+    const sd = saude(K.taxa), deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
+    const pa = R.paradas[0], pior = R.assuntos.find((t) => t.tot >= POUCOS && t.taxa < 0.7);
+    const acoes = [
+      SI.contato && ['parado', 'lojas', `<b>${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lojas'],
+      pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver assunto'],
+      CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta.</b>`, 'Ver dúvidas'],
+      pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${plural(pa.pararam, 'loja', 'lojas')}.`, 'Ver jornada'],
+    ].filter(Boolean);
+    return `
+      <div class="kpis k4">
+        ${kpi('loja', 'Cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
+        ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.')}
+        ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`)}
+        ${kpi('ok', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas.', 'hl')}
+      </div>
+      <div class="cols">
+        ${card('Saúde do treinamento', '', `<div class="status">
+          <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null && KP.comecaram >= POUCOS ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
+          ${R.avaliacao.n ? `<div class="status-l"><span class="estrela">★</span><span><b>${R.avaliacao.media.toFixed(1).replace('.', ',')}</b> de média · <b>${pct(R.avaliacao.ajudou, R.avaliacao.n)}</b> disseram que ajudou <small>(${plural(R.avaliacao.n, 'avaliação', 'avaliações')})</small></span></div>` : '<div class="status-l"><span class="estrela">★</span><span>Nenhuma avaliação ainda.</span></div>'}
+          <div class="status-l"><span class="ic-st">${IC.tempo}</span><span>Tempo mediano para concluir: <b>${dur(R.uso.tempoAtivo)}</b> <small>de tela, ${dias(R.uso.tempoCal)}</small></span></div>
+        </div>`)}
+        ${card('O que fazer agora', '', acoes.length ? `<ul class="ac">${acoes.map(([i, s, t, l]) => `<li><span class="ac-ic ${i}">${IC[i]}</span><span class="ac-t">${t}</span><a href="#${s}" class="ac-a">${l} →</a></li>`).join('')}</ul>` : '<p class="empty">Nada urgente por aqui. 🎉</p>', 'ac-card')}
+      </div>
+      ${card('Jornada', 'Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R))}`;
+  };
+
+  /* Jornada */
+  PG.jornada = ({ R }) => `
+    ${card('Até onde chegam', '', jornadaVisual(R))}
+    ${card('Por módulo', 'Os 10 módulos, na ordem do treinamento.', `<div class="tb-wrap"><table class="tb"><thead><tr><th>Módulo</th><th class="num">Iniciaram</th><th class="num">Concluíram</th><th>Conclusão</th><th class="num">Pararam aqui</th><th class="num">Tempo mediano</th><th>Passo onde mais saem</th></tr></thead>
+      <tbody>${R.modulos.map((x) => `<tr><td><b>M${x.m}</b> ${esc(x.titulo)}</td><td class="num">${n(x.ini)}</td><td class="num">${n(x.fim)}</td>
+        <td>${x.taxa == null ? '—' : `<span class="inl"><i style="width:${Math.round(x.taxa * 100)}%"></i></span>${pct(x.fim, x.ini)}`}</td>
+        <td class="num">${x.pararam ? `<b class="ct">${n(x.pararam)}</b>` : '<span class="mut">0</span>'}</td><td class="num">${dur(x.tempo)}</td>
+        <td>${x.passoSai ? `${esc(tituloPasso(x.m, x.passoSai.p))} <small class="mut">(${n(x.passoSai.c)})</small>` : '<span class="mut">—</span>'}</td></tr>`).join('')}</tbody></table></div>`)}
+    ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}`;
+
+  /* Passo a passo */
+  TABELAS.passos = () => {
+    const rows = st.R.passos.filter((x) => !st.fModulo || x.m === +st.fModulo);
+    const mxSai = Math.max(1, ...rows.map((x) => x.sairam));
+    const { itens, ctrl } = paginar('passos', rows);
+    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Módulo</th><th>Passo</th><th>Tipo</th><th class="num">Viram</th><th>Saíram aqui</th><th class="num">Pularam</th><th class="num">Tempo mediano</th></tr></thead>
+      <tbody>${itens.map((x) => `<tr><td>M${x.m}</td><td><small class="mut">${x.p}.</small> ${esc(x.titulo)}</td><td><span class="tag ${x.tipo === 'Pergunta' ? '' : 'cinza'}">${x.tipo}</span></td>
+        <td class="num">${n(x.viram)}</td>
+        <td>${x.sairam ? `<span class="inl o"><i style="width:${(x.sairam / mxSai) * 100}%"></i></span><b class="ct">${n(x.sairam)}</b> <small class="mut">${pct(x.sairam, x.viram)}</small>` : '<span class="mut">0</span>'}</td>
+        <td class="num">${x.pulos ? n(x.pulos) : '<span class="mut">0</span>'}</td>
+        <td class="num">${x.amostra >= 3 ? dur(x.tempo) : '<span class="mut">poucos dados</span>'}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhum passo com esse filtro.</p>';
+  };
+  PG.passos = () => card('', '', `
+    <div class="tb-top"><label class="sel"><span>Módulo</span><select data-loc="fModulo"><option value="">Todos os módulos</option>${MODS.map((m) => `<option value="${m.n}" ${+st.fModulo === m.n ? 'selected' : ''}>M${m.n} · ${esc(m.titulo)}</option>`).join('')}</select></label></div>
+    <div id="t-passos">${TABELAS.passos()}</div>`);
+
+  /* Assuntos */
+  PG.assuntos = ({ R }) => card('', '', assuntosVisual(R));
+
+  /* Perguntas: distribuição completa por alternativa */
+  PG.perguntas = ({ R }) => {
+    const temasQ = [...new Set(R.perguntas.map((q) => q.tema))];
+    const lista = R.perguntas.filter((q) => (!st.fTema || q.tema === st.fTema) && (!st.fBaixo || (q.taxa != null && q.taxa < 0.6)));
+    const dist = (ops, tot) => `<ul class="pq-ops">${ops.map((o) => `<li class="${o.ok ? 'ok' : ''}"><span class="pq-t">${o.ok ? '<i aria-label="Correta">✔</i>' : ''}${esc(o.t)}</span><span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span><b>${n(o.n)}<small>${tot ? pct(o.n, tot) : ''}</small></b></li>`).join('')}</ul>`;
+    return `
+      <div class="tb-top">
+        <label class="sel"><span>Assunto</span><select data-loc="fTema"><option value="">Todos</option>${temasQ.map((t) => `<option ${st.fTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+        <label class="chk"><input type="checkbox" data-loc="fBaixo" ${st.fBaixo ? 'checked' : ''}> Só com acerto abaixo de 60%</label>
+      </div>
+      <div class="pq">${lista.map((q) => { const nv = nivel(q.taxa, q.tot); return `
+        <article class="card pq-c nv-${nv}">
+          <header class="pq-h"><span class="pq-id">${q.id}</span><small>${esc(q.onde)} · ${esc(q.tema)}</small><em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em></header>
+          <h3>${esc(q.q)}</h3>
+          ${dist(q.opcoes, q.tot)}
+          <footer class="pq-f">
+            <span><b>${q.tot ? pct(q.ok, q.tot) : '—'}</b> acertam de primeira <small>(${plural(q.tot, 'resposta', 'respostas')})</small></span>
+            <span>${q.tentativas ? `<b>${q.tentativas.toFixed(1).replace('.', ',')}</b> tentativas, em média, até acertar` : ''}</span>
+          </footer>
+          ${q.antes ? `<details class="pq-antes"><summary>Antes da mudança: ${pct(q.antes.ok, q.antes.tot)} de ${plural(q.antes.tot, 'resposta', 'respostas')}</summary>${q.antes.q ? `<p>“${esc(q.antes.q)}”</p>` : ''}${dist(q.antes.opcoes, q.antes.tot)}</details>` : ''}
+        </article>`; }).join('') || '<p class="empty">Nenhuma pergunta com esse filtro.</p>'}</div>`;
+  };
+
+  PG.duvidas = ({ R, periodoTxt, f }) => secDuvidas(R, R.duvidas, periodoTxt, f);
+
+  /* Lojas */
+  PG.lojas = ({ R }) => {
+    const SI = R.sit;
+    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
+    return card('', '', `
+      <div class="lj-top">
+        <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
+        <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"></div>
+      </div>
+      <div id="t-lojas">${TABELAS.lojas()}</div>`);
+  };
+
+  /* Anotações */
+  TABELAS.anotacoes = () => {
+    const lojaDe = new Map(st.R.lojas.map((s) => [s.p.id, s]));
+    const b = st.buscaNota.trim().toLowerCase();
+    const rows = (st.dados.anotacoes || []).filter((a) => lojaDe.has(a.participante_id))
+      .filter((a) => (!st.fNotaTema || a.assunto === st.fNotaTema) && (!st.fNotaAutor || a.autor === st.fNotaAutor) && (!b || (a.texto + ' ' + lojaDe.get(a.participante_id).p.loja).toLowerCase().includes(b)))
+      .sort((x, y) => +new Date(y.criado_em) - +new Date(x.criado_em));
+    const { itens, ctrl } = paginar('anotacoes', rows);
+    return itens.length ? `<ul class="nt-l">${itens.map((a) => { const s = lojaDe.get(a.participante_id); return `
+      <li class="nt-i">
+        <div class="nt-h"><button class="lnk loja" data-ficha="${esc(s.p.id)}">${esc(s.p.loja)}</button><small>${esc(s.p.cidade)}</small><span class="tag">${esc(a.assunto || 'Outro')}</span></div>
+        <p>${esc(a.texto)}</p>
+        <div class="nt-f"><small>${esc(a.autor || 'Equipe')} · ${dataHoraBR(+new Date(a.criado_em))}${a.atualizado_em ? ' · editada' : ''}</small>
+          <span><button class="lnk" data-ficha="${esc(s.p.id)}" data-editar="${esc(a.id)}">Editar</button><button class="lnk del" data-excluir="${esc(a.id)}">Excluir</button></span></div>
+      </li>`; }).join('')}</ul>${ctrl}` : `<p class="empty">${(st.dados.anotacoes || []).length ? 'Nenhuma anotação com esse filtro.' : 'Nenhuma anotação ainda. Abra uma loja em "Lojas" para anotar.'}</p>`;
+  };
+  PG.anotacoes = () => {
+    const todas = st.dados.anotacoes || [];
+    const autores = [...new Set(todas.map((a) => a.autor).filter(Boolean))].sort();
+    const porTema = {}; todas.forEach((a) => { porTema[a.assunto || 'Outro'] = (porTema[a.assunto || 'Outro'] || 0) + 1; });
+    return `
+      ${Notas.semTabela && !demo ? '<p class="fx-aviso">Para salvar anotações, rode uma vez o arquivo <b>supabase/anotacoes.sql</b> no SQL Editor do Supabase.</p>' : ''}
+      ${Object.keys(porTema).length ? card('Por assunto', '', barras(Object.entries(porTema).map(([tema, c]) => ({ tema, c })).sort((a, b) => b.c - a.c), { valor: (x) => x.c, rotulo: (x) => x.tema, fmt: (x) => n(x.c) })) : ''}
+      ${card('', '', `
+        <div class="tb-top">
+          <label class="sel"><span>Assunto</span><select data-loc="fNotaTema"><option value="">Todos</option>${ASSUNTOS_NOTA.map((t) => `<option ${st.fNotaTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+          <label class="sel"><span>Autor</span><select data-loc="fNotaAutor"><option value="">Todos</option>${autores.map((t) => `<option ${st.fNotaAutor === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+          <input type="search" class="busca" id="nt-busca" placeholder="Buscar no texto ou na loja" value="${esc(st.buscaNota)}">
+        </div>
+        <div id="t-anotacoes">${TABELAS.anotacoes()}</div>`)}`;
+  };
+
+  /* Avaliações */
+  TABELAS.avaliacoes = () => {
+    const rows = st.R.lojas.filter((s) => s.aval && (!st.fAvalCom || s.aval.comentario)).sort((a, b) => b.aval.t - a.aval.t);
+    const { itens, ctrl } = paginar('avaliacoes', rows);
+    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Loja</th><th>Estrelas</th><th>Ajudou?</th><th>Comentário</th><th>Data</th></tr></thead>
+      <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0"><td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
+        <td><span class="estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span></td>
+        <td>${s.aval.ajudou ? '<span class="badge ok">Sim</span>' : '<span class="badge bad">Não</span>'}</td>
+        <td class="cm">${s.aval.comentario ? esc(s.aval.comentario) : '<span class="mut">—</span>'}</td><td>${dataHoraBR(s.aval.t)}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhuma avaliação com esse filtro.</p>';
+  };
+  PG.avaliacoes = ({ R }) => `
+    ${avaliacaoCard(Object.assign({}, R.avaliacao, { comentarios: [] }))}
+    ${card('Todas as avaliações', '', `<div class="tb-top"><label class="chk"><input type="checkbox" data-loc="fAvalCom" ${st.fAvalCom ? 'checked' : ''}> Só com comentário</label></div><div id="t-avaliacoes">${TABELAS.avaliacoes()}</div>`)}`;
+
+  /* Cidades */
+  TABELAS.cidades = () => {
+    const b = st.buscaCid.trim().toLowerCase();
+    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b));
+    const { itens, ctrl } = paginar('cidades', rows);
+    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th class="num">Começaram</th><th class="num">Concluíram</th><th class="num">Certificadas</th><th class="num">Acerto médio</th><th class="num">Precisam de contato</th></tr></thead>
+      <tbody>${itens.map((c) => { const t = c.comecaram ? c.concluiram / c.comecaram : null; const sd = saude(c.comecaram >= 3 ? t : null);
+        return `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td><td class="num">${n(c.comecaram)}</td>
+        <td class="num"><span class="saude mini ${sd.cls}" title="${t == null ? 'Sem dados' : sd.rot + ' · de quem começou'}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td>
+        <td class="num">${n(c.certificadas)}</td><td class="num">${c.respondidas ? pct(c.certas, c.respondidas) : '<span class="mut">—</span>'}</td>
+        <td class="num">${c.contato ? `<b class="ct">${n(c.contato)}</b>` : '<span class="mut">0</span>'}</td></tr>`; }).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhuma cidade encontrada.</p>';
+  };
+  PG.cidades = ({ R }) => card('', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div id="t-cidades">${TABELAS.cidades()}</div>
+    ${R.semCadastro.length ? `<details class="sem"><summary>${plural(R.semCadastro.length, 'cidade ainda sem', 'cidades ainda sem')} nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`);
+
+  /* Uso */
+  PG.uso = ({ R }) => {
+    const K = R.kpi;
+    return `
+      <div class="kpis k4">
+        ${kpi('tempo', 'Tempo para concluir', dur(R.uso.tempoAtivo), `de tela · ${dias(R.uso.tempoCal)}`, '', 'Mediana de quem concluiu: tempo de tela somado e dias entre o primeiro e o último módulo.')}
+        ${kpi('olho', 'Acessos', n(R.uso.acessos), 'vezes que o treinamento foi aberto', '', 'Inclui visitantes que ainda não se cadastraram, quando não há filtro de cidade.')}
+        ${kpi('loja', 'No celular', pct(R.uso.celular, K.cadastradas), 'das cadastradas', '', 'Lojas que fizeram o treinamento pelo celular.')}
+        ${kpi('raio', 'Usaram a narração', pct(R.uso.voz, K.cadastradas), 'das cadastradas', '', 'Lojas que ligaram a narração por voz.')}
+      </div>
+      ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
+      <div class="cols">
+        ${card('Quando acessam', 'Acessos por dia da semana e hora.', graficoCalor(R))}
+        ${card('Perfil', '', `<div class="pf">${perfilBloco('Aparelho', R.perfil.dispositivo, K.cadastradas)}${perfilBloco('Navegador', R.perfil.navegador, K.cadastradas)}${perfilBloco('Dicas mais abertas', R.perfil.dicas, 0, true)}</div>`)}
+      </div>`;
+  };
+
+  /* Exportar */
+  const EXPORTS = [
+    ['csv-plano', 'Dúvidas e anotações', 'Uma linha por erro em pergunta (com a resposta escolhida), comentário da avaliação e anotação da equipe. É o principal para o plano de ação.', true],
+    ['csv', 'Lojas', 'Situação, progresso, acerto, dúvidas, anotações e avaliação de cada loja.'],
+    ['csv-perguntas', 'Perguntas', 'As 19 perguntas com quantas lojas escolheram cada alternativa, na versão atual e na anterior.'],
+    ['csv-passos', 'Passo a passo', 'Cada passo de cada módulo: quantas viram, saíram, pularam e o tempo mediano.'],
+    ['csv-modulos', 'Módulos', 'Iniciaram, concluíram, pararam e tempo de cada módulo.'],
+    ['csv-avaliacoes', 'Avaliações', 'Estrelas, "ajudou?" e comentários de cada loja.'],
+    ['csv-cidades', 'Cidades', 'Lojas, conclusão, certificação, acerto médio e contatos por cidade.'],
+  ].concat(CHAT ? [['csv-duvidas', 'Dúvidas do chat', 'Perguntas feitas no assistente e as avaliações das respostas.']] : []);
+  PG.exportar = ({ periodoTxt, f }) => `
+    <p class="ex-nota">Os arquivos seguem os filtros atuais: lojas cadastradas ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. Abrem no Excel e no Google Planilhas.</p>
+    <div class="ex">${EXPORTS.map(([a, t, d, destaque]) => `<div class="card ex-c ${destaque ? 'hl' : ''}"><h3>${t}</h3><p>${d}</p><button class="btn ${destaque ? 'primary' : ''} ic" data-a="${a}">${IC.baixar}<span>Baixar CSV</span></button></div>`).join('')}</div>`;
 
   function desenharLinha() {
     const el = document.getElementById('linha');
     if (el) el.innerHTML = graficoLinha(st.R, el.clientWidth || 600);
-  }
-
-  function desenharCidades() {
-    const el = document.getElementById('cid-tb');
-    if (!el) return;
-    const b = st.buscaCid.trim().toLowerCase();
-    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b));
-    el.innerHTML = rows.length ? `<table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th class="num">Concluíram</th><th class="num">Certificadas</th><th class="num">Precisam de contato</th></tr></thead>
-      <tbody>${rows.map((c) => { const t = c.comecaram ? c.concluiram / c.comecaram : null; const sd = saude(c.comecaram >= 3 ? t : null);
-        return `<tr><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td>
-        <td class="num"><span class="saude mini ${sd.cls}" title="${t == null ? 'Sem dados' : sd.rot + ' · de quem começou'}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td>
-        <td class="num">${n(c.certificadas)}</td><td class="num">${c.contato ? `<b class="ct">${n(c.contato)}</b>` : '<span class="mut">0</span>'}</td></tr>`; }).join('')}</tbody></table>` : '<p class="empty">Nenhuma cidade encontrada.</p>';
   }
 
   const SIT = {
@@ -944,25 +1196,25 @@
     const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'notas' ? s.notas.length > 0 : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
     const rows = st.R.lojas.filter((s) => filtro(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
     const k = st.ordem.k, d = st.ordem.dir;
-    const val = (s) => (k === 'loja' ? s.p.loja : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : k === 'erros' ? s.erros.length : k === 'notas' ? s.notas.length : s.ultimo);
+    const val = (s) => (k === 'loja' ? s.p.loja : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : k === 'erros' ? s.erros.length : k === 'notas' ? s.notas.length : k === 'tempo' ? s.tempoTotal : k === 'concl' ? s.concluiuEm || 0 : s.ultimo);
     return rows.sort((a, c) => { const x = val(a), y = val(c); return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * d; });
   }
 
-  function desenharLojas() {
-    const el = document.getElementById('lj');
-    if (!el) return;
-    const todas = linhasLojas(), rows = todas.slice(0, 300);
+  TABELAS.lojas = () => {
+    const { itens, ctrl } = paginar('lojas', linhasLojas());
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    el.innerHTML = rows.length ? `<table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('ultimo', 'Último acesso')}</tr></thead>
-      <tbody>${rows.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
+    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}</tr></thead>
+      <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
         <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
         <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
         <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span><small>${esc(s.motivo)}</small></td>
         <td class="num">${s.erros.length ? `<b class="ct">${n(s.erros.length)}</b>` : '<span class="mut">0</span>'}</td>
         <td class="num">${s.notas.length ? `<span class="nt">${n(s.notas.length)}</span>` : '<span class="mut">—</span>'}</td>
-        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td></tr>`).join('')}</tbody></table>
-      ${todas.length > 300 ? `<p class="note">Mostrando 300 de ${n(todas.length)} lojas. Use a busca ou exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : 'Nenhuma loja com esse filtro.'}</p>`;
-  }
+        <td class="num">${s.tempoTotal ? dur(s.tempoTotal) : '<span class="mut">—</span>'}</td>
+        <td>${s.concluiuEm ? dataBR(s.concluiuEm) : '<span class="mut">—</span>'}</td>
+        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : 'Nenhuma loja com esse filtro.'}</p>`;
+  };
+  const desenharLojas = () => redesenhar('lojas');
 
   /* ------------------------------ Ficha da loja ------------------------------ */
   const ASSUNTOS_NOTA = [...new Set(MODS.flatMap((m) => m.steps.filter((x) => x.tema).map((x) => x.tema)))].concat(['Plataforma', 'Atendimento', 'Outro']);
@@ -1130,56 +1382,84 @@
     baixarCSV('treinamento-duvidas-e-anotacoes', [cab].concat(linhas));
   }
 
-  // Destaca na navegação a seção que está na tela
-  let obs = null;
-  function observarSecoes() {
-    if (obs) obs.disconnect();
-    if (!('IntersectionObserver' in window)) return;
-    obs = new IntersectionObserver((ents) => {
-      ents.forEach((e) => { if (e.isIntersecting) document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.sec === e.target.id.slice(2))); });
-    }, { rootMargin: '-35% 0px -60% 0px' });
-    document.querySelectorAll('.sec').forEach((s) => obs.observe(s));
+  /* ------------------------------ CSVs com os dados completos ------------------------------ */
+  function exportarPerguntas() {
+    const linhas = [];
+    st.R.perguntas.forEach((q) => {
+      q.opcoes.forEach((o) => linhas.push([q.id, q.onde, q.tema, 'Atual (2)', q.q, o.t, o.ok ? 'Sim' : 'Não', o.n, q.tot ? pct(o.n, q.tot) : '', q.tot ? pct(q.ok, q.tot) : '', q.tentativas ? q.tentativas.toFixed(1).replace('.', ',') : '']));
+      if (q.antes) q.antes.opcoes.forEach((o) => linhas.push([q.id, q.onde, q.tema, 'Anterior (1)', q.antes.q || '', o.t, '', o.n, pct(o.n, q.antes.tot), pct(q.antes.ok, q.antes.tot), '']));
+    });
+    baixarCSV('treinamento-perguntas', [['Id', 'Onde', 'Assunto', 'Versão', 'Pergunta', 'Alternativa', 'Correta', 'Escolheram (1ª tentativa)', '% das respostas', 'Acerto de primeira', 'Tentativas até acertar']].concat(linhas));
+  }
+  function exportarPassos() {
+    baixarCSV('treinamento-passos', [['Módulo', 'Passo', 'Título', 'Tipo', 'Viram', 'Saíram aqui', 'Pularam', 'Tempo mediano (s)']].concat(st.R.passos.map((x) => [x.m, x.p, x.titulo, x.tipo, x.viram, x.sairam, x.pulos, x.tempo ? Math.round(x.tempo / 1000) : ''])));
+  }
+  function exportarModulos() {
+    baixarCSV('treinamento-modulos', [['Módulo', 'Título', 'Iniciaram', 'Concluíram', 'Conclusão', 'Pararam aqui', 'Tempo mediano (min)', 'Passo onde mais saem']].concat(st.R.modulos.map((x) => [x.m, x.titulo, x.ini, x.fim, x.taxa == null ? '' : pct(x.fim, x.ini), x.pararam, x.tempo ? (x.tempo / 60000).toFixed(1).replace('.', ',') : '', x.passoSai ? tituloPasso(x.m, x.passoSai.p) : ''])));
+  }
+  function exportarAvaliacoes() {
+    baixarCSV('treinamento-avaliacoes', [['Loja', 'Cidade', 'Estrelas', 'Ajudou', 'Comentário', 'Data']].concat(st.R.lojas.filter((s) => s.aval).map((s) => [s.p.loja, s.p.cidade, s.aval.estrelas, s.aval.ajudou ? 'Sim' : 'Não', s.aval.comentario || '', dataHoraBR(s.aval.t)])));
+  }
+  function exportarCidades() {
+    baixarCSV('treinamento-cidades', [['Cidade', 'Lojas', 'Começaram', 'Concluíram', 'Certificadas', 'Acerto médio', 'Precisam de contato']].concat(st.R.cidades.map((c) => [c.cidade, c.lojas, c.comecaram, c.concluiram, c.certificadas, c.respondidas ? pct(c.certas, c.respondidas) : '', c.contato])));
   }
 
   /* ------------------------------ Interações ------------------------------ */
+  window.addEventListener('hashchange', () => { if (!st.dados) return; st.menu = false; render(); window.scrollTo(0, 0); });
   root.addEventListener('change', (e) => {
     const s = e.target.closest('[data-f]');
-    if (!s) return;
-    st.filtros[s.dataset.f] = s.dataset.f === 'dias' ? +s.value : s.value;
-    render();
+    if (s) { st.filtros[s.dataset.f] = s.dataset.f === 'dias' ? +s.value : s.value; st.pag = {}; render(); return; }
+    const l = e.target.closest('[data-loc]');
+    if (l) {
+      st[l.dataset.loc] = l.type === 'checkbox' ? l.checked : l.value;
+      st.pag = {};
+      const pg = paginaAtual();
+      if (TABELAS[pg] && pg !== 'perguntas') redesenhar(pg); else render();
+    }
   });
   root.addEventListener('input', (e) => {
-    if (e.target.id === 'lj-busca') { st.busca = e.target.value; desenharLojas(); }
-    if (e.target.id === 'cid-busca') { st.buscaCid = e.target.value; desenharCidades(); }
+    const alvo = { 'lj-busca': ['busca', 'lojas'], 'cid-busca': ['buscaCid', 'cidades'], 'nt-busca': ['buscaNota', 'anotacoes'] }[e.target.id];
+    if (alvo) { st[alvo[0]] = e.target.value; st.pag[alvo[1]] = 1; redesenhar(alvo[1]); }
   });
-  root.addEventListener('click', (e) => {
+  const ACOES = { csv: () => exportarCSV(), 'csv-duvidas': () => exportarDuvidas(), 'csv-plano': () => exportarPlano(), 'csv-perguntas': exportarPerguntas, 'csv-passos': exportarPassos, 'csv-modulos': exportarModulos, 'csv-avaliacoes': exportarAvaliacoes, 'csv-cidades': exportarCidades };
+  root.addEventListener('click', async (e) => {
     const a = e.target.closest('[data-a]');
     if (a) {
-      if (a.dataset.a === 'atualizar') iniciar();
-      else if (a.dataset.a === 'sair') { sessao.sair(); telaLogin(); }
-      else if (a.dataset.a === 'csv') exportarCSV();
-      else if (a.dataset.a === 'csv-duvidas') exportarDuvidas();
-      else if (a.dataset.a === 'csv-plano') exportarPlano();
+      const x = a.dataset.a;
+      if (x === 'atualizar') iniciar();
+      else if (x === 'sair') { sessao.sair(); telaLogin(); }
+      else if (x === 'menu') { st.menu = !st.menu; document.querySelector('.ad').classList.toggle('menu-on', st.menu); }
+      else if (ACOES[x]) ACOES[x]();
+      return;
+    }
+    const pb = e.target.closest('[data-pgn] [data-ir]');
+    if (pb) {
+      const ch = pb.closest('[data-pgn]').dataset.pgn;
+      st.pag[ch] = +pb.dataset.ir;
+      redesenhar(ch);
+      const el = document.getElementById('t-' + ch);
+      if (el && el.getBoundingClientRect().top < 0) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 90 });
       return;
     }
     const chip = e.target.closest('[data-st]');
     if (chip) {
-      st.status = chip.dataset.st;
+      st.status = chip.dataset.st; st.pag.lojas = 1;
       document.querySelectorAll('[data-st]').forEach((c) => { const on = c.dataset.st === st.status; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
       desenharLojas();
       return;
     }
-    const nav = e.target.closest('.nav a, [data-ir]');
-    if (nav) {
-      e.preventDefault();
-      const alvo = document.querySelector(nav.getAttribute('href'));
-      if (alvo) window.scrollTo({ top: alvo.getBoundingClientRect().top + scrollY - document.querySelector('.bar').offsetHeight - 70, behavior: 'smooth' });
+    const fi = e.target.closest('[data-ficha]');
+    if (fi) { fxEditando = fi.dataset.editar || null; abrirFicha(fi.dataset.ficha); return; }
+    const ex = e.target.closest('[data-excluir]');
+    if (ex) {
+      if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
+      try { await Notas.excluir(ex.dataset.excluir); const y = scrollY; render(); scrollTo(0, y); } catch (err) { alert(err.message); }
       return;
     }
     const row = e.target.closest('.lj-row');
     if (row) { abrirFicha(row.dataset.loja); return; }
     const th = e.target.closest('th.sort');
-    if (th) { const k = th.dataset.k; st.ordem = { k, dir: st.ordem.k === k ? -st.ordem.dir : k === 'loja' || k === 'cidade' ? 1 : -1 }; desenharLojas(); }
+    if (th) { const k = th.dataset.k; st.ordem = { k, dir: st.ordem.k === k ? -st.ordem.dir : k === 'loja' ? 1 : -1 }; desenharLojas(); }
   });
 
   // Tooltip único para todos os gráficos
@@ -1204,14 +1484,7 @@
   root.addEventListener('keydown', (e) => { const row = e.target.closest && e.target.closest('.lj-row'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(row.dataset.loja); } });
   root.addEventListener('touchstart', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); else { const el = e.target.closest('[data-tip]'); if (el) mostrarTip(el.dataset.tip, e.touches[0].clientX, e.touches[0].clientY); else esconderTip(); } }, { passive: true });
   root.addEventListener('touchmove', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); }, { passive: true });
-  window.addEventListener('scroll', () => {
-    esconderTip();
-    // No fim da página, a última seção nunca cruza a linha do observador: marca ela
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) {
-      const ul = SECOES[SECOES.length - 1][0];
-      document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.sec === ul));
-    }
-  }, { passive: true });
+  window.addEventListener('scroll', esconderTip, { passive: true });
 
   function linhaHover(hit, cx) {
     const box = hit.closest('.lc'), svg = box.querySelector('svg');

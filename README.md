@@ -55,13 +55,18 @@ O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o
 - na raiz de qualquer endereço que comece com `admin.`: localmente <http://admin.localhost:5178>; publicado, aponte o subdomínio (ex.: `admin.seudominio`) para o mesmo site. O `serve.js` já faz isso; em outra hospedagem, configure o subdomínio para servir a pasta `admin/`;
 - em `/admin` do próprio site (ex.: <http://localhost:5178/admin>).
 
-O painel responde a três perguntas: o treinamento está funcionando, o que os parceiros não entenderam e quem precisa de contato. Seções:
-- **Resumo:** 4 números (cadastradas, começaram, concluíram, certificadas) com comparação com o período anterior, a frase "De cada 10 lojas que começam, X terminam" e até 3 ações em "O que fazer agora";
-- **Jornada:** 5 marcos (cadastrou → começou → metade → concluiu → certificou) com a maior perda destacada, e os módulos onde as lojas param, com o passo de saída e o mais demorado;
-- **Assuntos:** acerto de primeira por assunto (campo `tema` das perguntas em `js/modules.js`), do pior para o melhor. Ao abrir, mostra as perguntas e a resposta errada mais escolhida;
-- **Lojas para acompanhar:** situação de cada loja com o motivo. "Precisam de contato" junta as paradas (começaram e estão há 7 dias sem atividade), as que não começaram (cadastradas há 3 dias ou mais) e as que concluíram sem certificado (até 70% de acerto). Tem busca, ordenação e CSV com situação, motivo, acerto e assunto com mais erro;
-- **Cidades:** lojas, conclusão, certificadas e contatos pendentes por cidade;
-- **Uso:** tempo para concluir, % no celular, % que usou a narração, a avaliação do treinamento (ajudou, estrelas e comentários) e o gráfico diário de acessos e conclusões.
+O painel tem uma **sidebar** com uma página para cada assunto (o endereço muda: `#lojas`, `#perguntas`…). Tabelas com mais de 25 linhas são paginadas.
+- **Visão geral:** 4 números com comparação ao período anterior, saúde do treinamento, avaliação média, tempo para concluir, "O que fazer agora" e a jornada em cartões.
+- **Jornada:** os 5 marcos, a tabela dos 10 módulos (iniciaram, concluíram, pararam, tempo, passo onde mais saem) e "Onde param".
+- **Passo a passo:** todos os passos de todos os módulos: quantas lojas viram, saíram, pularam e o tempo mediano (filtro por módulo).
+- **Assuntos:** acerto de primeira por tema, com nível e "poucos dados".
+- **Perguntas:** as 19 perguntas com a distribuição completa por alternativa (atual e antes da mudança) e as tentativas até acertar.
+- **Lojas:** situação de cada loja, com busca, ordenação e a ficha (erros, avaliação e anotações).
+- **Anotações:** todas as anotações da equipe, com filtro por assunto e autor, busca, editar e excluir.
+- **Avaliações:** resumo e todas as avaliações das lojas.
+- **Cidades:** desempenho e contatos pendentes por cidade.
+- **Uso:** acessos por dia, mapa de calor, aparelho, navegador, narração e dicas mais abertas.
+- **Exportar:** todos os CSVs num só lugar (dúvidas e anotações, lojas, perguntas, passos, módulos, avaliações e cidades).
 
 O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou todo o período). Os limites de 7 e 3 dias ficam em `PARADA_DIAS` e `SEM_INICIO_DIAS` (`js/admin.js`).
 
