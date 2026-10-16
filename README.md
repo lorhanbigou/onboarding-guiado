@@ -90,6 +90,15 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para `js/registro-config.js`, junto com o e-mail do admin.
 5. Publique o site. No painel, entre com a senha.
 
+### Ambientes (produção e stage)
+
+| Ambiente | Branch | Site na Netlify | Supabase |
+|---|---|---|---|
+| Produção | `main` | `treinamentofinanceirobigou` | `onboarding-guiado` (`pfgkzdrbluelvphtveiq`) |
+| Stage | `stage` | `ondoarding-guiado-stage` | `onboard-guiado-stage` (`orftxacyupbdacwcfvzk`) |
+
+No deploy, a Netlify roda `scripts/gerar-config.js` (configurado em `netlify.toml`), que reescreve `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado (produção) só vale para rodar local.
+
 Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
 
 ## Assistente de dúvidas (chat)
@@ -137,7 +146,8 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/dicas.js` | Dicas importantes da tela inicial |
 | `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
-| `js/registro-config.js` | URL/chave do Supabase e e-mail do admin |
+| `js/registro-config.js` | URL/chave do Supabase e e-mail do admin (gerado no deploy) |
+| `scripts/gerar-config.js`, `netlify.toml` | Build da Netlify: config do Supabase por ambiente |
 | `js/registro.js` | Fila e envio dos eventos do treinamento |
 | `admin/index.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
 | `supabase/schema.sql` | Tabelas e regras de segurança do banco |

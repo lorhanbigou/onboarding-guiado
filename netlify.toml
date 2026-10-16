@@ -1,0 +1,7 @@
+# Site estático. O build só gera js/registro-config.js com o Supabase do ambiente
+# (variáveis SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL definidas em cada site).
+#   produção → site treinamentofinanceirobigou, branch main  → Supabase onboarding-guiado
+#   stage    → site de stage,                   branch stage → Supabase onboard-guiado-stage
+[build]
+  command = "node scripts/gerar-config.js"
+  publish = "."
