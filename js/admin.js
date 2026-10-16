@@ -270,6 +270,17 @@
     sair() { try { sessionStorage.removeItem('bigou-admin'); } catch (e) { /* */ } },
   };
 
+  async function auth(caminho, token, opcoes) {
+    const r = await fetch(`${base()}/auth/v1/${caminho}`, Object.assign({}, opcoes, {
+      headers: { apikey: CFG.anonKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.msg || j.message || 'Erro ' + r.status), { status: r.status });
+    return j;
+  }
+
+  // Login em duas etapas. 1) senha → sessão provisória (aal1), que fica só em memória:
+  // o banco não libera dados para ela. Se o admin ainda não tem app autenticador, já cadastra um.
   async function login(senha) {
     const r = await fetch(`${base()}/auth/v1/token?grant_type=password`, {
       method: 'POST',
@@ -277,8 +288,25 @@
       body: JSON.stringify({ email: CFG.adminEmail, password: senha }),
     });
     if (!r.ok) throw new Error(r.status === 400 ? 'Senha incorreta.' : 'Não foi possível entrar (' + r.status + ').');
-    const j = await r.json();
-    sessao.set({ token: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 60e3 });
+    const token = (await r.json()).access_token;
+    const totp = ((await auth('user', token)).factors || []).filter((f) => f.factor_type === 'totp');
+    const ativo = totp.find((f) => f.status === 'verified');
+    if (ativo) return { token, fator: ativo.id, novo: null };
+    // Cadastro anterior abandonado no meio: descarta e gera um QR code novo
+    for (const f of totp) await auth(`factors/${f.id}`, token, { method: 'DELETE' });
+    const novo = await auth('factors', token, { method: 'POST', body: JSON.stringify({ factor_type: 'totp', friendly_name: 'Painel do Treinamento', issuer: 'Bigou Treinamento' }) });
+    return { token, fator: novo.id, novo: novo.totp };
+  }
+
+  // 2) código de 6 dígitos do app autenticador → sessão verificada (aal2), a única que lê os dados
+  async function verificarCodigo(etapa, codigo) {
+    try {
+      const ch = await auth(`factors/${etapa.fator}/challenge`, etapa.token, { method: 'POST', body: '{}' });
+      const j = await auth(`factors/${etapa.fator}/verify`, etapa.token, { method: 'POST', body: JSON.stringify({ challenge_id: ch.id, code: codigo }) });
+      sessao.set({ token: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 60e3 });
+    } catch (err) {
+      throw new Error(err.status === 401 ? 'Sessão expirada. Entre de novo.' : 'Código incorreto ou expirado. Confira o app e tente de novo.');
+    }
   }
 
   async function lerTudo(tabela, select, ordem) {
@@ -862,8 +890,38 @@
       e.preventDefault();
       const b = fm.querySelector('button');
       b.disabled = true; b.textContent = 'Entrando…';
-      try { await login(document.getElementById('lg-senha').value); iniciar(); }
+      try { telaCodigo(await login(document.getElementById('lg-senha').value)); }
       catch (err) { telaLogin(err.message); }
+    });
+  }
+
+  function telaCodigo(etapa, msg) {
+    const novo = etapa.novo;
+    root.innerHTML = `
+      <main class="lg">
+        <form class="lg-card" id="lg-form">
+          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <h1>${novo ? 'Ative a verificação em duas etapas' : 'Verificação em duas etapas'}</h1>
+          <p>${novo ? 'Escaneie o QR code com um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…) e digite o código de 6 dígitos que aparecer.' : 'Digite o código de 6 dígitos do seu app autenticador.'}</p>
+          ${novo ? `<img class="lg-qr" id="lg-qr" alt="QR code para o app autenticador" width="180" height="180">
+          <details class="lg-chave"><summary>Não consegue escanear?</summary><p>Digite esta chave no app:</p><code id="lg-segredo">${esc(novo.secret)}</code></details>` : ''}
+          <label><span>Código</span><input id="lg-cod" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
+          ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
+          <button class="btn primary" type="submit">Confirmar</button>
+          <button class="lg-demo lg-link" type="button" id="lg-voltar">Voltar</button>
+        </form>
+      </main>`;
+    // O Supabase devolve o QR como SVG puro (ou já como data:); vira imagem sem passar por innerHTML
+    if (novo) document.getElementById('lg-qr').src = /^data:/.test(novo.qr_code) ? novo.qr_code : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(novo.qr_code);
+    const fm = document.getElementById('lg-form');
+    document.getElementById('lg-cod').focus();
+    document.getElementById('lg-voltar').addEventListener('click', () => telaLogin());
+    fm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const b = fm.querySelector('button[type=submit]');
+      b.disabled = true; b.textContent = 'Confirmando…';
+      try { await verificarCodigo(etapa, document.getElementById('lg-cod').value.trim()); iniciar(); }
+      catch (err) { if (/expirada/.test(err.message)) telaLogin(err.message); else telaCodigo(etapa, err.message); }
     });
   }
 

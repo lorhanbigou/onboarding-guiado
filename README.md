@@ -91,7 +91,14 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 3. Em **Authentication → Users → Add user**, crie esse usuário com e-mail e senha e marque "Auto Confirm User". Essa é a senha única do painel.
 4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para as variáveis do site na Netlify e para o `.env` local (veja "Ambientes").
 5. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up** (só o admin entra) e, em **URL Configuration**, ponha o endereço do site em **Site URL**.
-6. Publique o site. No painel, entre com a senha.
+6. Em **Project Settings → JWT Keys**, use as chaves de assinatura novas (ES256) e revogue a legada (HS256); no site use a chave **publishable** (`sb_publishable_…`), não a `anon` legada.
+7. Publique o site. No painel, entre com a senha e, no primeiro acesso, cadastre o app autenticador (veja abaixo).
+
+### Acesso ao painel: senha + código (verificação em duas etapas)
+
+O painel pede a senha e depois o código de 6 dígitos de um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). No primeiro acesso ele mostra um QR code para cadastrar o app. O banco só libera os dados para a sessão verificada com o código (`aal2`): com a senha sozinha não se lê nada.
+
+Perdeu o celular ou trocou de aparelho: no Supabase, **Authentication → Users → admin → MFA factors**, remova o fator. No próximo login o painel mostra um QR code novo.
 
 ### Ambientes (produção e stage)
 
@@ -104,7 +111,7 @@ No deploy, a Netlify roda `scripts/build.js` (configurado em `netlify.toml`): co
 
 **Mudanças no banco:** toda alteração vira um arquivo novo em `supabase/migrations` (`AAAAMMDDHHMMSS_descricao.sql`), aplicado **primeiro no stage**, testado, e só depois na produção. Não edite migrações já aplicadas. Tabelas novas não ficam liberadas para a API automaticamente: a migração precisa conceder (`grant`) o mínimo e criar as políticas RLS.
 
-Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissões das migrações deixam o público **apenas inserir** participantes e eventos, e só o usuário cujo e-mail está em `treino_admins` consegue **ler** (e gerenciar anotações). A checagem de admin fica no schema `private`, fora da API. O painel trata tudo que vem do banco como texto não confiável (escape no HTML, campos do `detalhe` validados, fórmulas neutralizadas nos CSVs), e o banco recusa avaliações fora do formato.
+Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissões das migrações deixam o público **apenas inserir** participantes e eventos, e só o usuário cujo e-mail está em `treino_admins` consegue **ler** (e gerenciar anotações). A checagem de admin fica no schema `private`, fora da API. O painel trata tudo que vem do banco como texto não confiável (escape no HTML, campos do `detalhe` validados, fórmulas neutralizadas nos CSVs), e o banco recusa avaliações fora do formato. O banco também corrige datas enviadas pelo aparelho (entre 1 dia atrás e agora) e limita cada participante a 3000 eventos por hora.
 
 ## Assistente de dúvidas (chat)
 
