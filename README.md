@@ -113,7 +113,7 @@ Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissõ
 
 ## Assistente de dúvidas (chat)
 
-**Desligado no momento** (`TREINO.config.recursos.assistente = false` em `js/data.js`). Com ele desligado, o botão não aparece e o painel esconde a seção "Dúvidas do chat". Para religar, troque para `true`.
+**Ligado por ambiente:** hoje só no **stage**. A variável `RECURSO_ASSISTENTE=true` no site da Netlify (e no `.env.stage` local) liga o assistente; sem ela vale o padrão desligado de `js/data.js` (produção). Desligado, o botão não aparece e o painel esconde a seção "Dúvidas do chat". Para ligar na produção, defina `RECURSO_ASSISTENTE=true` no site de produção e faça um novo deploy.
 
 Botão flutuante no canto da tela, liberado quando a loja **conclui os 10 módulos** (antes disso aparece com cadeado e mostra quantos módulos faltam). Não aparece dentro dos módulos guiados nem no cadastro.
 

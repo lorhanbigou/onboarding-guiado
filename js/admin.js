@@ -729,8 +729,8 @@
     busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
     pag: {}, fModulo: '', fTema: '', fBaixo: false, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
   };
-  // Assistente de dúvidas desligado em TREINO.config.recursos: a seção do chat some do painel
-  const CHAT = !!(TREINO.config.recursos && TREINO.config.recursos.assistente);
+  // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
+  const CHAT = TREINO.recurso('assistente');
 
   function telaLogin(msg) {
     root.innerHTML = `

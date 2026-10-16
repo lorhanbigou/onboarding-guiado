@@ -61,8 +61,9 @@ TREINO.periodo = (function (hoje) {
 
 TREINO.config = {
   loja: { nome: 'Loja de Treinamento', cidade: 'Rio Pomba - MG' },
-  // Recursos que podem ser ligados e desligados
-  recursos: { assistente: false },   // assistente de dúvidas (chat): desligado no 1º teste com lojas reais
+  // Recursos que podem ser ligados e desligados. Padrão desligado; cada ambiente liga os seus pelas
+  // variáveis RECURSO_* do deploy (viram window.TREINO_RECURSOS em js/registro-config.js). Use TREINO.recurso().
+  recursos: { assistente: false },   // assistente de dúvidas (chat): hoje ligado só no stage
   mes: `${TREINO.periodo.nomeMes.toUpperCase()} ${TREINO.periodo.ano}`,
   mesExtenso: `${TREINO.periodo.nomeMes} de ${TREINO.periodo.ano}`,
 
@@ -90,6 +91,9 @@ TREINO.config = {
   mensalidade: { valor: 59.9, acimaDeBruto: 500 },
   taxaServico: { normal: 0.99, maior: 1.99, acimaDe: 100 },
 };
+
+/** Recurso ligado? O ambiente (TREINO_RECURSOS, carregado depois deste arquivo) sobrepõe o padrão acima. */
+TREINO.recurso = (nome) => !!Object.assign({}, TREINO.config.recursos, window.TREINO_RECURSOS)[nome];
 
 const CLIENTES = [
   'Ana Paula Souza', 'Bruno Henrique Lima', 'Carla Mendes', 'Diego Ramos', 'Elaine Costa',
