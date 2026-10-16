@@ -1,0 +1,500 @@
+{
+ "1-abertura": [
+  {
+   "ini": 16.01,
+   "fim": 18.33,
+   "texto": "1. Suas vendas."
+  },
+  {
+   "ini": 6.07,
+   "fim": 16.01,
+   "texto": "Antes de começar, os números deste treinamento são ilustrativos. Os percentuais e valores da sua loja estão no seu contrato. Confira."
+  }
+ ],
+ "1-1": [
+  {
+   "ini": 18.33,
+   "fim": 24.27,
+   "texto": "Todas as vendas da sua loja aparecem na tela Relatório. Cada linha é um pedido."
+  }
+ ],
+ "1-2": [
+  {
+   "ini": 24.27,
+   "fim": 33.07,
+   "texto": "No topo da tela está o total bruto. É a soma de tudo o que você vendeu no mês. Já com as taxas de serviço pagas pelos clientes."
+  }
+ ],
+ "1-3": [
+  {
+   "ini": 33.07,
+   "fim": 37.65,
+   "texto": "Tocando no \"i\" ao lado dele, você vê como esse valor é formado."
+  }
+ ],
+ "1-4": [
+  {
+   "ini": 37.65,
+   "fim": 43.33,
+   "texto": "As vendas chegam por três caminhos. Pagamento online, dinheiro e maquininha."
+  }
+ ],
+ "1-5": [
+  {
+   "ini": 43.33,
+   "fim": 48.61,
+   "texto": "Todas são vendas, mas o dinheiro de cada uma chega a você de um jeito diferente."
+  }
+ ],
+ "2-abertura": [
+  {
+   "ini": 48.51,
+   "fim": 51.71,
+   "texto": "2. Pagamento online."
+  }
+ ],
+ "2-1": [
+  {
+   "ini": 51.45,
+   "fim": 63.97,
+   "texto": "No pagamento online, o cliente paga pelo aplicativo na hora do pedido. Você só precisa aceitar e entregar, sem cobrar nada do cliente. Esse dinheiro passa primeiro pela plataforma."
+  }
+ ],
+ "2-2": [
+  {
+   "ini": 63.73,
+   "fim": 71.15,
+   "texto": "É dele que sai em a comissão e as taxas de todas as suas vendas, inclusive das vendas em dinheiro e na maquininha."
+  }
+ ],
+ "2-3": [
+  {
+   "ini": 71.07,
+   "fim": 76.83,
+   "texto": "O que sobra depois disso é enviado para você, e esse envio se chama repasse."
+  }
+ ],
+ "3-abertura": [
+  {
+   "ini": 76.73,
+   "fim": 79.79,
+   "texto": "3. Dinheiro e maquininha."
+  }
+ ],
+ "3-1": [
+  {
+   "ini": 79.79,
+   "fim": 84.57,
+   "texto": "Quando o cliente paga em dinheiro, o valor vai direto para o seu caixa."
+  }
+ ],
+ "3-2": [
+  {
+   "ini": 84.57,
+   "fim": 91.47,
+   "texto": "Na maquininha, cai direto na conta da sua maquininha. Nos dois casos, o dinheiro não passa pela plataforma."
+  }
+ ],
+ "3-3": [
+  {
+   "ini": 91.27,
+   "fim": 99.05,
+   "texto": "Guarde essa ideia. Boa parte do que você vendeu já está com você. É por isso que o repasse pode parecer pequeno."
+  }
+ ],
+ "4-abertura": [
+  {
+   "ini": 98.91,
+   "fim": 102.07,
+   "texto": "4. A tela financeiro."
+  }
+ ],
+ "4-1": [
+  {
+   "ini": 102.03,
+   "fim": 104.83,
+   "texto": "No menu, toque em \"Financeiro\"."
+  }
+ ],
+ "4-2": [
+  {
+   "ini": 104.59,
+   "fim": 114.85,
+   "texto": "Ali você encontra. Resultado. Tudo o que ficou com você no mês já descontada às deduções. Ele é a soma dos três quadros ao lado."
+  }
+ ],
+ "4-3": [
+  {
+   "ini": 114.85,
+   "fim": 120.35,
+   "texto": "Recebido pela loja. As vendas em dinheiro e maquininha que já estão no seu caixa."
+  }
+ ],
+ "4-4": [
+  {
+   "ini": 120.25,
+   "fim": 125.61,
+   "texto": "Repasse-se recebidos, o que a plataforma já transferiu para você no mês."
+  }
+ ],
+ "4-5": [
+  {
+   "ini": 125.55,
+   "fim": 135.29,
+   "texto": "Repasse disponível, o que ainda vai ser transferido. Se você não antecipar, ele é enviado no segundo dia útil do mês seguinte às vendas."
+  }
+ ],
+ "4-6": [
+  {
+   "ini": 135.07,
+   "fim": 144.73,
+   "texto": "Esse valor muda ao longo do mês. Em dias com vendas só em dinheiro ou maquininha, as deduções dessas vendas saem do saldo online e ele diminui."
+  }
+ ],
+ "4-8": [
+  {
+   "ini": 144.71,
+   "fim": 157.49,
+   "texto": "Em repasses, ficam as transferências feitas para você. Em boletos, pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. Nesse caso, é só abrir e pagar."
+  }
+ ],
+ "4-9": [
+  {
+   "ini": 157.43,
+   "fim": 165.15,
+   "texto": "Mas abaixo, em faturas do período, fica a fatura, que mostra a conta completa do repasse linha por linha."
+  }
+ ],
+ "5-abertura": [
+  {
+   "ini": 165.11,
+   "fim": 169.13,
+   "texto": "5. A fatura. O que entrou?"
+  }
+ ],
+ "5-1": [
+  {
+   "ini": 169.13,
+   "fim": 171.05,
+   "texto": "Toque na fatura para abri-la."
+  }
+ ],
+ "5-2": [
+  {
+   "ini": 170.87,
+   "fim": 174.57,
+   "texto": "Ela junta as vendas do dia 1 do mês até ontem."
+  }
+ ],
+ "5-3": [
+  {
+   "ini": 174.31,
+   "fim": 177.71,
+   "texto": "Enquanto está aberta, aparece como vigente."
+  }
+ ],
+ "5-4": [
+  {
+   "ini": 177.59,
+   "fim": 186.09,
+   "texto": "A primeira parte mostra o que entrou pelo pagamento online. Vendas online, o que os clientes pagaram pelos produtos no aplicativo."
+  }
+ ],
+ "5-5": [
+  {
+   "ini": 185.91,
+   "fim": 202.41,
+   "texto": "Reimbolso dos incentivos. Quando o BigO oferece um cupom ao cliente, quem paga o desconto é a plataforma e esse valor volta para você aqui. Se o cupom foi criado por você, o desconto é por sua conta. Pedido com cupom pode ser aceito normalmente."
+  }
+ ],
+ "5-6": [
+  {
+   "ini": 202.11,
+   "fim": 212.43,
+   "texto": "Taxas de serviço online. A taxa que o cliente pagou pelo aplicativo. Ela entra aqui, mas não é sua. Sai mais abaixo, na linha taxa de serviço."
+  }
+ ],
+ "6-abertura": [
+  {
+   "ini": 212.19,
+   "fim": 220.25,
+   "texto": "6. A fatura. Comissão. Agora vem as deduções. Todas saem do valor que passou pela plataforma."
+  }
+ ],
+ "6-1": [
+  {
+   "ini": 220.11,
+   "fim": 238.45,
+   "texto": "A primeira linha pode ser débitos remanescentes. São deduções que ficaram sem saldo em uma fatura anterior, como uma mensalidade cobrada quando você já tinha antecipado tudo. Elas passam para a fatura seguinte. Se aparecer um boleto, ele deve ser pago quando a loja fica sem saldo online suficiente."
+  }
+ ],
+ "6-2": [
+  {
+   "ini": 238.35,
+   "fim": 248.17,
+   "texto": "Depois vem a comissão, a parte da plataforma pelas vendas feitas pelo aplicativo. Ela vale para todas as vendas, online, dinheiro e maquiminha."
+  }
+ ],
+ "6-3": [
+  {
+   "ini": 255.01,
+   "fim": 258.93,
+   "texto": "Tocando no \"I\" da comissão, você vê a conta completa."
+  }
+ ],
+ "6-5": [
+  {
+   "ini": 258.47,
+   "fim": 275.77,
+   "texto": "Repare que, além das vendas confirmadas, podem aparecer vendas canceladas por tempo. Isso acontece quando um pedido não é aceito nem recusado em até 15 minutos. Ele é cancelado automaticamente. Você não recebe o valor, mas ele entra no cálculo da comissão."
+  }
+ ],
+ "6-7": [
+  {
+   "ini": 248.05,
+   "fim": 252.37,
+   "texto": "É calculada sobre o valor dos produtos sem a taxa de serviço."
+  }
+ ],
+ "6-8": [
+  {
+   "ini": 252.25,
+   "fim": 255.01,
+   "texto": "No treinamento usamos 12%."
+  }
+ ],
+ "6-9": [
+  {
+   "ini": 275.59,
+   "fim": 279.01,
+   "texto": "Para evitar isso, acompanha a tela Pedidos."
+  }
+ ],
+ "6-10": [
+  {
+   "ini": 278.87,
+   "fim": 286.73,
+   "texto": "Os pedidos novos aparecem com a etiqueta aguardando confirmação. Abra, aceite ou recuse dentro do prazo."
+  }
+ ],
+ "6-11": [
+  {
+   "ini": 286.63,
+   "fim": 291.37,
+   "texto": "Se não puder atender, recuse. Assim, o pedido não entra na comissão."
+  }
+ ],
+ "7-abertura": [
+  {
+   "ini": 291.23,
+   "fim": 294.33,
+   "texto": "Sete, a fatura, taxas."
+  }
+ ],
+ "7-1": [
+  {
+   "ini": 294.15,
+   "fim": 298.97,
+   "texto": "Taxa do pagamento online vale só para as vendas pagas pelo aplicativo."
+  }
+ ],
+ "7-2": [
+  {
+   "ini": 304.91,
+   "fim": 307.37,
+   "texto": "O \"I\" ao lado mostra a conta."
+  }
+ ],
+ "7-3": [
+  {
+   "ini": 298.83,
+   "fim": 305.05,
+   "texto": "É um percentual, 4% no treinamento, sobre essas vendas sem a taxa de serviço."
+  }
+ ],
+ "7-4": [
+  {
+   "ini": 307.23,
+   "fim": 318.01,
+   "texto": "Taxa de transferência, referente à despesas bancárias. Dois reais e cinquenta centavos no treinamento. É cobrada uma vez no repasse mensal ou a cada antecipação."
+  }
+ ],
+ "7-5": [
+  {
+   "ini": 317.85,
+   "fim": 330.25,
+   "texto": "Taxa de antecipação, um percentual das vendas online. Um vírgula noventa e nove por cento no treinamento. Ela aparece em toda a fatura, mas só é cobrada de fato se você pedir antecipação."
+  }
+ ],
+ "8-abertura": [
+  {
+   "ini": 330.09,
+   "fim": 334.33,
+   "texto": "Oito, a fatura, taxa de serviço e mensalidade."
+  }
+ ],
+ "8-1": [
+  {
+   "ini": 334.19,
+   "fim": 348.41,
+   "texto": "A taxa de serviço é paga pelo cliente em cada pedido, além dos produtos. Noventa e nove centavos ou um real e noventa e nove centavos em pedidos acima de 100 reais. Ela é da plataforma e não é um custo seu."
+  }
+ ],
+ "8-2": [
+  {
+   "ini": 348.27,
+   "fim": 356.73,
+   "texto": "Você também não paga comissão nem taxa sobre ela. No pagamento online, ela entra e sai da fatura. Para você, fica zero."
+  }
+ ],
+ "8-4": [
+  {
+   "ini": 356.61,
+   "fim": 364.89,
+   "texto": "No dinheiro e na maquiminha, o cliente pagou a taxa junto com o pedido e ela ficou no seu caixa. Por isso, aparece como dedução."
+  }
+ ],
+ "8-5": [
+  {
+   "ini": 368.81,
+   "fim": 379.89,
+   "texto": "Como a maquininha cobra uma taxa sobre tudo o que passa nela, inclusive a taxa de serviço, a plataforma devolve uma parte, 4% no treinamento, para você não sair perdendo."
+  }
+ ],
+ "8-6": [
+  {
+   "ini": 364.83,
+   "fim": 368.81,
+   "texto": "Você só repassa a plataforma o que o cliente pagou para ela."
+  }
+ ],
+ "8-7": [
+  {
+   "ini": 379.79,
+   "fim": 396.13,
+   "texto": "A mensalidade, 59 reais e 90 centavos no treinamento, só é cobrada quando a loja atinge o faturamento mínimo do mês, 500 reais em total bruto. É um valor fixo, separado da comissão, descontado na virada do último dia do mês."
+  }
+ ],
+ "8-8": [
+  {
+   "ini": 396.13,
+   "fim": 399.45,
+   "texto": "Somando tudo, você tem o total das deduções."
+  }
+ ],
+ "8-9": [
+  {
+   "ini": 399.33,
+   "fim": 409.17,
+   "texto": "E lembre, você pode ajustar os preços do seu cardápio para não absorver esses custos. Se o cardápio não estiver atualizado, fale com suporte."
+  }
+ ],
+ "9-abertura": [
+  {
+   "ini": 409.07,
+   "fim": 412.49,
+   "texto": "9. Repasse e antecipação."
+  }
+ ],
+ "9-1": [
+  {
+   "ini": 412.35,
+   "fim": 416.81,
+   "texto": "O repasse é o que passou pela plataforma menos as deduções."
+  }
+ ],
+ "9-2": [
+  {
+   "ini": 416.69,
+   "fim": 426.33,
+   "texto": "Ele parece pequeno porque as deduções de todas as vendas saem só da parte online, enquanto o dinheiro das vendas em dinheiro e maquininha já estava com você."
+  }
+ ],
+ "9-3": [
+  {
+   "ini": 426.21,
+   "fim": 433.77,
+   "texto": "Somando o que está no seu caixa com o repasse, você chega ao resultado. A plataforma não ficou com o seu dinheiro."
+  }
+ ],
+ "9-4": [
+  {
+   "ini": 433.67,
+   "fim": 436.57,
+   "texto": "Durante o mês, não há repasse automático."
+  },
+  {
+   "ini": 436.43,
+   "fim": 440.37,
+   "texto": "Para receber antes, toque em Solicitar antecipação,"
+  }
+ ],
+ "9-6": [
+  {
+   "ini": 443.11,
+   "fim": 451.93,
+   "texto": "O dinheiro cai no próximo dia útil na sua chave PIX. Confira se os dados bancários estão certos e em nome do titular do contrato."
+  },
+  {
+   "ini": 456.57,
+   "fim": 467.85,
+   "texto": "Não há repasses em fins de semana nem em feriados nacionais ou municipais de Rio Pomba, MG, sede da empresa. Nesses dias, o valor cai no próximo dia útil."
+  }
+ ],
+ "9-7": [
+  {
+   "ini": 451.93,
+   "fim": 456.85,
+   "texto": "Depois de Confirmar, os pedidos daquele período não podem mais ser cancelados."
+  }
+ ],
+ "9-8": [
+  {
+   "ini": 440.25,
+   "fim": 443.45,
+   "texto": "Confira o valor e toque em Confirmar."
+  }
+ ],
+ "9-9": [
+  {
+   "ini": 467.75,
+   "fim": 471.65,
+   "texto": "Depois de antecipar, a fatura muda para antecipada."
+  }
+ ],
+ "9-10": [
+  {
+   "ini": 471.53,
+   "fim": 482.57,
+   "texto": "Quando a transferência cai, aparece repasse realizado no mesmo lugar onde você pediu antecipação com o botão Ver comprovante. No repasse mensal, é igual."
+  }
+ ],
+ "9-12": [
+  {
+   "ini": 482.45,
+   "fim": 487.21,
+   "texto": "O valor sai de repasse disponível e vai para repasses recebidos."
+  }
+ ],
+ "9-13": [
+  {
+   "ini": 487.13,
+   "fim": 490.93,
+   "texto": "E o resultado não muda. O dinheiro só mudou de lugar."
+  }
+ ],
+ "9-14": [
+  {
+   "ini": 490.83,
+   "fim": 503.69,
+   "texto": "Um cuidado. Se você antecipar tudo, normalmente não sobra saldo online para mensalidade, que é descontada na virada do mês. Aí, ela vai para a próxima fatura como débitos remanescentes."
+  }
+ ],
+ "10-abertura": [
+  {
+   "ini": 503.59,
+   "fim": 511.29,
+   "texto": "Dez. Exercício final e certificado. No fim, você responde algumas perguntas olhando para a tela."
+  }
+ ]
+}

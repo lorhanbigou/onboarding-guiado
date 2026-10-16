@@ -129,6 +129,14 @@ Para melhorar o bot: veja no painel as perguntas sem resposta e as respostas com
 
 ## Narração por voz (opcional)
 
+**Narração gravada (mp3).** Se `js/narracao.js` lista áudios, cada balão do tour toca o seu mp3 de `assets/audio/` uma vez e para; o próximo só toca quando o parceiro avança. Balão sem áudio fica em silêncio (a voz do aparelho não é usada, para não misturar vozes), e o botão "Ouvir de novo" só aparece onde há áudio. Os áudios foram cortados da narração completa (ElevenLabs, voz "Will") por `scripts/narracao/cortar.js`, a partir de `scripts/narracao/cortes.json` (balão → trechos em segundos do arquivo original):
+
+```bash
+node scripts/narracao/cortar.js "<narração completa>.mp3"   # precisa do ffmpeg
+```
+
+A gravação é um resumo por tópico, não o texto exato da tela: desafios, contas com valores e resumos de módulo ficam sem áudio. Se o texto de um balão mudar, ajuste o trecho em `cortes.json` (ou grave de novo) e rode o comando. Sem `js/narracao.js`, vale a voz do aparelho descrita abaixo.
+
 O parceiro liga a narração pelo botão de alto-falante no topo da tela inicial ou pelo botão **Narração** na barra do módulo. A escolha fica salva no navegador. Com a narração ligada:
 
 - cada balão é lido em voz alta;
@@ -158,6 +166,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/dicas.js` | Dicas importantes da tela inicial |
 | `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
+| `js/narracao.js`, `assets/audio/`, `scripts/narracao/` | Narração gravada: índice balão → mp3, os áudios e o cortador |
 | `js/registro-config.js` | URL/chave do Supabase e e-mail do admin (gerado no deploy) |
 | `scripts/build.js`, `scripts/gerar-config.js`, `netlify.toml` | Build da Netlify (`dist/`), config do Supabase por ambiente e cabeçalhos de segurança |
 | `js/registro.js` | Fila e envio dos eventos do treinamento |

@@ -22,7 +22,7 @@
   const bulb = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>';
   const speaker = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
   const vozBtn = () =>
-    TREINO.Voz && TREINO.Voz.temVozPt()
+    TREINO.Voz && TREINO.Voz.temVozPt() && TREINO.Voz.temAudio(audioId())
       ? `<button type="button" class="tr-voz" data-tr="voz" aria-label="Ouvir de novo" title="Ouvir de novo">${speaker}</button>`
       : '';
   const hand = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.6-2.2L4.3 15.6a1.5 1.5 0 0 1 2.3-1.9L9 16"/></svg>';
@@ -66,7 +66,13 @@
   // Lê o balão atual (usado quando a narração é ligada no meio de um passo)
   // Narração: cada passo tem uma chave própria, para ser falado uma única vez
   const chave = () => (opts.chave || '') + ':' + idx;
-  const falarPasso = (forcar) => { if (cur && TREINO.Voz) TREINO.Voz.falarPasso(chave(), TREINO.Voz.roteiro(cur), { forcar }); };
+  // Áudio gravado do balão: "<módulo>-abertura", "<módulo>-<passo>" ou "<módulo>-resumo" (js/narracao.js)
+  const audioId = () => {
+    const mod = /^m(\d+)$/.exec(opts.chave || '');
+    if (!mod || !cur) return null;
+    return `${mod[1]}-${cur.kind === 'intro' ? 'abertura' : cur.kind === 'summary' ? 'resumo' : idx}`;
+  };
+  const falarPasso = (forcar) => { if (cur && TREINO.Voz) TREINO.Voz.falarPasso(chave(), TREINO.Voz.roteiro(cur), { forcar, audio: audioId() }); };
   Tour.falarAtual = () => { if (cur && tip.classList.contains('in')) falarPasso(true); };
   Tour.next = () => go(idx + 1);
   Tour.back = () => go(idx - 1);

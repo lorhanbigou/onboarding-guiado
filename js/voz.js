@@ -8,6 +8,10 @@
      no fim da anterior), o que evita falas repetidas ou "ressuscitadas";
    - toda fala nova invalida a anterior (token de sessão);
    - só o botão "Ouvir de novo" repete um balão.
+
+   Narração gravada: se js/narracao.js lista áudios (TREINO_NARRACAO), os
+   balões do tour tocam o mp3 deles uma vez e param; balão sem áudio fica em
+   silêncio, e a voz do aparelho não é usada (não mistura duas vozes).
    ========================================================================= */
 (function () {
   const KEY = 'bigou-treino-voz';
@@ -18,10 +22,15 @@
   let synth = window.speechSynthesis;
   let Utt = window.SpeechSynthesisUtterance;
 
+  const GRAVADA = window.TREINO_NARRACAO || {};
+  const temGravada = Object.keys(GRAVADA).length > 0;
+  let player = null;
+
   const Voz = {
     voz: null,
     ligada: false,
-    disponivel: !!(synth && Utt),
+    gravada: temGravada,
+    disponivel: temGravada || !!(synth && Utt),
     estado: 'parado',
     ritmo: 0.95,
     ouvintes: [],
@@ -32,7 +41,7 @@
 
   /* ------------------------------ Escolha da voz ------------------------------ */
   function escolherVoz() {
-    if (!Voz.disponivel) return;
+    if (!(synth && Utt)) return;
     const todas = synth.getVoices().filter((v) => !ROBOTICAS.test(v.name));
     const br = todas.filter((v) => /^pt[-_]BR/i.test(v.lang));
     const pt = br.length ? br : todas.filter((v) => /^pt/i.test(v.lang));
@@ -48,12 +57,14 @@
     Voz.voz = melhor || pt[0] || null;
     Voz.ouvintes.forEach((f) => f());
   }
-  if (Voz.disponivel) {
+  if (synth && Utt) {
     escolherVoz();
     if (synth.addEventListener) synth.addEventListener('voiceschanged', escolherVoz);
   }
 
-  Voz.temVozPt = () => Voz.disponivel && !!Voz.voz;
+  Voz.temVozPt = () => temGravada || (Voz.disponivel && !!Voz.voz);
+  // Com narração gravada, só balões com áudio têm o que tocar
+  Voz.temAudio = (id) => !temGravada || !!(id && GRAVADA[id]);
   Voz.aoMudar = (f) => Voz.ouvintes.push(f);
   Voz.aoEstado = (f) => Voz.ouvintesEstado.push(f);
   function setEstado(e) {
@@ -183,9 +194,22 @@
     fila = [];
     clearTimeout(timer);
     clearTimeout(vigia);
-    if (Voz.disponivel && (synth.speaking || synth.pending)) synth.cancel();
+    if (player) { player.onended = player.onerror = null; player.pause(); }
+    if (synth && (synth.speaking || synth.pending)) synth.cancel();
     setEstado('parado');
   };
+
+  function tocar(src) {
+    const minha = sessao;
+    if (!player) { player = new Audio(); player.preload = 'auto'; }
+    player.src = src;
+    const fim = () => { if (minha === sessao) setEstado('parado'); };
+    player.onended = fim;
+    player.onerror = fim;
+    setEstado('falando');
+    const p = player.play();
+    if (p && p.catch) p.catch(fim);   // navegador bloqueou o som sem clique: fica parado, o botão "Ouvir de novo" resolve
+  }
 
   function proxima(minha) {
     if (minha !== sessao) return;
@@ -218,6 +242,7 @@
 
   /** Fala as frases uma vez. Interrompe qualquer fala anterior. */
   Voz.falar = function (partes) {
+    if (temGravada) { Voz.parar(); return; }  // falas avulsas (feedback, avisos) não existem na gravação
     if (!Voz.ligada || !Voz.temVozPt()) return;
     Voz.parar();
     const minha = sessao;
@@ -230,6 +255,12 @@
   Voz.falarPasso = function (chave, partes, opcoes) {
     if (!(opcoes && opcoes.forcar) && chave === ultimaChave) return;
     ultimaChave = chave;
+    if (temGravada) {
+      Voz.parar();
+      const src = opcoes && opcoes.audio && GRAVADA[opcoes.audio];
+      if (Voz.ligada && src) tocar(src);
+      return;
+    }
     Voz.falar(partes);
   };
   Voz.esquecerPasso = () => { ultimaChave = null; };
