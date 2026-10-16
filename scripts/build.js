@@ -21,7 +21,7 @@ fs.rmSync(dist, { recursive: true, force: true });
 for (const item of PUBLICOS) fs.cpSync(path.join(raiz, item), path.join(dist, item), { recursive: true });
 
 if (falta.length) {
-  console.log('Variáveis do Supabase não definidas; dist/ usa o config vazio (modo demonstração).');
+  console.log('Variáveis do Supabase não definidas; dist/ usa o config vazio (sem Supabase).');
 } else {
   const origem = `${CONTEXT || 'local'}${BRANCH ? ' · ' + BRANCH : ''}`;
   fs.writeFileSync(path.join(dist, 'js', 'registro-config.js'), montarConfig(process.env, origem));

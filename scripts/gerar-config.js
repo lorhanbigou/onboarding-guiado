@@ -1,7 +1,7 @@
 // Monta o conteúdo de js/registro-config.js a partir das variáveis de ambiente:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL
 // Usado pelo build da Netlify (scripts/build.js, grava em dist/) e pelo serve.js
-// local (npm run dev / dev:main). O arquivo versionado fica vazio (demonstração).
+// local (npm run dev / dev:main). O arquivo versionado fica vazio (sem Supabase).
 const CHAVES = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'ADMIN_EMAIL'];
 const faltando = (env) => CHAVES.filter((k) => !env[k]);
 

@@ -1,8 +1,6 @@
 /* =========================================================================
    PAINEL ADMIN — analytics do treinamento
-   - Real: login (senha do usuário admin do Supabase) e leitura das tabelas.
-   - Demonstração: sem configuração, ou com ?demo=1, gera dados simulados
-     fixos (mesma estrutura do banco) para avaliar o painel.
+   - Login (senha do usuário admin do Supabase) e leitura das tabelas.
    Todos os números são calculados no navegador por calcular(dados, filtros).
    ========================================================================= */
 (function () {
@@ -14,7 +12,10 @@
   const SEQ = ['#f1f6fd', '#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  const demo = /[?&]demo=1/.test(location.search) || !(CFG.url && CFG.anonKey && CFG.adminEmail);
+  const configurado = !!(CFG.url && CFG.anonKey && CFG.adminEmail);
+  // Verificação em duas etapas (TOTP) no login. Desligada por enquanto; para religar, troque para
+  // true e aplique de novo a regra aal2 em private.eh_admin() (ver supabase/migrations).
+  const EXIGIR_MFA = false;
 
   /* ------------------------------ Metadados do treinamento ------------------------------ */
   const MODS = TREINO.buildModules(TREINO.calc(TREINO.dados));
@@ -135,133 +136,10 @@
   const mediana = (arr) => { if (!arr.length) return null; const a = arr.slice().sort((x, y) => x - y); const k = a.length >> 1; return a.length % 2 ? a[k] : (a[k - 1] + a[k]) / 2; };
   const diaKey = (t) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 
-  /* =====================================================================
-     DADOS DE DEMONSTRAÇÃO (fixos, mesma estrutura do banco)
-     ===================================================================== */
   const Bot = TREINO.Bot;
-  const COMENTARIOS_DEMO = [
-    'Agora entendi por que o repasse vem menor.', 'Muito bom, explicação simples.', 'A parte da taxa de serviço ainda ficou confusa.',
-    'Gostei de poder clicar na tela.', 'Poderia ser mais curto.', 'Não sabia do prazo de 15 minutos!', 'Ajudou bastante com a antecipação.',
-  ];
-  const DUVIDAS_DEMO = [
-    'quando cai meu repasse?', 'qnd vou receber o dinheiro do app', 'pq paguei comissão de pedido cancelado', 'pedido cancelou sozinho',
-    'o que é a taxa de serviço', 'por que desconta taxa de servico se o cliente pagou em dinheiro', 'como antecipar', 'quanto custa antecipar',
-    'por que o repasse veio menor', 'recebi pouco esse mes', 'onde pego o comprovante', 'tenho que pagar boleto?', 'o que é debito remanescente',
-    'quando tem mensalidade', 'quem paga o cupom de desconto', 'tem repasse no feriado', 'quero trocar minha chave pix', 'posso aumentar o preço do cardapio',
-    'meu saldo diminuiu do nada', 'onde vejo a fatura',
-    'como faço pra mudar o horário de funcionamento', 'como cadastro produto novo', 'quanto é a taxa de entrega', 'como mudar a foto da loja',
-    'o app ta travando', 'nota fiscal', 'como imprimir o pedido', 'quero cancelar o contrato', 'quanto custa o plano anual', 'como funciona o marketing',
-  ];
-  function gerarDemo() {
-    let seed = 20261005;
-    const rnd = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const pick = (a) => a[Math.floor(rnd() * a.length)];
-    const uid = () => 'demo-' + Math.floor(rnd() * 1e12).toString(36) + Math.floor(rnd() * 1e6).toString(36);
-    const agora = Date.now();
-    const grandes = ['Muriaé - MG', 'Ubá - MG', 'Viçosa - MG', 'Rio Pomba - MG', 'Cataguases - MG', 'Ponte Nova - MG'];
-    // Algumas cidades ficam sem lojas de propósito (para a lista "sem cadastro"); as grandes nunca
-    const pesoCid = TREINO.cidades.map((c, i) => (grandes.includes(c) ? 14 + Math.floor(rnd() * 6) : i % 7 === 0 ? 0 : 1 + Math.floor(rnd() * 6)));
-    const totPeso = pesoCid.reduce((a, b) => a + b, 0);
-    const cidade = () => { let r = rnd() * totPeso; for (let i = 0; i < pesoCid.length; i++) { r -= pesoCid[i]; if (r <= 0) return TREINO.cidades[i]; } return TREINO.cidades[0]; };
-    const tipos = ['Lanchonete', 'Pizzaria', 'Restaurante', 'Hamburgueria', 'Açaí', 'Padaria', 'Sorveteria', 'Pastelaria', 'Marmitaria', 'Doceria', 'Espetinho', 'Cafeteria'];
-    const nomes = ['da Ana', 'do Zé', 'Sabor & Cia', 'Bom Gosto', 'da Praça', 'Central', 'Delícia', 'do Bairro', 'Primavera', 'Estrela', 'Família', 'Dona Maria', 'Point', 'Express', 'da Esquina'];
-    const hora = () => { const r = rnd(); return r < 0.4 ? 9 + Math.floor(rnd() * 3) : r < 0.8 ? 14 + Math.floor(rnd() * 4) : 7 + Math.floor(rnd() * 15); };
-    const quando = (base) => { const d = new Date(base); d.setHours(hora(), Math.floor(rnd() * 60), Math.floor(rnd() * 60)); return d.getTime(); };
-
-    const continua = [0.94, 0.93, 0.92, 0.82, 0.89, 0.78, 0.9, 0.8, 0.85, 0.92];   // chance de concluir cada módulo
-    const gargaloPasso = { 4: 1, 6: 9, 8: 4, 9: 11 };                               // passos onde mais gente para
-    const acertoFinal = [0.86, 0.78, 0.71, 0.66, 0.62, 0.44, 0.52, 0.69, 0.8, 0.83];
-    const acertoDesafio = [0.9, 0.82, 0.88, 0.7, 0.76, 0.64, 0.6, 0.58, 0.66];
-
-    const P = [], E = [];
-    const ev = (pid, tipo, t, x) => E.push(Object.assign({ participante_id: pid, tipo, modulo: null, passo: null, alvo: null, detalhe: null, criado_em: new Date(t).toISOString() }, x || {}));
-
-    for (let i = 0; i < 70; i++) ev(uid(), 'acesso', quando(agora - rnd() * 60 * DIA));   // visitantes sem cadastro
-
-    for (let i = 0; i < 320; i++) {
-      const id = uid();
-      let t = quando(agora - Math.pow(rnd(), 0.8) * 75 * DIA);
-      if (t > agora) t = agora - 3600e3;
-      const cel = rnd() < 0.72;
-      P.push({ id, loja: `${pick(tipos)} ${pick(nomes)}`, cidade: cidade(), dispositivo: cel ? 'celular' : 'computador', navegador: cel ? pick(['Chrome', 'Chrome', 'Safari', 'Samsung']) : pick(['Chrome', 'Edge', 'Safari']), criado_em: new Date(t).toISOString() });
-      ev(id, 'acesso', t - 60e3);
-      ev(id, 'cadastro', t);
-      if (rnd() < 0.18) ev(id, 'voz', t + 5e3, { detalhe: { ligada: true } });
-      if (rnd() < 0.35) ev(id, 'dica', t + 8e3, { detalhe: { dica: pick(['Antecipação de valores', 'Boleto', 'Repasse mensal', 'Pagamento online', 'Cupons de desconto', 'Pedidos com tempo expirado', 'Antecipação de valores', 'Boleto']) } });
-      if (rnd() < 0.16) continue;                       // cadastrou e não começou
-      let concluidos = 0, acertosPrimeira = 0;
-      const habilidade = (rnd() - 0.5) * 0.3;          // umas lojas entendem mais que outras
-      for (let m = 1; m <= NMOD; m++) {
-        if (rnd() < 0.08) { t = quando(t + (1 + Math.floor(rnd() * 4)) * DIA); ev(id, 'acesso', t - 30e3); }
-        const ini = (t += 20e3 + rnd() * 60e3);
-        ev(id, 'modulo_inicio', t, { modulo: m });
-        const steps = MODS[m - 1].steps.length;
-        const termina = rnd() < continua[m - 1];
-        const paraEm = termina ? steps + 1 : (gargaloPasso[m] && rnd() < 0.55 ? gargaloPasso[m] : 1 + Math.floor(rnd() * steps));
-        let ant = 0;
-        for (let p = 1; p <= Math.min(paraEm, steps); p++) {
-          const ms = Math.round((6 + rnd() * 18 + (gargaloPasso[m] === p - 1 ? 40 * rnd() : 0)) * 1000);
-          t += ms;
-          const st = MODS[m - 1].steps[p - 1];
-          ev(id, 'passo', t, { modulo: m, passo: p, alvo: st.target, detalhe: { titulo: st.title, anterior: ant, ms } });
-          ant = p;
-          if (st.mode === 'click' && rnd() < 0.07) ev(id, 'passo_pulado', t + 2e3, { modulo: m, passo: p, alvo: st.target, detalhe: { titulo: st.title } });
-          if (st.mode === 'quiz') {
-            const base = (st.desafio ? acertoDesafio[m - 1] : acertoFinal[p - 1]) + habilidade;
-            const certa = st.options.findIndex((o) => o.ok);
-            const erradas = st.options.map((_, i) => i).filter((i) => i !== certa);
-            for (let tent = 1; tent < 4; tent++) {
-              const ok = rnd() < base + (tent - 1) * 0.25;
-              // O erro se concentra numa alternativa (o equívoco mais comum)
-              const opcao = ok ? certa : erradas[rnd() < 0.7 ? 0 : erradas.length - 1];
-              // Respostas com mais de 10 dias simulam a versão 1 das perguntas (sem id)
-              const nova = t > agora - 10 * DIA;
-              ev(id, 'quiz', t + tent * 4e3, { modulo: m, passo: p, alvo: st.target, detalhe: Object.assign({ pergunta: st.title, acertou: ok, tentativa: tent, opcao }, nova ? { id: st.id, versao: st.versao, resposta: st.options[opcao].t } : {}) });
-              if (tent === 1 && ok) acertosPrimeira++;
-              if (ok) break;
-            }
-          }
-        }
-        if (!termina) { ev(id, 'modulo_saida', t + 15e3, { modulo: m, passo: ant, detalhe: { motivo: rnd() < 0.6 ? 'fechou' : 'navegou', ms: t - ini } }); break; }
-        t += 8e3;
-        ev(id, 'modulo_fim', t, { modulo: m, detalhe: { ms: t - ini, ultimo_passo: ant, ultimo_passo_ms: 8000 } });
-        concluidos++;
-      }
-      if (concluidos === NMOD) {
-        ev(id, 'treino_concluido', t + 1e3);
-        if (rnd() < 0.85) {
-          const est = rnd() < 0.55 ? 5 : rnd() < 0.7 ? 4 : rnd() < 0.6 ? 3 : 2;
-          ev(id, 'avaliacao', t + 3e4, { detalhe: { ajudou: est >= 3 || rnd() < 0.3, estrelas: est, comentario: rnd() < 0.3 ? pick(COMENTARIOS_DEMO) : null } });
-        }
-        const nota = acertosPrimeira / NPERG;
-        if (nota > ACERTO_MIN && rnd() < 0.8) ev(id, 'certificado', t + 6e4, { detalhe: { acertos: Math.round(nota * 100) } });
-        // Dúvidas no assistente (liberado ao concluir), classificadas pelo próprio bot
-        if (Bot) {
-          let td = t + 2 * 3600e3;
-          const nd = Math.floor(rnd() * 5);
-          for (let k = 0; k < nd; k++) {
-            td += (0.5 + rnd() * 6) * DIA;
-            if (rnd() < 0.3) {
-              const x = pick(Bot.intencoes);
-              ev(id, 'duvida_escolha', td, { detalhe: { intencao: x.id, tema: x.tema, origem: pick(['inicio', 'seguinte', 'sugestao']) } });
-              continue;
-            }
-            const texto = pick(DUVIDAS_DEMO), r = Bot.entender(texto);
-            const resultado = r.tipo === 'resposta' ? (r.intencao.id === 'fora' ? 'fora' : 'respondida') : r.tipo === 'sugestao' ? 'sugestao' : 'sem_resposta';
-            ev(id, 'duvida', td, { detalhe: { texto, intencao: r.intencao ? r.intencao.id : null, tema: resultado === 'respondida' ? r.intencao.tema : null, confianca: r.confianca, resultado } });
-            if (resultado === 'respondida' && rnd() < 0.55) {
-              const ruim = ['repasse_menor', 'taxa_servico', 'debitos'].includes(r.intencao.id) ? 0.45 : 0.12;
-              ev(id, 'duvida_feedback', td + 20e3, { detalhe: { intencao: r.intencao.id, tema: r.intencao.tema, util: rnd() > ruim, texto } });
-            }
-          }
-        }
-      }
-    }
-    return { participantes: P, eventos: E.filter((e) => +new Date(e.criado_em) <= agora) };
-  }
 
   /* =====================================================================
-     SUPABASE (modo real)
+     SUPABASE
      ===================================================================== */
   const base = () => CFG.url.replace(/\/$/, '');
   const sessao = {
@@ -288,7 +166,8 @@
       body: JSON.stringify({ email: CFG.adminEmail, password: senha }),
     });
     if (!r.ok) throw new Error(r.status === 400 ? 'Senha incorreta.' : 'Não foi possível entrar (' + r.status + ').');
-    const token = (await r.json()).access_token;
+    const j = await r.json(), token = j.access_token;
+    if (!EXIGIR_MFA) { sessao.set({ token, exp: Date.now() + (j.expires_in || 3600) * 1000 - 60e3 }); return null; }
     const totp = ((await auth('user', token)).factors || []).filter((f) => f.factor_type === 'totp');
     const ativo = totp.find((f) => f.status === 'verified');
     if (ativo) return { token, fator: ativo.id, novo: null };
@@ -327,7 +206,6 @@
   }
 
   async function carregar() {
-    if (demo) { const D = gerarDemo(); D.anotacoes = Notas.demo(D); return D; }
     const [participantes, eventos, anotacoes] = await Promise.all([
       lerTudo('treino_participantes', 'id,loja,cidade,dispositivo,navegador,criado_em', 'criado_em.asc'),
       lerTudo('treino_eventos', 'participante_id,tipo,modulo,passo,alvo,detalhe,criado_em', 'id.asc'),
@@ -338,21 +216,9 @@
   }
 
   /* ------------------------------ Anotações da equipe ------------------------------ */
-  // Real: tabela treino_anotacoes (só o admin lê e escreve). Demonstração: guardadas neste navegador.
+  // Tabela treino_anotacoes (só o admin lê e escreve).
   const Notas = {
     semTabela: false,
-    chaveDemo: 'bigou-admin-anotacoes-demo',
-    demo(D) {
-      try { const salvas = JSON.parse(localStorage.getItem(this.chaveDemo)); if (Array.isArray(salvas)) return salvas; } catch (e) { /* */ }
-      // Alguns exemplos para a demonstração
-      const ex = [
-        ['Taxa de serviço', 'Ligamos para a loja: achava que a taxa de serviço era descontada do valor dos produtos. Explicamos que é paga pelo cliente.'],
-        ['Pagamento online', 'Parceiro perguntou por que o repasse veio menor que o total vendido. Mostramos o Recebido pela Loja.'],
-        ['Plataforma', 'Sugere mostrar a data do repasse mensal direto na tela Financeiro.'],
-      ];
-      return D.participantes.slice().sort((a, b) => +new Date(b.criado_em) - +new Date(a.criado_em)).slice(2, 5).map((p, i) => ({ id: 'demo-' + i, participante_id: p.id, assunto: ex[i][0], texto: ex[i][1], autor: 'Equipe Financeiro', criado_em: new Date(Date.now() - (i + 1) * 864e5).toISOString(), atualizado_em: null }));
-    },
-    salvarDemo() { try { localStorage.setItem(this.chaveDemo, JSON.stringify(st.dados.anotacoes)); } catch (e) { /* */ } },
     async req(metodo, filtro, corpo) {
       const s = sessao.get();
       if (!s) throw Object.assign(new Error('Sessão expirada. Entre de novo.'), { auth: true });
@@ -367,22 +233,17 @@
       return metodo === 'DELETE' ? null : (await r.json())[0];
     },
     async criar(participante_id, assunto, texto, autor) {
-      const nova = { participante_id, assunto, texto, autor, criado_em: new Date().toISOString(), atualizado_em: null };
-      const salva = demo ? Object.assign({ id: 'demo-' + Date.now() }, nova) : await this.req('POST', '', { participante_id, assunto, texto, autor });
-      st.dados.anotacoes.push(salva);
-      if (demo) this.salvarDemo();
+      st.dados.anotacoes.push(await this.req('POST', '', { participante_id, assunto, texto, autor }));
     },
     async editar(id, assunto, texto, autor) {
       const a = st.dados.anotacoes.find((x) => x.id === id);
       const mudou = { assunto, texto, autor, atualizado_em: new Date().toISOString() };
-      if (!demo) Object.assign(mudou, await this.req('PATCH', `?id=eq.${encodeURIComponent(id)}`, mudou));
+      Object.assign(mudou, await this.req('PATCH', `?id=eq.${encodeURIComponent(id)}`, mudou));
       Object.assign(a, mudou);
-      if (demo) this.salvarDemo();
     },
     async excluir(id) {
-      if (!demo) await this.req('DELETE', `?id=eq.${encodeURIComponent(id)}`);
+      await this.req('DELETE', `?id=eq.${encodeURIComponent(id)}`);
       st.dados.anotacoes = st.dados.anotacoes.filter((x) => x.id !== id);
-      if (demo) this.salvarDemo();
     },
   };
 
@@ -881,7 +742,6 @@
           <label><span>Senha</span><input id="lg-senha" type="password" autocomplete="current-password" required></label>
           ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
           <button class="btn primary" type="submit">Entrar</button>
-          <a class="lg-demo" href="?demo=1">Ver com dados de demonstração</a>
         </form>
       </main>`;
     const fm = document.getElementById('lg-form');
@@ -890,7 +750,7 @@
       e.preventDefault();
       const b = fm.querySelector('button');
       b.disabled = true; b.textContent = 'Entrando…';
-      try { telaCodigo(await login(document.getElementById('lg-senha').value)); }
+      try { const etapa = await login(document.getElementById('lg-senha').value); if (etapa) telaCodigo(etapa); else iniciar(); }
       catch (err) { telaLogin(err.message); }
     });
   }
@@ -925,6 +785,17 @@
     });
   }
 
+  function telaSemConfig() {
+    root.innerHTML = `
+      <main class="lg">
+        <div class="lg-card">
+          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <h1>Painel do Treinamento</h1>
+          <p class="lg-err" role="alert">O painel não está configurado: faltam a URL e a chave do Supabase (veja "Ambientes" no README).</p>
+        </div>
+      </main>`;
+  }
+
   function telaCarregando() {
     root.innerHTML = `
       <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
@@ -935,7 +806,8 @@
   }
 
   async function iniciar() {
-    if (!demo && !sessao.get()) return telaLogin();
+    if (!configurado) return telaSemConfig();
+    if (!sessao.get()) return telaLogin();
     telaCarregando();
     try { st.dados = await carregar(); render(); }
     catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else { root.innerHTML = `<main class="ld"><p class="lg-err">${esc(err.message)}</p><button class="btn" id="ld-retry">Tentar de novo</button></main>`; root.querySelector('#ld-retry').addEventListener('click', () => location.reload()); } }
@@ -1036,11 +908,10 @@
       <div class="painel ${st.menu ? 'menu-on' : ''}">
         <aside class="sb" aria-label="Menu do painel">
           <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
-          ${demo ? '<span class="sb-demo">Dados de demonstração</span>' : ''}
           <nav class="sb-nav">${PAGINAS.map((p) => `<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
             <button class="sb-a" data-a="atualizar">${IC.atualizar}<span>Atualizar dados</span></button>
-            ${demo ? '' : `<button class="sb-a" data-a="sair">${IC.sair}<span>Sair</span></button>`}
+            <button class="sb-a" data-a="sair">${IC.sair}<span>Sair</span></button>
           </div>
         </aside>
         <div class="sb-scrim" data-a="menu"></div>
@@ -1197,7 +1068,7 @@
     const autores = [...new Set(todas.map((a) => a.autor).filter(Boolean))].sort();
     const porTema = {}; todas.forEach((a) => { porTema[a.assunto || 'Outro'] = (porTema[a.assunto || 'Outro'] || 0) + 1; });
     return `
-      ${Notas.semTabela && !demo ? '<p class="fx-aviso">Para salvar anotações, rode uma vez o arquivo <b>supabase/anotacoes.sql</b> no SQL Editor do Supabase.</p>' : ''}
+      ${Notas.semTabela ? '<p class="fx-aviso">Para salvar anotações, aplique no Supabase as migrações de <b>supabase/migrations</b>.</p>' : ''}
       ${Object.keys(porTema).length ? card('Por assunto', '', barras(Object.entries(porTema).map(([tema, c]) => ({ tema, c })).sort((a, b) => b.c - a.c), { valor: (x) => x.c, rotulo: (x) => x.tema, fmt: (x) => n(x.c) })) : ''}
       ${card('', '', `
         <div class="tb-top">
@@ -1368,7 +1239,7 @@
 
           <section class="fx-s">
             <h3>Anotações da equipe <small>${plural(s.notas.length, 'anotação', 'anotações')}</small></h3>
-            ${Notas.semTabela && !demo ? '<p class="fx-aviso">Para salvar anotações, rode uma vez o arquivo <b>supabase/anotacoes.sql</b> no SQL Editor do Supabase.</p>' : ''}
+            ${Notas.semTabela ? '<p class="fx-aviso">Para salvar anotações, aplique no Supabase as migrações de <b>supabase/migrations</b>.</p>' : ''}
             ${fxEditando ? '' : form(null)}
             ${s.notas.length ? `<ul class="fx-notas">${anot}</ul>` : ''}
           </section>
@@ -1596,6 +1467,6 @@
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (st.R) desenharLinha(); }, 150); });
 
   // Exposto para testes
-  window.ADMIN = { calcular, gerarDemo, estado: st, abrirFicha };
+  window.ADMIN = { calcular, estado: st, abrirFicha };
   iniciar();
 })();

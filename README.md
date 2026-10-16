@@ -7,10 +7,10 @@ Treinamento interativo (Product Tour com spotlight) feito sobre um clone das tel
 ```bash
 npm run dev        # usa o Supabase de stage (.env.stage)
 npm run dev:main   # usa o Supabase de produção (.env.main) — grava dados reais
-npm start          # sem Supabase (modo demonstração)
+npm start          # sem Supabase (treinamento funciona; eventos ficam na fila do aparelho)
 ```
 
-Depois acesse <http://localhost:5178>. Também funciona abrindo o `index.html` direto no navegador (modo demonstração). Os arquivos `.env.stage` e `.env.main` não vão para o git: copie o `.env.example` e preencha.
+Depois acesse <http://localhost:5178>. Também funciona abrindo o `index.html` direto no navegador (sem Supabase). Os arquivos `.env.stage` e `.env.main` não vão para o git: copie o `.env.example` e preencha.
 
 Painel admin: <http://admin.localhost:5178> (ou <http://localhost:5178/admin>).
 
@@ -72,7 +72,7 @@ O painel tem uma **sidebar** com uma página para cada assunto (o endereço muda
 
 O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou todo o período). Os limites de 7 e 3 dias ficam em `PARADA_DIAS` e `SEM_INICIO_DIAS` (`js/admin.js`).
 
-Enquanto o Supabase não estiver configurado, o painel abre com **dados de demonstração** (ou force com `?demo=1`).
+Sem o Supabase configurado, o painel mostra um aviso em vez dos dados (não há mais modo de demonstração).
 
 ### Perguntas: versões e rastreabilidade
 
@@ -80,7 +80,7 @@ Cada pergunta tem um id fixo (`d1`…`d9` nos desafios, `f1`…`f10` no exercíc
 
 ### Anotações da equipe (ficha da loja)
 
-Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, perguntas que ela errou (com a resposta escolhida), avaliação e **anotações da equipe** (criar, editar e excluir; cada anotação tem assunto, texto, autor e data). As anotações ficam na tabela `treino_anotacoes`, que só o admin lê e escreve. Sem a tabela, a ficha mostra um aviso. Na demonstração, as anotações ficam no navegador.
+Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, perguntas que ela errou (com a resposta escolhida), avaliação e **anotações da equipe** (criar, editar e excluir; cada anotação tem assunto, texto, autor e data). As anotações ficam na tabela `treino_anotacoes`, que só o admin lê e escreve. Sem a tabela, a ficha mostra um aviso.
 
 **Exportações:** "Lojas (CSV)" e "Dúvidas e anotações (CSV)", com uma linha por erro em pergunta, comentário da avaliação e anotação da equipe — a base para o plano de ação de melhorias.
 
@@ -92,13 +92,11 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para as variáveis do site na Netlify e para o `.env` local (veja "Ambientes").
 5. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up** (só o admin entra) e, em **URL Configuration**, ponha o endereço do site em **Site URL**.
 6. Em **Project Settings → JWT Keys**, use as chaves de assinatura novas (ES256) e revogue a legada (HS256); no site use a chave **publishable** (`sb_publishable_…`), não a `anon` legada.
-7. Publique o site. No painel, entre com a senha e, no primeiro acesso, cadastre o app autenticador (veja abaixo).
+7. Publique o site. No painel, entre com a senha.
 
-### Acesso ao painel: senha + código (verificação em duas etapas)
+### Acesso ao painel
 
-O painel pede a senha e depois o código de 6 dígitos de um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…). No primeiro acesso ele mostra um QR code para cadastrar o app. O banco só libera os dados para a sessão verificada com o código (`aal2`): com a senha sozinha não se lê nada.
-
-Perdeu o celular ou trocou de aparelho: no Supabase, **Authentication → Users → admin → MFA factors**, remova o fator. No próximo login o painel mostra um QR code novo.
+Hoje o painel entra só com a senha do admin. A verificação em duas etapas (código de um app autenticador, com QR code no primeiro acesso) está pronta no código, mas **desligada**: `EXIGIR_MFA = false` em `js/admin.js`, e a migração `20261016230000_admin_sem_mfa.sql` tirou a exigência no banco. Para religar: `EXIGIR_MFA = true` e uma migração nova com a regra `aal2` de `20261016220000_admin_exige_mfa.sql`. Com ela ligada, se o admin perder o celular: **Authentication → Users → admin → MFA factors**, remova o fator; no próximo login aparece um QR code novo.
 
 ### Ambientes (produção e stage)
 
@@ -107,7 +105,7 @@ Perdeu o celular ou trocou de aparelho: no Supabase, **Authentication → Users 
 | Produção | `main` | `treinamentofinanceirobigou` | `onboarding-guiado` (`pfgkzdrbluelvphtveiq`) |
 | Stage | `stage` | `ondoarding-guiado-stage` | `onboard-guiado-stage` (`orftxacyupbdacwcfvzk`) |
 
-No deploy, a Netlify roda `scripts/build.js` (configurado em `netlify.toml`): copia para `dist/` só o que o navegador usa (`index.html`, `admin/`, `css/`, `js/`, `assets/`) e grava ali o `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. README, SQL e scripts não são publicados. O `netlify.toml` também define os cabeçalhos de segurança (CSP, bloqueio de iframe etc.), que o `serve.js` repete localmente; por causa da CSP, não use `onclick=`/`<script>` inline nem scripts de outros domínios. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado fica vazio (modo demonstração); localmente o `serve.js` entrega a configuração do `.env` escolhido.
+No deploy, a Netlify roda `scripts/build.js` (configurado em `netlify.toml`): copia para `dist/` só o que o navegador usa (`index.html`, `admin/`, `css/`, `js/`, `assets/`) e grava ali o `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. README, SQL e scripts não são publicados. O `netlify.toml` também define os cabeçalhos de segurança (CSP, bloqueio de iframe etc.), que o `serve.js` repete localmente; por causa da CSP, não use `onclick=`/`<script>` inline nem scripts de outros domínios. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado fica vazio (sem Supabase); localmente o `serve.js` entrega a configuração do `.env` escolhido.
 
 **Mudanças no banco:** toda alteração vira um arquivo novo em `supabase/migrations` (`AAAAMMDDHHMMSS_descricao.sql`), aplicado **primeiro no stage**, testado, e só depois na produção. Não edite migrações já aplicadas. Tabelas novas não ficam liberadas para a API automaticamente: a migração precisa conceder (`grant`) o mínimo e criar as políticas RLS.
 

@@ -6,7 +6,7 @@
    - Local: npm run dev (stage) ou npm run dev:main (produção) lê o .env
      correspondente (veja .env.example).
    Vazio assim, o treinamento funciona normalmente (eventos ficam numa fila
-   no aparelho) e o painel abre em modo demonstração.
+   no aparelho) e o painel mostra que não está configurado.
    ========================================================================= */
 window.TREINO_ANALYTICS = {
   url: '',
