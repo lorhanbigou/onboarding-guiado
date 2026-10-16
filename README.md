@@ -115,8 +115,9 @@ Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissõ
 
 **Ligado por ambiente:** hoje só no **stage**. A variável `RECURSO_ASSISTENTE=true` no site da Netlify (e no `.env.stage` local) liga o assistente; sem ela vale o padrão desligado de `js/data.js` (produção). Desligado, o botão não aparece e o painel esconde a seção "Dúvidas do chat". Para ligar na produção, defina `RECURSO_ASSISTENTE=true` no site de produção e faça um novo deploy.
 
-Botão flutuante no canto da tela, liberado quando a loja **conclui os 10 módulos** (antes disso aparece com cadeado e mostra quantos módulos faltam). Não aparece dentro dos módulos guiados nem no cadastro.
+Botão flutuante no canto da tela, disponível **a qualquer momento**, sem precisar concluir o treinamento. Não aparece dentro dos módulos guiados nem no cadastro.
 
+- **Quando não consegue ajudar** (pergunta sem resposta, assunto fora do treinamento, pedido de atendimento ou resposta marcada com 👎), indica o **WhatsApp do Financeiro: (32) 99819-6024** (`CONTATO_FINANCEIRO` em `js/bot.js`).
 - **Sem IA e sem custo:** as respostas ficam em `js/bot.js` (lista `INTENCOES`), escritas a partir do conteúdo do treinamento. Cada intenção tem palavras-chave com peso (`k3`, `k2`, `k1`), a resposta, o módulo para "Rever no treinamento" e perguntas relacionadas.
 - **Entendimento:** ignora acentos, maiúsculas, plural e palavras comuns, aceita erros de digitação ("comição") e abreviações ("qnd", "pq"). Se houver dúvida entre assuntos, mostra "Você quis dizer…". Perguntas fora do treinamento (cardápio, horário, nota fiscal…) são encaminhadas ao suporte.
 - **No chat:** perguntas prontas, "digitando…", 👍/👎 em cada resposta, nova conversa e histórico salvo no aparelho. Lê a resposta em voz alta se a narração estiver ligada.

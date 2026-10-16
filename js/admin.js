@@ -822,7 +822,7 @@
 
   // Seção "Dúvidas do chat" (só com o assistente ligado)
   function secDuvidas(R, DV, periodoTxt, f) {
-    return sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente é liberado ao concluir o treinamento.`, `
+    return sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente fica disponível a qualquer momento.`, `
           <div class="kpis k3">
             ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
             ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}

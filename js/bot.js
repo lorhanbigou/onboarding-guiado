@@ -1,5 +1,8 @@
 /* =========================================================================
-   ASSISTENTE DE DÚVIDAS — mini chat liberado ao concluir o treinamento
+   ASSISTENTE DE DÚVIDAS — mini chat disponível a qualquer momento
+   - Quando não consegue ajudar (sem resposta, assunto fora do treinamento,
+     resposta marcada como "não ajudou" ou pedido de atendimento), indica o
+     WhatsApp do Financeiro (CONTATO_FINANCEIRO).
    - Sem IA: as respostas são escritas a partir do conteúdo do treinamento e
      escolhidas por palavras-chave (com sinônimos e tolerância a erros de
      digitação). Nunca inventa valores.
@@ -10,6 +13,9 @@
 (function () {
   const F = TREINO.fmt;
   const CFG = TREINO.config;
+  // Para onde o assistente encaminha quando não consegue ajudar
+  const CONTATO_FINANCEIRO = { numero: '(32) 99819-6024', whatsapp: 'https://wa.me/5532998196024' };
+  const contatoFinanceiro = () => `<a class="bt-contato" href="${CONTATO_FINANCEIRO.whatsapp}" target="_blank" rel="noopener noreferrer">WhatsApp do Financeiro: ${CONTATO_FINANCEIRO.numero}</a>`;
   const PCT = (p) => String(Math.round(p * 10000) / 100).replace('.', ',') + '%';
   const R$ = (v) => F(Math.round(v * 100));
   const T = CFG.taxas, MS = CFG.mensalidade, TS = CFG.taxaServico;
@@ -211,13 +217,13 @@
     {
       id: 'fora', tema: 'Outros assuntos do painel', exemplo: 'Outros assuntos',
       k3: ['taxa entrega', 'horario funcionamento', 'cadastrar produto', 'cadastro produto', 'produto novo', 'nota fiscal', 'marketing', 'foto', 'senha', 'imprimir', 'impressora', 'travando', 'travou', 'nao abre', 'cancelar contrato', 'contrato', 'avaliacao', 'avaliacoes', 'entregador', 'motoboy'],
-      r: () => 'Esse assunto não faz parte deste treinamento, que fala sobre <b>vendas, taxas e repasses</b>. Para isso, fale com o suporte Bigou: o contato aparece no rodapé do seu painel, em <b>SUPORTE</b>.<br>Anotamos sua pergunta para melhorar nossos materiais.',
+      r: () => `Esse assunto não faz parte deste treinamento, que fala sobre <b>vendas, taxas e repasses</b>. Fale com o <b>Financeiro Bigou</b>, que vai te ajudar ou encaminhar:<br>${contatoFinanceiro()}<br>Anotamos sua pergunta para melhorar nossos materiais.`,
       seguintes: [],
     },
     {
       id: 'suporte', tema: 'Suporte', exemplo: 'Como falo com o suporte?',
       k3: ['suporte', 'atendente', 'falar alguem', 'falar pessoa', 'humano', 'whatsapp', 'telefone', 'atendimento'], k2: ['contato', 'ajuda', 'reclamar'],
-      r: () => 'O contato do <b>suporte Bigou</b> aparece no rodapé do seu painel, em <b>SUPORTE</b>. Se a sua dúvida não estiver aqui, fale com a gente por lá.',
+      r: () => `Para falar com uma pessoa, chame o <b>Financeiro Bigou</b>:<br>${contatoFinanceiro()}`,
       seguintes: [],
     },
   ];
@@ -398,7 +404,7 @@
     if (st.liberado && st.visivel && !ler(chaveAnuncio(), false)) {
       gravar(chaveAnuncio(), true);
       el.fab.classList.add('novo');
-      setTimeout(() => mostrarPop('<b>Assistente liberado! 🎉</b><span>Tire suas dúvidas sobre vendas, taxas e repasses por aqui.</span>'), antes ? 0 : 600);
+      setTimeout(() => mostrarPop('<b>Tem dúvidas? 💬</b><span>Pergunte aqui sobre vendas, taxas e repasses, a qualquer momento.</span>'), antes ? 0 : 600);
     }
   };
 
@@ -438,7 +444,8 @@
   function htmlBot(m) {
     if (m.k === 'oi') return `<div class="bt-b">Olá${st.loja ? `, <b>${esc(st.loja)}</b>` : ''}! 👋 Sou o assistente do treinamento.<br>Pergunte com suas palavras ou toque em uma dúvida comum:</div>${chips(POPULARES, 'inicio')}`;
     if (m.k === 'obrigado') return '<div class="bt-b">Por nada! Se surgir outra dúvida, é só perguntar. 😊</div>';
-    if (m.k === 'sem') return `<div class="bt-b">Ainda não sei responder essa. 😕 Tente com outras palavras ou escolha um assunto:</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b sm">Se preferir, fale com o suporte: o contato aparece no rodapé do seu painel.</div>`;
+    if (m.k === 'sem') return `<div class="bt-b">Ainda não sei responder essa. 😕 Tente com outras palavras ou escolha um assunto:</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b">Se preferir, fale com o <b>Financeiro Bigou</b>:<br>${contatoFinanceiro()}</div>`;
+    if (m.k === 'contato') return `<div class="bt-b">Sentimos muito. 😕 Para resolver com uma pessoa, fale com o <b>Financeiro Bigou</b>:<br>${contatoFinanceiro()}</div>`;
     if (m.k === 'sug') return `<div class="bt-b">Você quis dizer:</div>${chips(m.ids, 'sugestao')}`;
     const x = POR_ID.get(m.id);
     if (!x) return '';
@@ -540,6 +547,7 @@
       const i = st.hist.indexOf(m), antes = st.hist.slice(0, i).reverse().find((h) => h.de === 'eu');
       ev('duvida_feedback', { intencao: m && m.id, tema: m && POR_ID.get(m.id) ? POR_ID.get(m.id).tema : null, util, texto: antes ? limpar(antes.t) : null });
       box.outerHTML = `<span class="bt-fb-ok">${util ? 'Que bom! 👍' : 'Obrigado! Vamos melhorar essa resposta.'}</span>`;
+      if (!util) digitando(() => adicionar({ de: 'bot', k: 'contato' }));   // não ajudou: oferece falar com uma pessoa
     }
   }
 

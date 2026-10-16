@@ -524,6 +524,8 @@ body.bt-on .bt-fab { display: none; }
 .bt-rever { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--t-g2); }
 .bt-rever svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .bt-rever:hover { text-decoration: underline; }
+.bt-contato { display: inline-flex; align-items: center; margin-top: 6px; background: var(--t-g); color: #fff; font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 10px; text-decoration: none; }
+.bt-contato:hover { filter: brightness(0.95); }
 .bt-fb { display: inline-flex; align-items: center; gap: 4px; }
 .bt-fb small { font-size: 12.5px; color: var(--t-ink3); margin-right: 2px; }
 .bt-fb button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid #e3e8e5; background: #fff; color: var(--t-ink2); display: grid; place-items: center; cursor: pointer; }
