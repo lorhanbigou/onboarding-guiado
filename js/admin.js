@@ -52,14 +52,25 @@
     f10: ['Onde você pega o comprovante do repasse?', ['Na tela Relatório', 'Na fatura, em Ver comprovante', 'Em Boletos']],
   };
   // Dados de uma resposta: pergunta (id fixo), versão, enunciado e a alternativa escolhida
+  // detalhe é JSON livre enviado por qualquer visitante: só os campos usados, com tipo garantido.
+  function lerAvaliacao(e) {
+    const d = e.detalhe, est = Number(d.estrelas);
+    return {
+      t: e.t,
+      ajudou: d.ajudou === true,
+      estrelas: Number.isInteger(est) && est >= 1 && est <= 5 ? est : 0,
+      comentario: typeof d.comentario === 'string' && d.comentario ? d.comentario : null,
+    };
+  }
+
   function lerResposta(e) {
     const d = e.detalhe || {}, st = passoDe(e.modulo, e.passo);
     const id = d.id || (st && st.id) || `${e.modulo}:${e.passo}`;
     const v = d.versao || 1;
-    const antigo = QUIZ_V1[id];
+    const antigo = Object.prototype.hasOwnProperty.call(QUIZ_V1, id) ? QUIZ_V1[id] : null;
     const q = v >= 2 && st ? st.q : d.q || (antigo && antigo[0]) || (st && st.q) || 'Pergunta';
     const ops = v >= 2 && st ? st.options.map((o) => o.t) : antigo ? antigo[1] : st ? st.options.map((o) => o.t) : [];
-    return { id, v, st, q: semValor(q), resposta: d.resposta || (d.opcao != null ? ops[d.opcao] : null), tema: st ? st.tema : 'Outro' };
+    return { id, v, st, q: semValor(q), resposta: d.resposta || (Number.isInteger(d.opcao) && Array.isArray(ops) ? ops[d.opcao] : null), tema: st ? st.tema : 'Outro' };
   }
   const ACERTO_MIN = 0.7;        // certificado: mais de 70% de acerto (igual ao treinamento)
   const PARADA_DIAS = 7;         // começou e está sem atividade há 7 dias ou mais
@@ -373,7 +384,7 @@
       else if (e.tipo === 'modulo_saida') s.saidas.push(e);
       else if (e.tipo === 'voz' && e.detalhe && e.detalhe.ligada) s.voz = true;
       else if (e.tipo === 'certificado') s.cert = true;
-      else if (e.tipo === 'avaliacao' && e.detalhe) s.aval = Object.assign({ t: e.t }, e.detalhe);
+      else if (e.tipo === 'avaliacao' && e.detalhe) s.aval = lerAvaliacao(e);
     }
     const L = [...S.values()];
     L.forEach((s) => {
@@ -869,7 +880,7 @@
     if (!demo && !sessao.get()) return telaLogin();
     telaCarregando();
     try { st.dados = await carregar(); render(); }
-    catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else root.innerHTML = `<main class="ld"><p class="lg-err">${esc(err.message)}</p><button class="btn" onclick="location.reload()">Tentar de novo</button></main>`; }
+    catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else { root.innerHTML = `<main class="ld"><p class="lg-err">${esc(err.message)}</p><button class="btn" id="ld-retry">Tentar de novo</button></main>`; root.querySelector('#ld-retry').addEventListener('click', () => location.reload()); } }
   }
 
   const sec = (id, titulo, desc, corpo, extra) => `
@@ -1294,7 +1305,7 @@
 
           <section class="fx-s">
             <h3>Avaliação do treinamento</h3>
-            ${s.aval ? `<div class="fx-av"><span class="estrelas" aria-label="${s.aval.estrelas} de 5 estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span><span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
+            ${s.aval ? `<div class="fx-av"><span class="estrelas" aria-label="${esc(s.aval.estrelas)} de 5 estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span><span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
           </section>
 
           <section class="fx-s">
@@ -1359,7 +1370,11 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fx.hidden) fecharFicha(); });
 
   function baixarCSV(nome, linhas) {
-    const q = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    // Texto vindo de visitantes pode começar com = + - @ e virar fórmula no Excel/Sheets: prefixa com '.
+    const q = (v) => {
+      const t = String(v == null ? '' : v);
+      return `"${(typeof v === 'string' && /^[\s]*[=+\-@\t\r]/.test(t) ? "'" + t : t).replace(/"/g, '""')}"`;
+    };
     const csv = '\ufeff' + linhas.map((l) => l.map(q).join(';')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));

@@ -100,11 +100,11 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 | Produção | `main` | `treinamentofinanceirobigou` | `onboarding-guiado` (`pfgkzdrbluelvphtveiq`) |
 | Stage | `stage` | `ondoarding-guiado-stage` | `onboard-guiado-stage` (`orftxacyupbdacwcfvzk`) |
 
-No deploy, a Netlify roda `scripts/gerar-config.js` (configurado em `netlify.toml`), que reescreve `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado fica vazio (modo demonstração); localmente o `serve.js` entrega a configuração do `.env` escolhido.
+No deploy, a Netlify roda `scripts/build.js` (configurado em `netlify.toml`): copia para `dist/` só o que o navegador usa (`index.html`, `admin/`, `css/`, `js/`, `assets/`) e grava ali o `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. README, SQL e scripts não são publicados. O `netlify.toml` também define os cabeçalhos de segurança (CSP, bloqueio de iframe etc.), que o `serve.js` repete localmente; por causa da CSP, não use `onclick=`/`<script>` inline nem scripts de outros domínios. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado fica vazio (modo demonstração); localmente o `serve.js` entrega a configuração do `.env` escolhido.
 
 **Mudanças no banco:** toda alteração vira um arquivo novo em `supabase/migrations` (`AAAAMMDDHHMMSS_descricao.sql`), aplicado **primeiro no stage**, testado, e só depois na produção. Não edite migrações já aplicadas. Tabelas novas não ficam liberadas para a API automaticamente: a migração precisa conceder (`grant`) o mínimo e criar as políticas RLS.
 
-Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissões das migrações deixam o público **apenas inserir** participantes e eventos, e só o usuário cujo e-mail está em `treino_admins` consegue **ler** (e gerenciar anotações). A checagem de admin fica no schema `private`, fora da API.
+Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissões das migrações deixam o público **apenas inserir** participantes e eventos, e só o usuário cujo e-mail está em `treino_admins` consegue **ler** (e gerenciar anotações). A checagem de admin fica no schema `private`, fora da API. O painel trata tudo que vem do banco como texto não confiável (escape no HTML, campos do `detalhe` validados, fórmulas neutralizadas nos CSVs), e o banco recusa avaliações fora do formato.
 
 ## Assistente de dúvidas (chat)
 
@@ -152,7 +152,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
 | `js/registro-config.js` | URL/chave do Supabase e e-mail do admin (gerado no deploy) |
-| `scripts/gerar-config.js`, `netlify.toml` | Build da Netlify: config do Supabase por ambiente |
+| `scripts/build.js`, `scripts/gerar-config.js`, `netlify.toml` | Build da Netlify (`dist/`), config do Supabase por ambiente e cabeçalhos de segurança |
 | `js/registro.js` | Fila e envio dos eventos do treinamento |
 | `admin/index.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
 | `supabase/migrations/` | Tabelas, regras de segurança e permissões do banco, em ordem |
