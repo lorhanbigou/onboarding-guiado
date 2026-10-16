@@ -5,3 +5,8 @@
 [build]
   command = "node scripts/gerar-config.js"
   publish = "."
+
+# A URL e a chave anon do Supabase vão para o navegador de propósito (a segurança
+# vem das regras RLS), então a varredura de segredos da Netlify ignora só essas duas.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,SUPABASE_ANON_KEY"
