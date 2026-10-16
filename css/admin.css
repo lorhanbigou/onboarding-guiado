@@ -379,11 +379,11 @@ body.fx-on { overflow: hidden; }
 /* =========================================================================
    LAYOUT COM SIDEBAR
    ========================================================================= */
-.ad { min-height: 100vh; }
+.painel { min-height: 100vh; }
 .sb { position: fixed; z-index: 60; top: 0; bottom: 0; left: 0; width: 248px; background: #0f1b16; color: #d7e2dc; display: flex; flex-direction: column; padding: 18px 12px; transform: translateX(-100%); transition: transform .22s cubic-bezier(.2,.8,.2,1); overflow-y: auto; }
-.ad.menu-on .sb { transform: none; box-shadow: 12px 0 40px rgba(0,0,0,.25); }
+.painel.menu-on .sb { transform: none; box-shadow: 12px 0 40px rgba(0,0,0,.25); }
 .sb-scrim { display: none; }
-.ad.menu-on .sb-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(15,23,42,.4); }
+.painel.menu-on .sb-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(15,23,42,.4); }
 .sb-logo { display: flex; align-items: center; gap: 10px; padding: 0 8px 14px; }
 .sb-logo img { border-radius: 10px; }
 .sb-logo b { display: block; font-size: 14.5px; color: #fff; }
@@ -401,7 +401,7 @@ body.fx-on { overflow: hidden; }
 .sb-a { font: inherit; display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 0; border-radius: 10px; background: none; color: #a9bbb1; font-size: 13.5px; cursor: pointer; text-align: left; }
 .sb-a:hover { background: rgba(255,255,255,.06); color: #fff; }
 
-.ad-main { min-width: 0; }
+.painel-main { min-width: 0; }
 .ph { position: sticky; top: 0; z-index: 40; display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; padding: 12px 16px; background: rgba(243,245,248,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .sb-btn { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: #fff; display: grid; place-items: center; cursor: pointer; }
 .sb-btn svg { width: 20px; height: 20px; fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
@@ -413,9 +413,9 @@ body.fx-on { overflow: hidden; }
 
 @media (min-width: 1000px) {
   .sb { transform: none; }
-  .sb-scrim, .ad.menu-on .sb-scrim { display: none; }
+  .sb-scrim, .painel.menu-on .sb-scrim { display: none; }
   .sb-btn { display: none; }
-  .ad-main { margin-left: 248px; }
+  .painel-main { margin-left: 248px; }
   .ph { grid-template-columns: 1fr auto; padding: 16px 28px; }
   .ph .flt { grid-column: auto; }
   .ph-t h1 { font-size: 24px; }
@@ -523,3 +523,8 @@ body.fx-on { overflow: hidden; }
 .lj-act { flex: 0 1 320px; }
 .lj-act .busca { width: 100%; }
 @media (min-width: 1400px) { .kpis.k4 { gap: 16px; } .cols { gap: 16px; } }
+
+.erro-pg { border-color: #f3c9b8; background: #fffaf7; display: grid; gap: 8px; }
+.erro-pg p { margin: 0; font-size: 14px; color: var(--ink2); }
+.erro-pg code { font-size: 12.5px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
+.aviso-ext { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 300; max-width: min(560px, calc(100vw - 32px)); background: #111827; color: #fff; font-size: 14px; line-height: 1.5; padding: 14px 18px; border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.3); }

@@ -964,7 +964,7 @@
     const atual = PAGINAS.find((p) => p.id === pg);
 
     root.innerHTML = `
-      <div class="ad ${st.menu ? 'menu-on' : ''}">
+      <div class="painel ${st.menu ? 'menu-on' : ''}">
         <aside class="sb" aria-label="Menu do painel">
           <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
           ${demo ? '<span class="sb-demo">Dados de demonstração</span>' : ''}
@@ -975,7 +975,7 @@
           </div>
         </aside>
         <div class="sb-scrim" data-a="menu"></div>
-        <div class="ad-main">
+        <div class="painel-main">
           <header class="ph">
             <button class="sb-btn" data-a="menu" aria-label="Abrir menu">${IC.menu}</button>
             <div class="ph-t"><h1>${atual.t}</h1><p>${atual.d(ctx)}</p></div>
@@ -986,10 +986,27 @@
               <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
             </div>
           </header>
-          <main class="pg">${PG[pg](ctx)}</main>
+          <main class="pg">${montarPagina(pg, ctx)}</main>
         </div>
       </div>`;
     if (document.getElementById('linha')) desenharLinha();
+    avisarSeEscondido();
+  }
+
+  // Se uma página der erro, mostra o motivo em vez de ficar em branco
+  function montarPagina(pg, ctx) {
+    try { return PG[pg](ctx); }
+    catch (err) {
+      console.error('[painel] erro ao montar a página', pg, err);
+      return `<div class="card erro-pg"><h3>Não foi possível montar esta página</h3><p>Tente <b>Atualizar dados</b>. Se continuar, envie esta mensagem para a equipe:</p><code>${esc(pg + ': ' + (err && err.message))}</code></div>`;
+    }
+  }
+
+  // Extensões (bloqueadores de anúncio etc.) podem esconder partes da página
+  function avisarSeEscondido() {
+    const main = document.querySelector('.painel-main');
+    if (!main || (getComputedStyle(main).display !== 'none' && main.offsetHeight > 0)) return;
+    document.body.insertAdjacentHTML('beforeend', '<div class="aviso-ext" role="alert"><b>Uma extensão do navegador está escondendo o painel.</b> Desative o bloqueador de anúncios para este site e recarregue a página.</div>');
   }
 
   const PG = {};
@@ -1428,7 +1445,7 @@
       const x = a.dataset.a;
       if (x === 'atualizar') iniciar();
       else if (x === 'sair') { sessao.sair(); telaLogin(); }
-      else if (x === 'menu') { st.menu = !st.menu; document.querySelector('.ad').classList.toggle('menu-on', st.menu); }
+      else if (x === 'menu') { st.menu = !st.menu; document.querySelector('.painel').classList.toggle('menu-on', st.menu); }
       else if (ACOES[x]) ACOES[x]();
       return;
     }

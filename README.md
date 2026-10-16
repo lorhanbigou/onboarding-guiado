@@ -87,7 +87,7 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 1. Crie um projeto em <https://supabase.com> (plano grátis).
 2. Em **SQL Editor → New query**, cole o conteúdo de `supabase/schema.sql`. Antes de rodar, troque `admin@bigou.app` (no fim do arquivo) pelo e-mail do admin. Depois, clique em **Run**.
 3. Em **Authentication → Users → Add user**, crie esse usuário com e-mail e senha e marque "Auto Confirm User". Essa é a senha única do painel.
-4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para `js/analytics-config.js`, junto com o e-mail do admin.
+4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para `js/registro-config.js`, junto com o e-mail do admin.
 5. Publique o site. No painel, entre com a senha.
 
 Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
@@ -137,8 +137,8 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/dicas.js` | Dicas importantes da tela inicial |
 | `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
-| `js/analytics-config.js` | URL/chave do Supabase e e-mail do admin |
-| `js/analytics.js` | Fila e envio dos eventos do treinamento |
+| `js/registro-config.js` | URL/chave do Supabase e e-mail do admin |
+| `js/registro.js` | Fila e envio dos eventos do treinamento |
 | `admin/index.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
 | `supabase/schema.sql` | Tabelas e regras de segurança do banco |
 | `supabase/anotacoes.sql` | Tabela das anotações da equipe (rodar uma vez) |
