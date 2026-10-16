@@ -5,7 +5,11 @@
   "main": "serve.js",
   "scripts": {
     "start": "node serve.js",
-    "dev": "node serve.js"
+    "dev": "node --env-file=.env.stage serve.js",
+    "dev:main": "node --env-file=.env.main serve.js"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=20.6"
+  }
 }

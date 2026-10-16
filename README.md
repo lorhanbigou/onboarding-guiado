@@ -5,10 +5,12 @@ Treinamento interativo (Product Tour com spotlight) feito sobre um clone das tel
 ## Como abrir
 
 ```bash
-node serve.js
+npm run dev        # usa o Supabase de stage (.env.stage)
+npm run dev:main   # usa o Supabase de produção (.env.main) — grava dados reais
+npm start          # sem Supabase (modo demonstração)
 ```
 
-Depois acesse <http://localhost:5178>. Também funciona abrindo o `index.html` direto no navegador.
+Depois acesse <http://localhost:5178>. Também funciona abrindo o `index.html` direto no navegador (modo demonstração). Os arquivos `.env.stage` e `.env.main` não vão para o git: copie o `.env.example` e preencha.
 
 Painel admin: <http://admin.localhost:5178> (ou <http://localhost:5178/admin>).
 
@@ -78,17 +80,18 @@ Cada pergunta tem um id fixo (`d1`…`d9` nos desafios, `f1`…`f10` no exercíc
 
 ### Anotações da equipe (ficha da loja)
 
-Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, perguntas que ela errou (com a resposta escolhida), avaliação e **anotações da equipe** (criar, editar e excluir; cada anotação tem assunto, texto, autor e data). Para salvar no Supabase, rode **uma vez** o arquivo `supabase/anotacoes.sql` no SQL Editor (cria a tabela `treino_anotacoes`, que só o admin lê e escreve). Sem isso, a ficha mostra um aviso. Na demonstração, as anotações ficam no navegador.
+Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, perguntas que ela errou (com a resposta escolhida), avaliação e **anotações da equipe** (criar, editar e excluir; cada anotação tem assunto, texto, autor e data). As anotações ficam na tabela `treino_anotacoes`, que só o admin lê e escreve. Sem a tabela, a ficha mostra um aviso. Na demonstração, as anotações ficam no navegador.
 
 **Exportações:** "Lojas (CSV)" e "Dúvidas e anotações (CSV)", com uma linha por erro em pergunta, comentário da avaliação e anotação da equipe — a base para o plano de ação de melhorias.
 
 ### Como ligar o Supabase (uma vez)
 
 1. Crie um projeto em <https://supabase.com> (plano grátis).
-2. Em **SQL Editor → New query**, cole o conteúdo de `supabase/schema.sql`. Antes de rodar, troque `admin@bigou.app` (no fim do arquivo) pelo e-mail do admin. Depois, clique em **Run**.
+2. Em **SQL Editor → New query**, rode as migrações de `supabase/migrations` em ordem (nome do arquivo = data). Na primeira, troque `admin@bigou.app` pelo e-mail do admin se for outro.
 3. Em **Authentication → Users → Add user**, crie esse usuário com e-mail e senha e marque "Auto Confirm User". Essa é a senha única do painel.
-4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para `js/registro-config.js`, junto com o e-mail do admin.
-5. Publique o site. No painel, entre com a senha.
+4. Em **Project Settings → API**, copie a **Project URL** e a chave **anon public** para as variáveis do site na Netlify e para o `.env` local (veja "Ambientes").
+5. Em **Authentication → Sign In / Providers**, desligue **Allow new users to sign up** (só o admin entra) e, em **URL Configuration**, ponha o endereço do site em **Site URL**.
+6. Publique o site. No painel, entre com a senha.
 
 ### Ambientes (produção e stage)
 
@@ -97,9 +100,11 @@ Em **Lojas para acompanhar**, toque em uma loja para abrir a ficha: progresso, p
 | Produção | `main` | `treinamentofinanceirobigou` | `onboarding-guiado` (`pfgkzdrbluelvphtveiq`) |
 | Stage | `stage` | `ondoarding-guiado-stage` | `onboard-guiado-stage` (`orftxacyupbdacwcfvzk`) |
 
-No deploy, a Netlify roda `scripts/gerar-config.js` (configurado em `netlify.toml`), que reescreve `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado (produção) só vale para rodar local.
+No deploy, a Netlify roda `scripts/gerar-config.js` (configurado em `netlify.toml`), que reescreve `js/registro-config.js` com as variáveis de ambiente do site: `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `ADMIN_EMAIL`. Sem elas o build falha, para o stage nunca publicar apontando para o banco de produção. O `js/registro-config.js` versionado fica vazio (modo demonstração); localmente o `serve.js` entrega a configuração do `.env` escolhido.
 
-Segurança: a chave `anon` é pública por natureza. As regras (RLS) do `schema.sql` deixam o público **apenas inserir** dados, e só o usuário cujo e-mail está em `treino_admins` consegue **ler**.
+**Mudanças no banco:** toda alteração vira um arquivo novo em `supabase/migrations` (`AAAAMMDDHHMMSS_descricao.sql`), aplicado **primeiro no stage**, testado, e só depois na produção. Não edite migrações já aplicadas. Tabelas novas não ficam liberadas para a API automaticamente: a migração precisa conceder (`grant`) o mínimo e criar as políticas RLS.
+
+Segurança: a chave `anon` é pública por natureza. As regras (RLS) e permissões das migrações deixam o público **apenas inserir** participantes e eventos, e só o usuário cujo e-mail está em `treino_admins` consegue **ler** (e gerenciar anotações). A checagem de admin fica no schema `private`, fora da API.
 
 ## Assistente de dúvidas (chat)
 
@@ -150,8 +155,8 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `scripts/gerar-config.js`, `netlify.toml` | Build da Netlify: config do Supabase por ambiente |
 | `js/registro.js` | Fila e envio dos eventos do treinamento |
 | `admin/index.html`, `js/admin.js`, `css/admin.css` | Painel admin com analytics |
-| `supabase/schema.sql` | Tabelas e regras de segurança do banco |
-| `supabase/anotacoes.sql` | Tabela das anotações da equipe (rodar uma vez) |
+| `supabase/migrations/` | Tabelas, regras de segurança e permissões do banco, em ordem |
+| `.env.example` | Modelo do `.env.stage` / `.env.main` para rodar local |
 | `js/voz.js` | Narração: escolhe a voz pt-BR, transforma valores e datas em fala e lê o balão |
 | `js/tour.js` | Motor do spotlight / balões / passos de clique / quiz |
 | `js/app.js` | Tela inicial, dicas, lista de módulos, modo livre, revisão, certificado e progresso |

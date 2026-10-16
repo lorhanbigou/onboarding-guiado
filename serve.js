@@ -1,6 +1,12 @@
 // Servidor estático simples para abrir o treinamento: node serve.js  →  http://localhost:5178
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const root = __dirname, port = process.env.PORT || 5178;
+const { montarConfig, faltando } = require('./scripts/gerar-config');
+
+// Ambiente do Supabase vem do .env carregado pelo npm script (npm run dev → stage,
+// npm run dev:main → produção). Sem .env, vale o js/registro-config.js versionado (demonstração).
+const ambiente = faltando(process.env).length ? null : process.env;
+const configLocal = ambiente && montarConfig(ambiente, `local · ${ambiente.AMBIENTE || '?'}`);
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 function getNetworkIp() {
@@ -22,6 +28,10 @@ const server = http.createServer((req, res) => {
   const ehAdmin = /^admin\./i.test(req.headers.host || '');
   if (p === '/admin' || p === '/admin.html') { res.writeHead(301, { Location: '/admin/' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '') }); return res.end(); }
   const pagina = p === '/' ? (ehAdmin ? 'admin/index.html' : 'index.html') : p.endsWith('/') ? p + 'index.html' : p;
+  if (configLocal && pagina === '/js/registro-config.js') {
+    res.writeHead(200, { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' });
+    return res.end(configLocal);
+  }
   const file = path.join(root, pagina);
   if (!file.startsWith(root)) { res.writeHead(403); return res.end(); }
   fs.readFile(file, (err, data) => {
@@ -45,6 +55,8 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Treinamento rodando em:`);
   console.log(`  - Local:   http://localhost:${port}`);
   console.log(`  - Rede:    http://${netIp}:${port}`);
+  console.log(ambiente ? `Supabase: ${ambiente.AMBIENTE || '?'} (${ambiente.SUPABASE_URL})` : 'Supabase: desligado (modo demonstração)');
+  if (ambiente && ambiente.AMBIENTE === 'producao') console.log('ATENÇÃO: o que você fizer aqui grava no banco de PRODUÇÃO.');
   console.log(`Painel admin: http://admin.localhost:${port}  (ou http://localhost:${port}/admin)`);
 });
 

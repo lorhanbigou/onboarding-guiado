@@ -1,30 +1,39 @@
-// Gera js/registro-config.js a partir das variáveis de ambiente do deploy (Netlify).
-// Cada site da Netlify (produção → branch main, stage → branch stage) define as suas:
+// Monta js/registro-config.js a partir das variáveis de ambiente:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL
-// Na Netlify as três são obrigatórias: sem elas o build falha, para o stage nunca
-// publicar apontando para o banco de produção por engano.
-// Rodando local sem as variáveis, o arquivo versionado (produção) fica como está.
+// - Na Netlify (build): cada site define as suas (produção → main, stage → stage)
+//   e o arquivo é reescrito. Sem elas o build falha, para o stage nunca publicar
+//   apontando para o banco de produção por engano.
+// - Local: serve.js usa montarConfig() com o .env escolhido (npm run dev / dev:main)
+//   e não mexe no arquivo versionado, que fica vazio (modo demonstração).
 const fs = require('fs'), path = require('path');
 
-const { SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL, NETLIFY, CONTEXT, BRANCH } = process.env;
-const faltando = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'ADMIN_EMAIL'].filter((k) => !process.env[k]);
+const CHAVES = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'ADMIN_EMAIL'];
+const faltando = (env) => CHAVES.filter((k) => !env[k]);
 
-if (faltando.length) {
-  if (NETLIFY === 'true') {
-    console.error(`Erro: defina ${faltando.join(', ')} nas variáveis de ambiente do site na Netlify.`);
-    process.exit(1);
-  }
-  console.log('Variáveis do Supabase não definidas; mantendo js/registro-config.js versionado.');
-  process.exit(0);
-}
-
-const destino = path.join(__dirname, '..', 'js', 'registro-config.js');
-const conteudo = `/* Gerado no deploy por scripts/gerar-config.js (${CONTEXT || 'local'}${BRANCH ? ' · ' + BRANCH : ''}). Não editar. */
+function montarConfig(env, origem) {
+  return `/* Gerado por scripts/gerar-config.js (${origem}). Não editar. */
 window.TREINO_ANALYTICS = {
-  url: ${JSON.stringify(SUPABASE_URL)},
-  anonKey: ${JSON.stringify(SUPABASE_ANON_KEY)},
-  adminEmail: ${JSON.stringify(ADMIN_EMAIL)},
+  url: ${JSON.stringify(env.SUPABASE_URL)},
+  anonKey: ${JSON.stringify(env.SUPABASE_ANON_KEY)},
+  adminEmail: ${JSON.stringify(env.ADMIN_EMAIL)},
 };
 `;
-fs.writeFileSync(destino, conteudo);
-console.log(`js/registro-config.js gerado → ${SUPABASE_URL}`);
+}
+
+module.exports = { montarConfig, faltando };
+
+if (require.main === module) {
+  const { NETLIFY, CONTEXT, BRANCH } = process.env;
+  const falta = faltando(process.env);
+  if (falta.length) {
+    if (NETLIFY === 'true') {
+      console.error(`Erro: defina ${falta.join(', ')} nas variáveis de ambiente do site na Netlify.`);
+      process.exit(1);
+    }
+    console.log('Variáveis do Supabase não definidas; mantendo js/registro-config.js versionado.');
+    process.exit(0);
+  }
+  const destino = path.join(__dirname, '..', 'js', 'registro-config.js');
+  fs.writeFileSync(destino, montarConfig(process.env, `${CONTEXT || 'local'}${BRANCH ? ' · ' + BRANCH : ''}`));
+  console.log(`js/registro-config.js gerado → ${process.env.SUPABASE_URL}`);
+}
