@@ -4,6 +4,8 @@
      participante no banco. "Trocar loja" gera um id novo.
    - Os eventos entram numa fila no aparelho e são enviados em lote para o
      Supabase (API REST). Sem internet, ficam guardados e são reenviados.
+   - Em outro aparelho, o cadastro procura a loja no banco (buscarSessao) e,
+     se achar, continua como o mesmo participante (retomar).
    - Nada aqui trava o treinamento: qualquer falha é silenciosa.
    ========================================================================= */
 (function () {
@@ -68,6 +70,45 @@
       row: { id, loja, cidade, dispositivo: dispositivo(), navegador: navegador(), criado_em: p.criado_em },
     });
     An.registrar('cadastro', { detalhe: { loja, cidade } });
+    An.enviar();
+    return p;
+  };
+
+  /** Procura a loja no banco (mesma cidade, nome igual ou ≥ 90% parecido). Sem resposta em 6 s, segue sem. */
+  An.buscarSessao = async function (loja, cidade) {
+    if (!An.ativo || navigator.onLine === false) return null;
+    const ctl = window.AbortController ? new AbortController() : null;
+    const t = ctl && setTimeout(() => ctl.abort(), 6000);
+    try {
+      const r = await An._fetch(`${CFG.url.replace(/\/$/, '')}/rest/v1/rpc/treino_retomar`, {
+        method: 'POST',
+        headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_loja: loja, p_cidade: cidade }),
+        signal: ctl ? ctl.signal : undefined,
+      });
+      if (!r || !r.ok) return null;
+      const d = await r.json();
+      return d && d.id ? d : null;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(t);
+    }
+  };
+
+  /** Continua como o participante encontrado no banco: os próximos eventos vão para ele. */
+  An.retomar = function (s, lojaDigitada) {
+    // Eventos deste aparelho antes do cadastro (ex.: acesso) passam a ser da loja retomada
+    if (!ler(K_PART)) {
+      const antigo = id;
+      fila = fila.map((x) => (x.t === 'treino_eventos' && x.row.participante_id === antigo ? { t: x.t, row: Object.assign({}, x.row, { participante_id: s.id }) } : x));
+      gravar(K_FILA, fila);
+    }
+    id = s.id;
+    gravar(K_ID, id);
+    const p = { id, loja: s.loja, cidade: s.cidade, criado_em: new Date().toISOString() };
+    gravar(K_PART, p);
+    An.registrar('sessao_retomada', { detalhe: { semelhanca: s.semelhanca, loja_digitada: lojaDigitada } });
     An.enviar();
     return p;
   };

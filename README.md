@@ -49,6 +49,8 @@ Só aparecem telas que existem no sistema: Pedidos, Relatório, Total Bruto, Fin
 
 ## Cadastro da loja e painel admin (analytics)
 
+**Continuar em outro aparelho.** No cadastro, antes de começar, o app procura a loja no banco (função `treino_retomar`, migração `20261019120000_retomar_sessao.sql`): mesma cidade e nome igual ou pelo menos **90% parecido**, comparando sem maiúsculas, acentos, pontuação, espaços e palavras de ligação (de, da, do, das, dos, e). Ex.: "Loja de Teste" × "loja de testes" = 90%; "Loja Teste" = 100%. Com nome igual (100%), retoma direto; entre 90% e 99%, pergunta "É a sua loja?" antes. O progresso (módulos concluídos, passo onde parou, respostas, avaliação e certificado) é reconstruído a partir dos eventos da loja, e os próximos eventos continuam no mesmo participante. Sem correspondência, começa do zero. A função só devolve o necessário para o progresso; quem souber o nome e a cidade de uma loja consegue ver o andamento dela.
+
 Antes de começar, o parceiro digita o **nome da loja** e escolhe a **cidade** (lista fixa em `js/cidades.js`). Isso identifica o parceiro no painel; a tela do treinamento continua com "Loja de Treinamento". O link "Trocar loja" na tela inicial permite cadastrar outra loja no mesmo aparelho.
 
 O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas dos desafios e do exercício, narração, dicas abertas, certificado). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.

@@ -379,6 +379,10 @@ body.voz-falando .tr-voz { background: var(--t-g); color: #fff; animation: vozPu
 .cad-lista li[aria-selected="true"], .cad-lista li[role=option]:hover { background: var(--t-gsoft); color: var(--t-g2); }
 .cad-lista .cad-vazio { color: var(--t-ink3); cursor: default; }
 .cad-ok { width: 100%; margin-top: 4px; }
+.cad-achado { display: grid; gap: 2px; padding: 14px 16px; border: 1.5px solid var(--t-g); border-radius: 12px; background: var(--t-gsoft); }
+.cad-achado b { font-size: 18px; }
+.cad-achado span { font-size: 15px; }
+.cad-achado small { font-size: 13px; color: var(--t-ink2); margin-top: 4px; }
 @media (min-width: 640px) {
   .cad { padding-top: 56px; }
   .cad-card { border: 1px solid var(--t-line); border-radius: 20px; padding: 32px; box-shadow: 0 24px 60px -30px rgba(15,23,42,.25); }

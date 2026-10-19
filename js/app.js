@@ -152,6 +152,77 @@
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const semAcento = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+  function seguirAposCadastro() {
+    const destino = A.destino || '#/comecar';
+    A.destino = null;
+    location.replace(destino);
+  }
+
+  /* ------------------------------ Retomar em outro aparelho ------------------------------ */
+  // Reconstrói o progresso salvo no aparelho a partir dos eventos da loja no banco (mesmas regras do tour)
+  function progressoDoServidor(eventos) {
+    const s = { p: {}, passo: {}, visto: {}, quiz: {}, avaliacao: null, certificadoEm: null };
+    (eventos || []).forEach((e) => {
+      const m = e.m;
+      if (e.t === 'modulo_inicio' && m != null) { if (s.p[m] !== 'done') s.p[m] = 'prog'; }
+      else if (e.t === 'passo' && m != null && e.p != null) {
+        s.passo[m] = e.p;
+        const v = (s.visto[m] = s.visto[m] || []);
+        if (!v.includes(e.p)) v.push(e.p);
+      } else if (e.t === 'modulo_fim' && m != null) { s.p[m] = 'done'; delete s.passo[m]; }
+      else if (e.t === 'quiz' && m != null && e.p != null && e.tentativa === 1) s.quiz[`${m}:${e.p}`] = !!e.acertou;
+      else if (e.t === 'avaliacao') s.avaliacao = { ajudou: e.ajudou === true, estrelas: e.estrelas, em: e.c };
+      else if (e.t === 'certificado' && !s.certificadoEm) s.certificadoEm = e.c;
+    });
+    return s;
+  }
+  const modulosFeitos = (sessao) => Object.values(progressoDoServidor(sessao.eventos).p).filter((x) => x === 'done').length;
+
+  function retomarSessao(sessao, lojaDigitada) {
+    const r = progressoDoServidor(sessao.eventos);
+    Object.assign(A.saved, { p: r.p, passo: r.passo, visto: r.visto, quiz: r.quiz });
+    if (r.avaliacao) A.saved.avaliacao = r.avaliacao; else delete A.saved.avaliacao;
+    save();
+    const p = An.retomar(sessao, lojaDigitada);
+    try {
+      if (r.certificadoEm) localStorage.setItem('bigou-treino-concluido-em', r.certificadoEm); else localStorage.removeItem('bigou-treino-concluido-em');
+      if (doneCount() === A.mods.length) localStorage.setItem('bigou-treino-concluido-' + p.id, '1');
+    } catch (e) { /* sem armazenamento */ }
+    const feitos = doneCount();
+    TREINO.toast(feitos ? `Bem-vindo de volta! ${feitos} de ${A.mods.length} módulos concluídos. Continuando de onde você parou.` : 'Bem-vindo de volta! Continuando de onde você parou.');
+    seguirAposCadastro();
+  }
+
+  // Nome parecido (90% a 99%): confirma antes, para não misturar duas lojas de nome parecido
+  function viewConfirmarSessao(sessao, loja, cidade) {
+    const feitos = modulosFeitos(sessao);
+    app.innerHTML = `
+      <div class="tv tv-cad">
+        <header class="t-top">
+          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <span></span>
+        </header>
+        <main class="cad">
+          <div class="cad-card">
+            <span class="cad-kicker">Já começou em outro aparelho?</span>
+            <h1>Encontramos um treinamento desta loja</h1>
+            <div class="cad-achado">
+              <b>${esc(sessao.loja)}</b>
+              <span>${esc(sessao.cidade)}</span>
+              <small>${feitos ? `${feitos} de ${A.mods.length} módulos concluídos` : 'Treinamento iniciado'}</small>
+            </div>
+            <p class="t-lead sm">É a sua loja? Se for, você continua de onde parou.</p>
+            <button type="button" class="t-btn primary lg cad-ok" data-sessao="sim">${ICON.play}Sim, continuar de onde parei</button>
+            <button type="button" class="t-btn ghost lg cad-ok" data-sessao="nao">Não, começar do zero</button>
+          </div>
+        </main>
+      </div>`;
+    app.querySelector('[data-sessao="sim"]').addEventListener('click', () => retomarSessao(sessao, loja));
+    app.querySelector('[data-sessao="nao"]').addEventListener('click', () => { if (An) An.cadastrar(loja, cidade); seguirAposCadastro(); });
+    app.querySelector('[data-sessao="sim"]').focus();
+  }
+
   function viewCadastro() {
     const p = (An && An.participante()) || {};
     app.innerHTML = `
@@ -221,7 +292,7 @@
     lista.addEventListener('mousedown', (e) => { const li = e.target.closest('[data-c]'); if (li) { e.preventDefault(); escolher(li.dataset.c); } });
     iCid.addEventListener('blur', () => setTimeout(fechar, 120));
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const loja = iLoja.value.trim().replace(/\s+/g, ' ');
       // Aceita a cidade digitada sem acento/maiúscula, desde que seja da lista
@@ -231,10 +302,18 @@
       eC.textContent = cidade ? '' : 'Escolha uma cidade da lista.';
       if (loja.length < 2) { iLoja.focus(); return; }
       if (!cidade) { iCid.focus(); return; }
+      // Outro aparelho (ou outra loja neste): procura o progresso da loja no banco antes de começar do zero
+      const atual = An && An.participante();
+      const mesmaLoja = atual && semAcento(atual.loja) === semAcento(loja) && atual.cidade === cidade;
+      if (An && An.ativo && !mesmaLoja) {
+        const btn = form.querySelector('.cad-ok');
+        btn.disabled = true;
+        btn.textContent = 'Procurando seu progresso…';
+        const s = await An.buscarSessao(loja, cidade);
+        if (s) { if (s.semelhanca >= 1) retomarSessao(s, loja); else viewConfirmarSessao(s, loja, cidade); return; }
+      }
       if (An) An.cadastrar(loja, cidade);
-      const destino = A.destino || '#/comecar';
-      A.destino = null;
-      location.replace(destino);
+      seguirAposCadastro();
     });
     if (!p.loja) iLoja.focus({ preventScroll: true });
   }
