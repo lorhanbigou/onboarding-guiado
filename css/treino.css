@@ -594,3 +594,15 @@ body:has(.bt-fab:not([hidden])) .tv { padding-bottom: 88px; }
   .cert-rodape { grid-template-columns: 1fr; gap: 10px; text-align: center; }
   .cert-rodape .cert-selo { justify-self: center; order: -1; }
 }
+
+/* Debug (só com RECURSO_DEBUG): atalhos de teste, canto inferior esquerdo, acima do tour */
+.dbg { position: fixed; left: 12px; bottom: 12px; z-index: 1050; font-family: 'Poppins', system-ui, sans-serif; display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 8px; }
+.dbg-t { font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .3px; padding: 6px 12px; border-radius: 999px; border: 2px dashed #b45309; background: #fef3c7; color: #92400e; cursor: pointer; }
+.dbg-m { display: grid; gap: 6px; width: min(260px, calc(100vw - 24px)); padding: 12px; border-radius: 14px; background: #111827; box-shadow: 0 16px 40px -12px rgba(0,0,0,.45); }
+.dbg-m[hidden] { display: none; }
+.dbg-m small { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #9ca3af; margin-top: 4px; }
+.dbg-m button { font: inherit; font-size: 13px; text-align: left; padding: 8px 10px; border-radius: 9px; border: 1px solid #374151; background: #1f2937; color: #fff; cursor: pointer; }
+.dbg-m button:hover { border-color: #fbbf24; }
+.dbg-m button.del { color: #fca5a5; }
+@media print { .dbg { display: none; } }
+.cr-cta + .cr-dica { margin-top: 14px; }

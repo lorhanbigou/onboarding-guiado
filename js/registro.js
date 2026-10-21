@@ -96,6 +96,27 @@
     }
   };
 
+  /** Perguntas editadas no painel (treino_perguntas). Guarda a última lista no aparelho
+      para usar já na abertura e sem internet; devolve a lista nova ou null se não mudou/falhou. */
+  const K_PERG = 'bigou-treino-perguntas';
+  An.perguntasSalvas = () => ler(K_PERG) || [];
+  An.buscarPerguntas = async function () {
+    if (!An.ativo || navigator.onLine === false) return null;
+    try {
+      const r = await An._fetch(`${CFG.url.replace(/\/$/, '')}/rest/v1/treino_perguntas?select=id,q,opcoes,correta,ok,no,atualizado_em`, {
+        headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}` },
+      });
+      if (!r || !r.ok) return null;
+      const lista = await r.json();
+      if (!Array.isArray(lista)) return null;
+      if (JSON.stringify(lista) === JSON.stringify(An.perguntasSalvas())) return null;
+      gravar(K_PERG, lista);
+      return lista;
+    } catch (e) {
+      return null;
+    }
+  };
+
   /** Continua como o participante encontrado no banco: os próximos eventos vão para ele. */
   An.retomar = function (s, lojaDigitada) {
     // Eventos deste aparelho antes do cadastro (ex.: acesso) passam a ser da loja retomada

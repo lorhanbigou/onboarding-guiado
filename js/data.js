@@ -63,7 +63,10 @@ TREINO.config = {
   loja: { nome: 'Loja de Treinamento', cidade: 'Rio Pomba - MG' },
   // Recursos que podem ser ligados e desligados. Padrão desligado; cada ambiente liga os seus pelas
   // variáveis RECURSO_* do deploy (viram window.TREINO_RECURSOS em js/registro-config.js). Use TREINO.recurso().
-  recursos: { assistente: false },   // assistente de dúvidas (chat): hoje ligado só no stage
+  recursos: {
+    assistente: false,   // assistente de dúvidas (chat): hoje ligado só no stage
+    debug: false,        // botão Debug (preencher respostas e cadastro para testar): só no stage
+  },
   mes: `${TREINO.periodo.nomeMes.toUpperCase()} ${TREINO.periodo.ano}`,
   mesExtenso: `${TREINO.periodo.nomeMes} de ${TREINO.periodo.ano}`,
 

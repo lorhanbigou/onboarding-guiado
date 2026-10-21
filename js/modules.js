@@ -747,7 +747,8 @@
     const nums = [mq.n, on.n, d.n].sort((a, c) => a - c);
     /* Perguntas — versão 2 (reescritas em 10/2026 para não induzir ao erro).
        Cada uma tem um id fixo: as respostas antigas (versão 1, sem id) são
-       ligadas a ela pela posição (módulo e passo), que não muda. */
+       ligadas a ela pela posição (módulo e passo), que não muda.
+       O painel pode editar os textos (TREINO.aplicarPerguntas, abaixo). */
     const QV = 2;
     const perguntas = [
       {
@@ -923,6 +924,29 @@
     const mods = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10];
     mods.forEach((m) => { if (DESAFIOS[m.n]) m.steps.push(DESAFIOS[m.n]); });
     mods.forEach((m) => m.steps.forEach((s) => { s.kicker = s.desafio ? 'Desafio rápido' : m.titulo; if (s.mode === 'quiz') s.versao = QV; }));
+    return mods;
+  };
+
+  /* Perguntas editadas no painel (tabela treino_perguntas): trocam o enunciado, as alternativas,
+     a correta e as mensagens. As alternativas mantêm a posição, e é por ela que as respostas são
+     contadas. O texto do código fica em s.original (para "Restaurar" e para ligar respostas antigas).
+     html = true: o texto vem do banco e vai para o balão, então é escapado. */
+  TREINO.aplicarPerguntas = function (mods, lista, html) {
+    const esc = (t) => (html ? String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) : String(t));
+    const txt = (v) => typeof v === 'string' && v.trim() ? v.trim() : null;
+    const porId = new Map((Array.isArray(lista) ? lista : []).filter((p) => p && p.id).map((p) => [p.id, p]));
+    mods.forEach((m) => m.steps.forEach((s) => {
+      if (s.mode !== 'quiz') return;
+      if (!s.original) s.original = { q: s.q, options: s.options.map((o) => ({ t: o.t, ok: !!o.ok })), ok: s.ok, no: s.no };
+      const o = s.original, p = porId.get(s.id);
+      const ops = p && Array.isArray(p.opcoes) && p.opcoes.length === o.options.length ? p.opcoes : null;
+      const correta = ops && Number.isInteger(p.correta) && p.correta >= 0 && p.correta < ops.length ? p.correta : null;
+      s.q = p && txt(p.q) ? esc(txt(p.q)) : o.q;
+      s.options = o.options.map((x, i) => ({ t: ops && txt(ops[i]) ? esc(txt(ops[i])) : x.t, ok: correta != null ? i === correta : x.ok }));
+      s.ok = p && txt(p.ok) ? esc(txt(p.ok)) : o.ok;
+      s.no = p && txt(p.no) ? esc(txt(p.no)) : o.no;
+      s.editada = p ? { em: p.atualizado_em, autor: p.autor || null } : null;
+    }));
     return mods;
   };
 

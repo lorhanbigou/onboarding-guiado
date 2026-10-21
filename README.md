@@ -45,7 +45,7 @@ Só aparecem telas que existem no sistema: Pedidos, Relatório, Total Bruto, Fin
 - **Ícones, medalhas e celebração:** cada módulo tem um ícone. Ao fechar uma fase, aparece a medalha "Fase concluída". Confete curto ao concluir um módulo, maior ao terminar tudo (desligado para quem prefere menos movimento).
 - **Nome da loja:** saudação na tela inicial e "Mandou bem, {loja}!" no fim de cada módulo.
 - **Avaliação** (`#/avaliacao`): ao concluir os 10 módulos, antes do certificado, a loja responde "Esse treinamento te ajudou?" (Sim/Não), dá de 1 a 5 estrelas e pode deixar um comentário. Aparece uma vez e vai para o painel (seção Uso).
-- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta e quais módulos refazer; refazer um módulo substitui as respostas dele. Mostra o nome da loja, a cidade, a data e "Bigou Delivery" (a nota não aparece no certificado). "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
+- **Certificado** (`#/certificado`): liberado com **100% do conteúdo visto** e **mais de 70% de acertos** (19 perguntas; vale a 1ª tentativa de cada uma). Enquanto não libera, a tela mostra o que falta. Com o conteúdo completo e acerto abaixo de 70%, o botão principal é **Refazer só as que errei** (`#/refazer`): um tour só com as perguntas sem acerto, cada uma na tela dela; a 1ª tentativa substitui a resposta anterior (evento `quiz` com `refazer: true`). Também dá para refazer o módulo inteiro, que substitui as respostas dele. Mostra o nome da loja, a cidade, a data e "Bigou Delivery" (a nota não aparece no certificado). "Baixar ou imprimir" abre a impressão do navegador (dá para salvar em PDF).
 
 ## Cadastro da loja e painel admin (analytics)
 
@@ -64,8 +64,8 @@ O painel tem uma **sidebar** com uma página para cada assunto (o endereço muda
 - **Jornada:** os 5 marcos, a tabela dos 10 módulos (iniciaram, concluíram, pararam, tempo, passo onde mais saem) e "Onde param".
 - **Passo a passo:** todos os passos de todos os módulos: quantas lojas viram, saíram, pularam e o tempo mediano (filtro por módulo).
 - **Assuntos:** acerto de primeira por tema, com nível e "poucos dados".
-- **Perguntas:** as 19 perguntas com a distribuição completa por alternativa (atual e antes da mudança) e as tentativas até acertar.
-- **Lojas:** situação de cada loja, com busca, ordenação e a ficha (erros, avaliação e anotações).
+- **Perguntas:** as 19 perguntas com a distribuição completa por alternativa e as tentativas até acertar. Cada pergunta tem **Editar** (veja abaixo).
+- **Lojas:** situação de cada loja, com busca, ordenação e a ficha (erros, avaliação e anotações). Loja certificada que só passou de 70% depois de refazer perguntas ganha a etiqueta **Reincidente**, com o acerto da 1ª vez e quantas perguntas refez (filtro "Certificadas após refazer" e colunas no CSV de lojas).
 - **Anotações:** todas as anotações da equipe, com filtro por assunto e autor, busca, editar e excluir.
 - **Avaliações:** resumo e todas as avaliações das lojas.
 - **Cidades:** desempenho e contatos pendentes por cidade.
@@ -76,9 +76,13 @@ O filtro de período considera a data de cadastro da loja (7, 14 ou 28 dias, ou 
 
 Sem o Supabase configurado, o painel mostra um aviso em vez dos dados (não há mais modo de demonstração).
 
-### Perguntas: versões e rastreabilidade
+### Perguntas: edição e rastreabilidade
 
-Cada pergunta tem um id fixo (`d1`…`d9` nos desafios, `f1`…`f10` no exercício final) e uma versão (`versao`, hoje **2**, reescritas em 10/2026 para não induzir ao erro). O evento `quiz` envia `id`, `versao`, o enunciado e a alternativa escolhida. Respostas antigas (versão 1, sem id) são ligadas à pergunta pela posição (módulo e passo), que não muda; os textos da versão 1 ficam em `QUIZ_V1` (`js/admin.js`). No painel, o acerto atual conta só a versão nova e cada pergunta mostra "Antes da mudança". Se reescrever as perguntas de novo, suba `QV` em `js/modules.js` e guarde os textos antigos.
+Cada pergunta tem um id fixo (`d1`…`d9` nos desafios, `f1`…`f10` no exercício final). O evento `quiz` envia `id`, `versao`, o enunciado e a **posição** da alternativa escolhida (`opcao`).
+
+**Editar pelo painel:** em **Perguntas**, toque em **Editar** para mudar o enunciado, as alternativas, qual é a correta e as mensagens de acerto e erro. A edição fica na tabela `treino_perguntas` (migração `20261021120000_perguntas_editaveis.sql`): o treinamento lê essa tabela ao abrir (e guarda uma cópia no aparelho para usar sem internet); só o admin grava. "Restaurar texto original" apaga a edição e volta ao texto de `js/modules.js`. O número de alternativas é fixo.
+
+**Respostas antigas:** toda resposta conta na alternativa **atual da mesma posição**, seja da versão 1 (até 10/2026, sem id, ligada pela posição do módulo e passo), da versão 2 ou de antes de uma edição. O acerto passa a seguir a alternativa marcada como correta hoje. Não há mais separação "antes da mudança". Respostas antigas sem a posição são localizadas pelo texto (`QUIZ_V1` em `js/admin.js`).
 
 ### Anotações da equipe (ficha da loja)
 
@@ -127,6 +131,17 @@ Botão flutuante no canto da tela, disponível **a qualquer momento**, sem preci
 - **Painel → Dúvidas do chat:** perguntas, % respondidas de primeira, % que ajudou, assuntos mais perguntados, perguntas sem resposta ou fora do treinamento, respostas que não ajudaram e exportação em CSV.
 
 Para melhorar o bot: veja no painel as perguntas sem resposta e as respostas com 👎, e ajuste ou crie intenções em `js/bot.js`.
+
+## Botão Debug (só no stage)
+
+Com `RECURSO_DEBUG=true` (site de stage na Netlify e `.env.stage` local), aparece um botão **Debug** no canto inferior esquerdo do treinamento. **Nunca ligue na produção.**
+
+- **Responder certa / errada:** responde a pergunta aberta no balão.
+- **Preencher tudo (100%)** e **Preencher com erros (abaixo de 70%)**: marca todos os módulos como vistos e concluídos e responde as 19 perguntas (com erros: acerta 7 de 19, para testar o "Refazer só as que errei").
+- **Preencher cadastro** (loja "Teste debug <data e hora>", primeira cidade da lista) e **Preencher avaliação** (Sim, 5 estrelas e um comentário).
+- **Zerar progresso:** apaga o progresso do aparelho, mantendo a loja.
+
+Os eventos gerados vão para o banco como os de verdade (os do preenchimento têm `debug: true` no `detalhe`), então aparecem no painel do stage.
 
 ## Narração por voz (opcional)
 

@@ -62,7 +62,7 @@
     if (TREINO.Voz) TREINO.Voz.parar();
   };
 
-  Tour.current = () => cur && { idx, total: seq.length, kind: cur.kind, mode: cur.mode, target: cur.target, click: cur.click, found: !!target };
+  Tour.current = () => cur && { idx, total: seq.length, kind: cur.kind, mode: cur.mode, target: cur.target, click: cur.click, found: !!target, correta: cur.options ? cur.options.findIndex((o) => o.ok) : -1 };
   // Lê o balão atual (usado quando a narração é ligada no meio de um passo)
   // Narração: cada passo tem uma chave própria, para ser falado uma única vez
   const chave = () => (opts.chave || '') + ':' + idx;

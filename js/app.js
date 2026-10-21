@@ -2,6 +2,7 @@
    APLICAÇÃO — telas do treinamento, navegação e progresso
    Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/modulo/N/inicio (recomeçar)
           #/explorar  #/dicas  #/revisao  #/avaliacao  #/certificado  #/comecar
+          #/refazer (só as perguntas erradas)
    ========================================================================= */
 (function () {
   const F = TREINO.fmt;
@@ -352,7 +353,7 @@
     // Uma ação principal, sempre a próxima coisa a fazer
     let main;
     if (tudo && cert.ok) main = { href: '#/certificado', ic: ICON.certificado, t: 'Ver meu certificado', s: 'Você concluiu o treinamento!' };
-    else if (tudo) main = { href: '#/certificado', ic: ICON.redo, t: 'Liberar meu certificado', s: `Você acertou ${pct(cert.taxa)}. Precisa de mais de 70%.` };
+    else if (tudo) main = { href: cert.acertoOk ? '#/certificado' : '#/refazer', ic: ICON.redo, t: cert.acertoOk ? 'Liberar meu certificado' : 'Refazer as que errei', s: `Você acertou ${pct(cert.taxa)}. Precisa de mais de 70%.` };
     else if (ret) main = { href: `#/modulo/${ret.n}`, ic: ICON.play, t: 'Continuar', s: `Módulo ${ret.n} · ${tituloMod(ret.n)}` };
     else if (started) main = { href: '#/comecar', ic: ICON.play, t: 'Continuar', s: `Módulo ${firstPending()} · ${tituloMod(firstPending())}` };
     else main = { href: '#/comecar', ic: ICON.play, t: 'Começar o treinamento', s: 'Passo a passo, no seu ritmo.' };
@@ -622,6 +623,90 @@
     });
   }
 
+  /* ------------------------------ Refazer só as perguntas erradas ------------------------------ */
+  // Perguntas sem acerto na 1ª tentativa (de módulos já abertos), na ordem do treinamento
+  function perguntasErradas() {
+    const R = respostas(), lista = [];
+    A.mods.forEach((m) => {
+      let st = m.steps[0].state;
+      m.steps.forEach((s, j) => {
+        if (s.state) st = s.state;
+        const k = `${m.n}:${j + 1}`;
+        if (s.mode === 'quiz' && status(m.n) === 'done' && R[k] !== true) lista.push({ m, s, p: j + 1, k, state: st });
+      });
+    });
+    return lista;
+  }
+
+  // Um tour só com as perguntas erradas. A 1ª tentativa de cada uma substitui a resposta antiga (como refazer o módulo).
+  function viewRefazer() {
+    const erradas = perguntasErradas();
+    if (!erradas.length) { location.replace('#/certificado'); return; }
+    document.body.classList.add('in-player');
+    app.innerHTML = playerBar('Refazer as que errei', `${erradas.length} ${erradas.length === 1 ? 'pergunta' : 'perguntas'}`) + '<div id="clone"></div>';
+    TREINO.Clone.reset();
+    TREINO.Clone.mount(document.getElementById('clone'), A.d);
+    ev('refazer_inicio', { detalhe: { perguntas: erradas.length } });
+    const feitas = new Set();
+
+    const intro = {
+      kind: 'intro',
+      state: erradas[0].state,
+      fala: ['Vamos refazer as perguntas que você errou.', 'Vale a primeira resposta de cada uma.'],
+      html: `
+        <div class="tr-intro">
+          <div class="tr-intro-top"><span class="tr-intro-ic">${ICON.redo}</span><span class="tr-kicker">${erradas.length} ${erradas.length === 1 ? 'pergunta' : 'perguntas'}</span></div>
+          <h3>Refazer as que errei</h3>
+          <p>Você vai responder de novo só as perguntas que errou. Vale a primeira resposta de cada uma, e ela substitui a anterior.</p>
+          <div class="tr-actions">
+            <button type="button" class="tr-back" data-tr="cb:certificado">Voltar</button>
+            <button type="button" class="tr-next" data-tr="next">Vamos lá</button>
+          </div>
+        </div>`,
+    };
+    // O resultado é calculado quando o resumo aparece
+    const summary = {
+      kind: 'summary',
+      state: Object.assign({}, erradas[erradas.length - 1].state, { modals: [] }),
+      get fala() { const c = certStatus(); return [c.acertoOk ? 'Muito bem! Seu certificado está liberado.' : `Você está com ${pct(c.taxa)} de acertos. Precisa de mais de 70%.`]; },
+      get html() {
+        const c = certStatus(), resta = perguntasErradas().length;
+        return `
+        <div class="tr-sum">
+          <div class="tr-check">${c.acertoOk ? ICON.check : ICON.redo}</div>
+          <h3>${c.acertoOk ? 'Certificado liberado!' : 'Quase lá!'}</h3>
+          <p class="tr-sum-sub">Agora você tem ${pct(c.taxa)} de acertos (${c.acertos} de ${c.perguntas}).${c.acertoOk ? '' : ' Precisa de mais de 70%.'}</p>
+          <div class="tr-actions col">
+            ${c.ok ? '<button type="button" class="tr-next" data-tr="cb:certificado">Ver meu certificado</button>'
+              : resta ? `<button type="button" class="tr-next" data-tr="cb:repeat">Refazer as ${resta === 1 ? 'que falta' : `${resta} que faltam`}</button>`
+              : '<button type="button" class="tr-next" data-tr="cb:certificado">Ver o que falta</button>'}
+            <div class="tr-row"><button type="button" class="tr-back" data-tr="cb:home">Início</button></div>
+          </div>
+        </div>`;
+      },
+    };
+    const seq = [intro].concat(erradas.map((x) => Object.assign({ kind: 'step' }, x.s, { state: x.state, kicker: `Refazer · Módulo ${x.m.n}`, _q: x })), [summary]);
+
+    window.scrollTo(0, 0);
+    TREINO.Tour.play(seq, 0, {
+      chave: 'refazer',
+      barH,
+      applyState: (s) => TREINO.Clone.set(s),
+      onStep: (i, all) => { const line = document.getElementById('pb-line'); if (line) line.style.width = (i / (all.length - 1)) * 100 + '%'; },
+      onQuiz: (i, item, r) => {
+        const x = item._q;
+        if (!feitas.has(x.k)) { feitas.add(x.k); respostas()[x.k] = !!r.acertou; save(); }
+        ev('quiz', { modulo: x.m.n, passo: x.p, alvo: item.target, detalhe: { id: item.id, versao: item.versao, pergunta: item.title, q: item.q, acertou: r.acertou, tentativa: r.tentativa, opcao: r.opcao, resposta: item.options[r.opcao] ? item.options[r.opcao].t : null, refazer: true } });
+      },
+      onAction: (a) => {
+        if (a === 'certificado') location.hash = '#/certificado';
+        else if (a === 'repeat') route();
+        else if (a === 'home') location.hash = '#/';
+      },
+      onEnd: () => { location.hash = '#/certificado'; },
+    });
+  }
+
   function refreshDots(n) {
     const el = document.querySelector('.pb-dots');
     if (el) el.innerHTML = dots(n);
@@ -727,7 +812,8 @@
           </ul>
           ${proximo
             ? `<a class="t-btn primary lg cr-cta" href="#/modulo/${proximo.n}">${ICON.play}Continuar · Módulo ${proximo.n}</a>`
-            : `<p class="cr-dica">Refaça os módulos abaixo para melhorar seus acertos. Vale a primeira resposta de cada pergunta.</p>
+            : `${c.acertoOk ? '' : `<a class="t-btn primary lg cr-cta" href="#/refazer">${ICON.redo}Refazer só as que errei · ${c.perguntas - c.acertos} ${c.perguntas - c.acertos === 1 ? 'pergunta' : 'perguntas'}</a>`}
+               <p class="cr-dica">${c.acertoOk ? 'Refaça os módulos abaixo para melhorar seus acertos.' : 'Ou refaça o módulo inteiro, se quiser rever o conteúdo.'} Vale a primeira resposta de cada pergunta.</p>
                <ul class="cr-refazer">${c.refazer.map((n) => { const m = A.mods.find((x) => x.n === n); return `<li><a href="#/modulo/${n}/inicio"><span class="cr-n">${ICON[m.icone] || n}</span><span><small>Módulo ${n}</small><b>${m.titulo}</b></span>${ICON.redo}</a></li>`; }).join('')}</ul>`}
         </main>
       </div>`;
@@ -873,7 +959,7 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const view = parts[0];
     // Pede o cadastro da loja antes de começar
-    if (['comecar', 'modulo', 'modulos', 'certificado', 'avaliacao'].includes(view) && An && !An.participante()) {
+    if (['comecar', 'modulo', 'modulos', 'certificado', 'avaliacao', 'refazer'].includes(view) && An && !An.participante()) {
       A.destino = location.hash;
       location.replace('#/cadastro');
       return;
@@ -887,6 +973,7 @@
       viewPlayer(parseInt(parts[1], 10) || 1);
     }
     else if (view === 'certificado') viewCertificado();
+    else if (view === 'refazer') viewRefazer();
     else if (view === 'explorar') viewExplore();
     else if (view === 'dicas') viewDicas();
     else if (view === 'avaliacao') viewAvaliacao();
@@ -898,10 +985,104 @@
     if (TREINO.recurso('assistente') && TREINO.Bot) TREINO.Bot.atualizar({ liberado: true, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome() });
   }
 
+  /* ------------------------------ Debug (só com RECURSO_DEBUG, hoje no stage) ------------------------------ */
+  // Atalhos para testar sem responder tudo à mão. Os eventos vão para o banco como os de verdade.
+  function preencherTudo(comErros) {
+    if (An && !An.participante()) { A.destino = '#/'; location.hash = '#/cadastro'; TREINO.toast('Cadastre a loja primeiro (use "Preencher cadastro").'); return; }
+    let q = 0;
+    A.mods.forEach((m) => {
+      ev('modulo_inicio', { modulo: m.n });
+      vistos()[m.n] = m.steps.map((s, j) => j + 1);
+      m.steps.forEach((s, j) => {
+        const p = j + 1;
+        ev('passo', { modulo: m.n, passo: p, alvo: s.target, detalhe: { titulo: s.title, anterior: j, ms: 1500 } });
+        if (s.mode !== 'quiz') return;
+        // Com erros: erra 2 de cada 3 perguntas, para ficar abaixo de 70%
+        const certa = s.options.findIndex((o) => o.ok), errar = comErros && q++ % 3 !== 0;
+        const opcao = errar ? s.options.findIndex((o) => !o.ok) : certa;
+        respostas()[`${m.n}:${p}`] = !errar;
+        ev('quiz', { modulo: m.n, passo: p, alvo: s.target, detalhe: { id: s.id, versao: s.versao, pergunta: s.title, q: s.q, acertou: !errar, tentativa: 1, opcao, resposta: s.options[opcao].t, debug: true } });
+      });
+      ev('modulo_fim', { modulo: m.n, detalhe: { ms: m.steps.length * 1500, debug: true } });
+      prog()[m.n] = 'done';
+      delete passos()[m.n];
+    });
+    save();
+    ev('treino_concluido');
+    if (An) An.enviar();
+    const c = certStatus();
+    TREINO.toast(`Debug: tudo preenchido, ${pct(c.taxa)} de acertos.`);
+    if (location.hash === '#/' || location.hash === '') route(); else location.hash = '#/';
+  }
+  function zerarProgresso() {
+    if (!confirm('Debug: apagar o progresso deste aparelho (módulos, respostas e avaliação)? A loja cadastrada continua.')) return;
+    A.saved = {};
+    save();
+    try { localStorage.removeItem('bigou-treino-concluido-em'); if (An) localStorage.removeItem('bigou-treino-concluido-' + An.id()); } catch (e) { /* */ }
+    TREINO.toast('Debug: progresso zerado.');
+    if (location.hash === '#/' || location.hash === '') route(); else location.hash = '#/';
+  }
+  function responderAtual(certa) {
+    const c = TREINO.Tour.current();
+    if (!c || c.mode !== 'quiz') { TREINO.toast('Debug: abra uma pergunta primeiro.'); return; }
+    const ops = [...document.querySelectorAll('.tr-opt')];
+    const alvo = certa ? ops[c.correta] : ops.find((b, i) => i !== c.correta && !b.disabled);
+    if (alvo) alvo.click();
+  }
+  function preencherCadastro() {
+    const loja = document.getElementById('cad-loja'), cidade = document.getElementById('cad-cidade'), form = document.getElementById('cad-form');
+    if (!form) { location.hash = '#/cadastro'; return; }
+    const agora = new Date();
+    loja.value = `Teste debug ${String(agora.getDate()).padStart(2, '0')}/${String(agora.getMonth() + 1).padStart(2, '0')} ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    cidade.value = TREINO.cidades[0];
+    form.requestSubmit();
+  }
+  function preencherAvaliacao() {
+    const form = document.getElementById('av-form');
+    if (!form) { location.hash = '#/avaliacao'; TREINO.toast('Debug: abra a avaliação e toque de novo.'); return; }
+    form.querySelector('[data-sn=sim]').click();
+    form.querySelector('[data-e="5"]').click();
+    document.getElementById('av-com').value = 'Teste do debug.';
+    form.requestSubmit();
+  }
+  if (TREINO.recurso('debug')) {
+    const dbg = document.createElement('div');
+    dbg.className = 'dbg';
+    dbg.innerHTML = `
+      <button type="button" class="dbg-t" data-dbg="abrir" aria-expanded="false">Debug</button>
+      <div class="dbg-m" hidden>
+        <small>Pergunta aberta</small>
+        <button type="button" data-dbg="certa">Responder certa</button>
+        <button type="button" data-dbg="errada">Responder errada</button>
+        <small>Treinamento inteiro</small>
+        <button type="button" data-dbg="tudo">Preencher tudo (100%)</button>
+        <button type="button" data-dbg="erros">Preencher com erros (abaixo de 70%)</button>
+        <small>Formulários</small>
+        <button type="button" data-dbg="cadastro">Preencher cadastro</button>
+        <button type="button" data-dbg="avaliacao">Preencher avaliação</button>
+        <button type="button" data-dbg="zerar" class="del">Zerar progresso</button>
+      </div>`;
+    document.body.appendChild(dbg);
+    dbg.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dbg]');
+      if (!b) return;
+      const menu = dbg.querySelector('.dbg-m'), a = b.dataset.dbg;
+      if (a === 'abrir') { menu.hidden = !menu.hidden; b.setAttribute('aria-expanded', !menu.hidden); return; }
+      menu.hidden = true;
+      dbg.querySelector('.dbg-t').setAttribute('aria-expanded', 'false');
+      ({ certa: () => responderAtual(true), errada: () => responderAtual(false), tudo: () => preencherTudo(false), erros: () => preencherTudo(true), cadastro: preencherCadastro, avaliacao: preencherAvaliacao, zerar: zerarProgresso })[a]();
+    });
+  }
+
   /* ------------------------------ Início ------------------------------ */
   A.saved = load();
   A.d = TREINO.calc(TREINO.dados);
   A.mods = TREINO.buildModules(A.d);
+  // Perguntas editadas no painel: a última lista salva vale já; a do banco chega em seguida
+  if (An) {
+    TREINO.aplicarPerguntas(A.mods, An.perguntasSalvas(), true);
+    An.buscarPerguntas().then((lista) => { if (lista) TREINO.aplicarPerguntas(A.mods, lista, true); });
+  }
   TREINO.Tour.init();
   syncVoz();
   ev('acesso');
