@@ -100,7 +100,7 @@
     f.creditos = f.liquidoOnline + f.reembolso + f.taxasOnline;
     f.cobrancas = f.debitoRemanescente + f.comissao + f.taxaOnline + f.transferencia + f.taxaAntecipacao + f.taxaServico + f.mensalidade;
     f.total = f.creditos - f.cobrancas;
-    f.tipo = f.total >= 0 ? 'Repasse' : 'Boleto';
+    f.tipo = f.total >= 0 ? L('Repasse', 'Transferencia') : 'Boleto';
 
     /* ---------- Faturamento do Mês ---------- */
     const r = {};

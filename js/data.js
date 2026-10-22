@@ -6,8 +6,39 @@
    ========================================================================= */
 window.TREINO = {};
 
+/* ------------------------------ Idioma ------------------------------ */
+// Português (padrão) ou espanhol. Escolha discreta no rodapé da tela inicial
+// (fica salva no aparelho) ou ?lang=es / ?lang=pt na URL.
+// Cada texto traz as duas versões lado a lado: L('Olá', 'Hola').
+const K_IDIOMA = 'bigou-treino-idioma';
+TREINO.IDIOMAS = ['pt', 'es'];
+TREINO.idioma = (function () {
+  if (typeof location === 'undefined') return 'pt';
+  // O painel admin usa os títulos dos módulos e os temas do assistente: sempre em português
+  if (/^admin\./.test(location.hostname) || /\/admin(\/|$)/.test(location.pathname)) return 'pt';
+  const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('lang') : null;
+  if (TREINO.IDIOMAS.includes(q)) { try { localStorage.setItem(K_IDIOMA, q); } catch (e) { /* sem armazenamento */ } return q; }
+  try { const s = localStorage.getItem(K_IDIOMA); if (TREINO.IDIOMAS.includes(s)) return s; } catch (e) { /* sem armazenamento */ }
+  return 'pt';
+})();
+TREINO.es = TREINO.idioma === 'es';
+const L = (pt, es) => (TREINO.es && es != null ? es : pt);
+TREINO.L = L;
+TREINO.trocarIdioma = function (id) {
+  if (!TREINO.IDIOMAS.includes(id) || id === TREINO.idioma) return;
+  try { localStorage.setItem(K_IDIOMA, id); } catch (e) { /* sem armazenamento */ }
+  // Os módulos são montados na carga da página: recarrega (sem ?lang, que fixaria o idioma anterior)
+  const u = new URL(location.href);
+  u.searchParams.delete('lang');
+  location.replace(u.toString());
+};
+if (typeof document !== 'undefined') document.documentElement.lang = L('pt-BR', 'es');
+
 /* ------------------------------ Datas ------------------------------ */
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const MESES = L(
+  ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
+  ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+);
 const pad2 = (n) => String(n).padStart(2, '0');
 const fmtData = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
 
@@ -25,14 +56,14 @@ TREINO.hoje = (function () {
    Fixos valem todo ano (MM-DD); os móveis são informados por ano (AAAA-MM-DD). */
 TREINO.feriados = {
   fixos: {
-    '01-01': 'Confraternização Universal', '04-21': 'Tiradentes', '05-01': 'Dia Mundial do Trabalho',
-    '09-07': 'Independência do Brasil', '10-12': 'Nossa Senhora Aparecida', '11-02': 'Finados',
-    '11-15': 'Proclamação da República', '11-20': 'Dia Nacional de Zumbi e da Consciência Negra', '12-25': 'Natal',
+    '01-01': L('Confraternização Universal', 'Año Nuevo'), '04-21': 'Tiradentes', '05-01': L('Dia Mundial do Trabalho', 'Día del Trabajador'),
+    '09-07': L('Independência do Brasil', 'Independencia de Brasil'), '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida'), '11-02': L('Finados', 'Día de los Difuntos'),
+    '11-15': L('Proclamação da República', 'Proclamación de la República'), '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra'), '12-25': L('Natal', 'Navidad'),
     // Rio Pomba - MG
-    '04-09': 'Dia da Lola', '06-17': 'Dia de São Manoel', '08-25': 'Emancipação Política de Rio Pomba',
+    '04-09': L('Dia da Lola', 'Día de Lola'), '06-17': L('Dia de São Manoel', 'Día de San Manuel'), '08-25': L('Emancipação Política de Rio Pomba', 'Emancipación Política de Rio Pomba'),
   },
   moveis: {
-    '2026-04-03': 'Paixão de Cristo',
+    '2026-04-03': L('Paixão de Cristo', 'Viernes Santo'),
     '2026-06-04': 'Corpus Christi',
   },
 };
@@ -60,7 +91,7 @@ TREINO.periodo = (function (hoje) {
 })(TREINO.hoje);
 
 TREINO.config = {
-  loja: { nome: 'Loja de Treinamento', cidade: 'Rio Pomba - MG' },
+  loja: { nome: L('Loja de Treinamento', 'Tienda de Capacitación'), cidade: 'Rio Pomba - MG' },
   // Recursos que podem ser ligados e desligados. Padrão desligado; cada ambiente liga os seus pelas
   // variáveis RECURSO_* do deploy (viram window.TREINO_RECURSOS em js/registro-config.js). Use TREINO.recurso().
   recursos: {

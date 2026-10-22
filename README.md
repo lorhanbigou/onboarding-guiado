@@ -24,6 +24,8 @@ Há um único conjunto de dados fictícios, igual para todos os parceiros (`TREI
 
 **Datas de repasse** (`#/repasses`): calendário dos repasses (2º dia útil de cada mês, sem sábados, domingos e feriados nacionais), calculado em `js/repasses.js`. O próximo repasse aparece em destaque; as datas que já passaram ficam apagadas. O ano do próximo repasse fica aberto e os outros (hoje 2026 e 2027) ficam recolhidos. Para testar outro dia: `?data=AAAA-MM-DD`.
 
+**Idioma (português ou espanhol):** escolha discreta "PT · ES" no rodapé da tela inicial; fica salva no aparelho e recarrega a página. Também dá para abrir direto com `?lang=es` (ou `?lang=pt`). Cada texto tem as duas versões lado a lado no código: `L('Olá', 'Hola')` (helper em `js/data.js`). Em espanhol a narração por voz fica desligada (os áudios gravados são em português). O painel admin é sempre em português.
+
 **Aviso:** a tela inicial, a abertura do Módulo 1 e o certificado deixam claro que tudo é fictício e ilustrativo, inclusive comissão e taxas, e que os valores reais estão no contrato.
 
 ## Módulos (10, em 4 fases)

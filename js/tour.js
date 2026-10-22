@@ -23,7 +23,7 @@
   const speaker = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>';
   const vozBtn = () =>
     TREINO.Voz && TREINO.Voz.temVozPt() && TREINO.Voz.temAudio(audioId())
-      ? `<button type="button" class="tr-voz" data-tr="voz" aria-label="Ouvir de novo" title="Ouvir de novo">${speaker}</button>`
+      ? `<button type="button" class="tr-voz" data-tr="voz" aria-label="${L('Ouvir de novo', 'Escuchar de nuevo')}" title="${L('Ouvir de novo', 'Escuchar de nuevo')}">${speaker}</button>`
       : '';
   const hand = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.6-2.2L4.3 15.6a1.5 1.5 0 0 1 2.3-1.9L9 16"/></svg>';
 
@@ -268,18 +268,18 @@
     const { n, total } = stepNumbers();
     const body = typeof cur.body === 'function' ? cur.body() : cur.body || '';
     let actions = '';
-    const back = `<button type="button" class="tr-back" data-tr="back">Voltar</button>`;
+    const back = `<button type="button" class="tr-back" data-tr="back">${L('Voltar', 'Volver')}</button>`;
     if (cur.mode === 'click') {
       actions = `
-        <div class="tr-hint">${hand}<span>${cur.hint || 'Clique no item destacado'}</span></div>
-        <div class="tr-actions">${back}<button type="button" class="tr-skip" data-tr="next">Pular esta etapa</button></div>`;
+        <div class="tr-hint">${hand}<span>${cur.hint || L('Clique no item destacado', 'Haz clic en el elemento destacado')}</span></div>
+        <div class="tr-actions">${back}<button type="button" class="tr-skip" data-tr="next">${L('Pular esta etapa', 'Saltar este paso')}</button></div>`;
     } else if (cur.mode === 'quiz') {
       actions = `
         <div class="tr-quiz">${cur.options.map((o, i) => `<button type="button" class="tr-opt" data-tr="opt" data-i="${i}"><span class="tr-radio"></span><span>${o.t}</span></button>`).join('')}</div>
         <div class="tr-fb" aria-live="polite"></div>
-        <div class="tr-actions">${back}<button type="button" class="tr-next" data-tr="next" disabled>Próximo</button></div>`;
+        <div class="tr-actions">${back}<button type="button" class="tr-next" data-tr="next" disabled>${L('Próximo', 'Siguiente')}</button></div>`;
     } else {
-      actions = `<div class="tr-actions">${idx > 0 ? back : '<span></span>'}<button type="button" class="tr-next" data-tr="next">${cur.btn || 'Entendi'}</button></div>`;
+      actions = `<div class="tr-actions">${idx > 0 ? back : '<span></span>'}<button type="button" class="tr-next" data-tr="next">${cur.btn || L('Entendi', 'Entendido')}</button></div>`;
     }
     tip.innerHTML = `
       <div class="tr-arrow"></div>
@@ -321,7 +321,7 @@
       tip.querySelectorAll('.tr-opt').forEach((x) => { x.disabled = true; });
       fb.className = 'tr-fb ok';
       // Elogio variado: deixa o exercício menos repetitivo
-      const elogio = ['Isso aí!', 'Na mosca!', 'Perfeito!', 'Mandou bem!', 'Exatamente!'][(idx + tentativas) % 5];
+      const elogio = L(['Isso aí!', 'Na mosca!', 'Perfeito!', 'Mandou bem!', 'Exatamente!'], ['¡Eso es!', '¡En el blanco!', '¡Perfecto!', '¡Muy bien!', '¡Exacto!'])[(idx + tentativas) % 5];
       fb.innerHTML = `<b>✓ ${elogio}</b> ${cur.ok || ''}`;
       if (TREINO.Voz) TREINO.Voz.falar([elogio, cur.ok || '']);
       const nx = tip.querySelector('.tr-next');
@@ -330,7 +330,7 @@
     } else {
       btn.classList.add('wrong');
       fb.className = 'tr-fb no';
-      fb.innerHTML = o.fb || cur.no || 'Ainda não. Olhe de novo o item destacado.';
+      fb.innerHTML = o.fb || cur.no || L('Ainda não. Olhe de novo o item destacado.', 'Todavía no. Mira de nuevo el elemento destacado.');
       if (TREINO.Voz) TREINO.Voz.falar([fb.textContent]);
     }
     last = '';

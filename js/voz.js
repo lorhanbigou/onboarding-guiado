@@ -22,7 +22,9 @@
   let synth = window.speechSynthesis;
   let Utt = window.SpeechSynthesisUtterance;
 
-  const GRAVADA = window.TREINO_NARRACAO || {};
+  // Em espanhol não há narração: a gravação e a pronúncia abaixo são em português
+  const semNarracao = !!TREINO.es;
+  const GRAVADA = semNarracao ? {} : window.TREINO_NARRACAO || {};
   const temGravada = Object.keys(GRAVADA).length > 0;
   let player = null;
 
@@ -30,18 +32,18 @@
     voz: null,
     ligada: false,
     gravada: temGravada,
-    disponivel: temGravada || !!(synth && Utt),
+    disponivel: !semNarracao && (temGravada || !!(synth && Utt)),
     estado: 'parado',
     ritmo: 0.95,
     ouvintes: [],
     ouvintesEstado: [],
   };
 
-  try { Voz.ligada = localStorage.getItem(KEY) === '1'; } catch (e) { /* sem armazenamento */ }
+  try { Voz.ligada = !semNarracao && localStorage.getItem(KEY) === '1'; } catch (e) { /* sem armazenamento */ }
 
   /* ------------------------------ Escolha da voz ------------------------------ */
   function escolherVoz() {
-    if (!(synth && Utt)) return;
+    if (semNarracao || !(synth && Utt)) return;
     const todas = synth.getVoices().filter((v) => !ROBOTICAS.test(v.name));
     const br = todas.filter((v) => /^pt[-_]BR/i.test(v.lang));
     const pt = br.length ? br : todas.filter((v) => /^pt/i.test(v.lang));

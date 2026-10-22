@@ -69,7 +69,7 @@
       t: 'treino_participantes',
       row: { id, loja, cidade, dispositivo: dispositivo(), navegador: navegador(), criado_em: p.criado_em },
     });
-    An.registrar('cadastro', { detalhe: { loja, cidade } });
+    An.registrar('cadastro', { detalhe: { loja, cidade, idioma: TREINO.idioma } });
     An.enviar();
     return p;
   };
@@ -129,7 +129,7 @@
     gravar(K_ID, id);
     const p = { id, loja: s.loja, cidade: s.cidade, criado_em: new Date().toISOString() };
     gravar(K_PART, p);
-    An.registrar('sessao_retomada', { detalhe: { semelhanca: s.semelhanca, loja_digitada: lojaDigitada } });
+    An.registrar('sessao_retomada', { detalhe: { semelhanca: s.semelhanca, loja_digitada: lojaDigitada, idioma: TREINO.idioma } });
     An.enviar();
     return p;
   };

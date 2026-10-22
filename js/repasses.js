@@ -19,16 +19,16 @@
     const sexta = pascoa(ano);
     sexta.setDate(sexta.getDate() - 2);
     return {
-      '1-1': 'Confraternização Universal',
-      [chave(sexta)]: 'Paixão de Cristo',
+      '1-1': L('Confraternização Universal', 'Año Nuevo'),
+      [chave(sexta)]: L('Paixão de Cristo', 'Viernes Santo'),
       '4-21': 'Tiradentes',
-      '5-1': 'Dia Mundial do Trabalho',
-      '9-7': 'Independência do Brasil',
-      '10-12': 'Nossa Senhora Aparecida',
-      '11-2': 'Finados',
-      '11-15': 'Proclamação da República',
-      '11-20': 'Dia Nacional de Zumbi e da Consciência Negra',
-      '12-25': 'Natal',
+      '5-1': L('Dia Mundial do Trabalho', 'Día del Trabajador'),
+      '9-7': L('Independência do Brasil', 'Independencia de Brasil'),
+      '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida'),
+      '11-2': L('Finados', 'Día de los Difuntos'),
+      '11-15': L('Proclamação da República', 'Proclamación de la República'),
+      '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra'),
+      '12-25': L('Natal', 'Navidad'),
     };
   }
 

@@ -118,8 +118,8 @@
   function vozToggle(variant) {
     if (!Voz || !Voz.disponivel) return '';
     const ok = Voz.temVozPt(), on = ok && Voz.ligada;
-    const label = variant === 'home' ? 'Narração por voz' : 'Narração';
-    return `<button type="button" class="t-voz ${variant} ${on ? 'on' : ''}" data-voz aria-pressed="${on}" ${ok ? '' : 'disabled title="Este navegador não tem voz em português instalada"'}>
+    const label = variant === 'home' ? L('Narração por voz', 'Narración por voz') : L('Narração', 'Narración');
+    return `<button type="button" class="t-voz ${variant} ${on ? 'on' : ''}" data-voz aria-pressed="${on}" ${ok ? '' : `disabled title="${L('Este navegador não tem voz em português instalada', 'Este navegador no tiene voz en español instalada')}"`}>
       <span class="t-voz-ic">${on ? ICON.som : ICON.mudo}</span><span class="t-voz-l">${label}</span>${variant === 'home' ? `<span class="t-switch" aria-hidden="true"><i></i></span>` : ''}
     </button>`;
   }
@@ -142,12 +142,18 @@
       Voz.ligar(!Voz.ligada);
       ev('voz', { detalhe: { ligada: Voz.ligada } });
       if (Voz.ligada) {
-        TREINO.toast('Narração ligada.');
+        TREINO.toast(L('Narração ligada.', 'Narración activada.'));
         if (TREINO.Tour.current()) TREINO.Tour.falarAtual();
-        else Voz.falar(['Narração ligada. Durante o treinamento, eu leio cada explicação para você.']);
-      } else TREINO.toast('Narração desligada.');
+        else Voz.falar([L('Narração ligada. Durante o treinamento, eu leio cada explicação para você.', 'Narración activada. Durante la capacitación, leo cada explicación para ti.')]);
+      } else TREINO.toast(L('Narração desligada.', 'Narración desactivada.'));
     });
   }
+
+  /* ------------------------------ Idioma (discreto, rodapé da tela inicial) ------------------------------ */
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-idioma]');
+    if (b) TREINO.trocarIdioma(b.dataset.idioma);
+  });
 
   /* ------------------------------ Cadastro da loja ------------------------------ */
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -190,7 +196,9 @@
       if (doneCount() === A.mods.length) localStorage.setItem('bigou-treino-concluido-' + p.id, '1');
     } catch (e) { /* sem armazenamento */ }
     const feitos = doneCount();
-    TREINO.toast(feitos ? `Bem-vindo de volta! ${feitos} de ${A.mods.length} módulos concluídos. Continuando de onde você parou.` : 'Bem-vindo de volta! Continuando de onde você parou.');
+    TREINO.toast(feitos
+      ? L(`Bem-vindo de volta! ${feitos} de ${A.mods.length} módulos concluídos. Continuando de onde você parou.`, `¡Bienvenido de nuevo! ${feitos} de ${A.mods.length} módulos completados. Continuamos donde lo dejaste.`)
+      : L('Bem-vindo de volta! Continuando de onde você parou.', '¡Bienvenido de nuevo! Continuamos donde lo dejaste.'));
     seguirAposCadastro();
   }
 
@@ -200,22 +208,22 @@
     app.innerHTML = `
       <div class="tv tv-cad">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="cad">
           <div class="cad-card">
-            <span class="cad-kicker">Já começou em outro aparelho?</span>
-            <h1>Encontramos um treinamento desta loja</h1>
+            <span class="cad-kicker">${L('Já começou em outro aparelho?', '¿Ya comenzaste en otro dispositivo?')}</span>
+            <h1>${L('Encontramos um treinamento desta loja', 'Encontramos una capacitación de esta tienda')}</h1>
             <div class="cad-achado">
               <b>${esc(sessao.loja)}</b>
               <span>${esc(sessao.cidade)}</span>
-              <small>${feitos ? `${feitos} de ${A.mods.length} módulos concluídos` : 'Treinamento iniciado'}</small>
+              <small>${feitos ? L(`${feitos} de ${A.mods.length} módulos concluídos`, `${feitos} de ${A.mods.length} módulos completados`) : L('Treinamento iniciado', 'Capacitación iniciada')}</small>
             </div>
-            <p class="t-lead sm">É a sua loja? Se for, você continua de onde parou.</p>
-            <button type="button" class="t-btn primary lg cad-ok" data-sessao="sim">${ICON.play}Sim, continuar de onde parei</button>
-            <button type="button" class="t-btn ghost lg cad-ok" data-sessao="nao">Não, começar do zero</button>
+            <p class="t-lead sm">${L('É a sua loja? Se for, você continua de onde parou.', '¿Es tu tienda? Si lo es, continúas donde lo dejaste.')}</p>
+            <button type="button" class="t-btn primary lg cad-ok" data-sessao="sim">${ICON.play}${L('Sim, continuar de onde parei', 'Sí, continuar donde lo dejé')}</button>
+            <button type="button" class="t-btn ghost lg cad-ok" data-sessao="nao">${L('Não, começar do zero', 'No, comenzar desde cero')}</button>
           </div>
         </main>
       </div>`;
@@ -229,27 +237,27 @@
     app.innerHTML = `
       <div class="tv tv-cad">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="cad">
           <form class="cad-card" id="cad-form" novalidate>
-            <span class="cad-kicker">Antes de começar</span>
-            <h1>Conte qual é a sua loja</h1>
-            <p class="t-lead sm">Assim conseguimos acompanhar o treinamento e melhorar as explicações. Os valores do treinamento continuam fictícios.</p>
+            <span class="cad-kicker">${L('Antes de começar', 'Antes de comenzar')}</span>
+            <h1>${L('Conte qual é a sua loja', 'Cuéntanos cuál es tu tienda')}</h1>
+            <p class="t-lead sm">${L('Assim conseguimos acompanhar o treinamento e melhorar as explicações. Os valores do treinamento continuam fictícios.', 'Así podemos acompañar la capacitación y mejorar las explicaciones. Los valores de la capacitación siguen siendo ficticios.')}</p>
             <label class="cad-f">
-              <span>Nome da loja</span>
-              <input id="cad-loja" name="loja" type="text" maxlength="60" autocomplete="organization" placeholder="Ex.: Lanchonete da Ana" value="${esc(p.loja || '')}" required>
+              <span>${L('Nome da loja', 'Nombre de la tienda')}</span>
+              <input id="cad-loja" name="loja" type="text" maxlength="60" autocomplete="organization" placeholder="${L('Ex.: Lanchonete da Ana', 'Ej.: Cafetería de Ana')}" value="${esc(p.loja || '')}" required>
               <small class="cad-err" id="cad-loja-err"></small>
             </label>
             <div class="cad-f cad-combo">
-              <label for="cad-cidade">Cidade</label>
-              <input id="cad-cidade" type="text" role="combobox" aria-expanded="false" aria-controls="cad-lista" aria-autocomplete="list" autocomplete="off" placeholder="Digite para buscar a cidade" value="${esc(p.cidade || '')}">
+              <label for="cad-cidade">${L('Cidade', 'Ciudad')}</label>
+              <input id="cad-cidade" type="text" role="combobox" aria-expanded="false" aria-controls="cad-lista" aria-autocomplete="list" autocomplete="off" placeholder="${L('Digite para buscar a cidade', 'Escribe para buscar la ciudad')}" value="${esc(p.cidade || '')}">
               <ul id="cad-lista" role="listbox" class="cad-lista" hidden></ul>
               <small class="cad-err" id="cad-cidade-err"></small>
             </div>
-            <button type="submit" class="t-btn primary lg cad-ok">${ICON.play}Continuar</button>
+            <button type="submit" class="t-btn primary lg cad-ok">${ICON.play}${L('Continuar', 'Continuar')}</button>
           </form>
         </main>
       </div>`;
@@ -269,7 +277,7 @@
         .slice(0, 60);
       lista.innerHTML = opcoes.length
         ? opcoes.map((c, i) => `<li role="option" id="cad-op-${i}" data-c="${esc(c)}" aria-selected="${i === ativo}">${esc(c)}</li>`).join('')
-        : '<li class="cad-vazio">Nenhuma cidade encontrada</li>';
+        : `<li class="cad-vazio">${L('Nenhuma cidade encontrada', 'No se encontró ninguna ciudad')}</li>`;
       lista.hidden = false;
       iCid.setAttribute('aria-expanded', 'true');
     }
@@ -299,8 +307,8 @@
       // Aceita a cidade digitada sem acento/maiúscula, desde que seja da lista
       const cidade = TREINO.cidades.find((c) => semAcento(c) === semAcento(iCid.value.trim())) || '';
       const eL = document.getElementById('cad-loja-err'), eC = document.getElementById('cad-cidade-err');
-      eL.textContent = loja.length < 2 ? 'Digite o nome da sua loja.' : '';
-      eC.textContent = cidade ? '' : 'Escolha uma cidade da lista.';
+      eL.textContent = loja.length < 2 ? L('Digite o nome da sua loja.', 'Escribe el nombre de tu tienda.') : '';
+      eC.textContent = cidade ? '' : L('Escolha uma cidade da lista.', 'Elige una ciudad de la lista.');
       if (loja.length < 2) { iLoja.focus(); return; }
       if (!cidade) { iCid.focus(); return; }
       // Outro aparelho (ou outra loja neste): procura o progresso da loja no banco antes de começar do zero
@@ -309,7 +317,7 @@
       if (An && An.ativo && !mesmaLoja) {
         const btn = form.querySelector('.cad-ok');
         btn.disabled = true;
-        btn.textContent = 'Procurando seu progresso…';
+        btn.textContent = L('Procurando seu progresso…', 'Buscando tu progreso…');
         const s = await An.buscarSessao(loja, cidade);
         if (s) { if (s.semelhanca >= 1) retomarSessao(s, loja); else viewConfirmarSessao(s, loja, cidade); return; }
       }
@@ -322,24 +330,24 @@
   function progressBlock() {
     const done = doneCount(), total = A.mods.length, p = Math.round((done / total) * 100);
     return `
-      <div class="t-progress" aria-label="Progresso do treinamento">
-        <div class="t-progress-top"><span>Seu treinamento</span><b>${p}%</b></div>
+      <div class="t-progress" aria-label="${L('Progresso do treinamento', 'Progreso de la capacitación')}">
+        <div class="t-progress-top"><span>${L('Seu treinamento', 'Tu capacitación')}</span><b>${p}%</b></div>
         <div class="t-bar"><i style="width:${p}%"></i></div>
-        <small>${done} de ${total} módulos concluídos${done < total ? ` · faltam ≈ ${minutosRestantes()} min` : ' · treinamento completo!'}</small>
+        <small>${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}${done < total ? L(` · faltam ≈ ${minutosRestantes()} min`, ` · faltan ≈ ${minutosRestantes()} min`) : L(' · treinamento completo!', ' · ¡capacitación completa!')}</small>
       </div>`;
   }
 
 
-  const statusLabel = { novo: 'Não iniciado', prog: 'Em andamento', done: 'Concluído' };
+  const statusLabel = { novo: L('Não iniciado', 'No iniciado'), prog: L('Em andamento', 'En curso'), done: L('Concluído', 'Completado') };
 
   /* ------------------------------ Tela inicial ------------------------------ */
   const FASES = [
-    { t: 'Vendas e pagamentos', s: 'Relatório e as 3 formas de pagamento', m: [1, 2, 3] },
-    { t: 'Tela Financeiro', s: 'Resultado e repasses', m: [4] },
-    { t: 'A fatura', s: 'O que entrou e o que saiu', m: [5, 6, 7, 8] },
-    { t: 'Repasse e prática', s: 'Antecipação e exercício final', m: [9, 10] },
+    { t: L('Vendas e pagamentos', 'Ventas y pagos'), s: L('Relatório e as 3 formas de pagamento', 'Informe y las 3 formas de pago'), m: [1, 2, 3] },
+    { t: L('Tela Financeiro', 'Pantalla Finanzas'), s: L('Resultado e repasses', 'Resultado y transferencias'), m: [4] },
+    { t: L('A fatura', 'La factura'), s: L('O que entrou e o que saiu', 'Lo que entró y lo que salió'), m: [5, 6, 7, 8] },
+    { t: L('Repasse e prática', 'Transferencia y práctica'), s: L('Antecipação e exercício final', 'Anticipo y ejercicio final'), m: [9, 10] },
   ];
-  const AVISO = 'Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.';
+  const AVISO = L('Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.', 'Todos los datos son ficticios, incluidos los valores de comisión y tasas. Consulta en tu contrato los valores que se aplican a tu tienda.');
 
   function viewHome() {
     const done = doneCount(), total = A.mods.length;
@@ -352,11 +360,11 @@
 
     // Uma ação principal, sempre a próxima coisa a fazer
     let main;
-    if (tudo && cert.ok) main = { href: '#/certificado', ic: ICON.certificado, t: 'Ver meu certificado', s: 'Você concluiu o treinamento!' };
-    else if (tudo) main = { href: cert.acertoOk ? '#/certificado' : '#/refazer', ic: ICON.redo, t: cert.acertoOk ? 'Liberar meu certificado' : 'Refazer as que errei', s: `Você acertou ${pct(cert.taxa)}. Precisa de mais de 70%.` };
-    else if (ret) main = { href: `#/modulo/${ret.n}`, ic: ICON.play, t: 'Continuar', s: `Módulo ${ret.n} · ${tituloMod(ret.n)}` };
-    else if (started) main = { href: '#/comecar', ic: ICON.play, t: 'Continuar', s: `Módulo ${firstPending()} · ${tituloMod(firstPending())}` };
-    else main = { href: '#/comecar', ic: ICON.play, t: 'Começar o treinamento', s: 'Passo a passo, no seu ritmo.' };
+    if (tudo && cert.ok) main = { href: '#/certificado', ic: ICON.certificado, t: L('Ver meu certificado', 'Ver mi certificado'), s: L('Você concluiu o treinamento!', '¡Completaste la capacitación!') };
+    else if (tudo) main = { href: cert.acertoOk ? '#/certificado' : '#/refazer', ic: ICON.redo, t: cert.acertoOk ? L('Liberar meu certificado', 'Desbloquear mi certificado') : L('Refazer as que errei', 'Rehacer las que fallé'), s: L(`Você acertou ${pct(cert.taxa)}. Precisa de mais de 70%.`, `Acertaste ${pct(cert.taxa)}. Necesitas más del 70%.`) };
+    else if (ret) main = { href: `#/modulo/${ret.n}`, ic: ICON.play, t: L('Continuar', 'Continuar'), s: `Módulo ${ret.n} · ${tituloMod(ret.n)}` };
+    else if (started) main = { href: '#/comecar', ic: ICON.play, t: L('Continuar', 'Continuar'), s: `Módulo ${firstPending()} · ${tituloMod(firstPending())}` };
+    else main = { href: '#/comecar', ic: ICON.play, t: L('Começar o treinamento', 'Comenzar la capacitación'), s: L('Passo a passo, no seu ritmo.', 'Paso a paso, a tu ritmo.') };
 
     const tile = (href, ic, t, sub, extra) => `
       <a class="hm-tile ${extra || ''}" href="${href}">
@@ -370,36 +378,40 @@
         <header class="t-top">
           <div class="t-logo">
             <img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32">
-            <span>Treinamento Financeiro</span>
+            <span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span>
           </div>
           ${vozToggle('bar')}
         </header>
         <main class="hm">
-          <h1 class="hm-ola">${tudo ? 'Parabéns' : 'Olá'}${loja ? `, <span>${esc(loja)}</span>` : ''}!</h1>
-          <p class="hm-sub">${tudo ? 'Você pode rever qualquer módulo quando quiser.' : 'Aprenda como funcionam suas vendas, taxas e repasses.'}</p>
+          <h1 class="hm-ola">${L('', '¡')}${tudo ? L('Parabéns', 'Felicitaciones') : L('Olá', 'Hola')}${loja ? `, <span>${esc(loja)}</span>` : ''}!</h1>
+          <p class="hm-sub">${tudo ? L('Você pode rever qualquer módulo quando quiser.', 'Puedes repasar cualquier módulo cuando quieras.') : L('Aprenda como funcionam suas vendas, taxas e repasses.', 'Aprende cómo funcionan tus ventas, tasas y transferencias.')}</p>
 
           <a class="hm-main" href="${main.href}">
             <span class="hm-main-ic">${main.ic}</span>
             <span class="hm-main-t"><b>${main.t}</b><small>${main.s}</small></span>
             ${ICON.arrowR}
-            ${started && !tudo ? `<span class="hm-main-bar" aria-label="${done} de ${total} módulos concluídos"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
+            ${started && !tudo ? `<span class="hm-main-bar" aria-label="${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
           </a>
 
-          <nav class="hm-grid" aria-label="Atalhos">
-            ${tile('#/modulos', ICON.grid, 'Módulos', started ? `${done} de ${total} concluídos` : `${total} módulos curtos`)}
-            ${tile('#/repasses', ICON.calendario, 'Datas de repasse', 'Calendário do ano')}
-            ${tile('#/explorar', ICON.cursor, 'Explorar a tela', 'Clique à vontade')}
-            ${tile('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, 'Certificado', cert.ok ? 'Pronto para baixar' : 'Veja o que falta', cert.ok ? 'ok' : 'lock')}
+          <nav class="hm-grid" aria-label="${L('Atalhos', 'Accesos directos')}">
+            ${tile('#/modulos', ICON.grid, L('Módulos', 'Módulos'), started ? L(`${done} de ${total} concluídos`, `${done} de ${total} completados`) : L(`${total} módulos curtos`, `${total} módulos cortos`))}
+            ${tile('#/repasses', ICON.calendario, L('Datas de repasse', 'Fechas de transferencia'), L('Calendário do ano', 'Calendario del año'))}
+            ${tile('#/explorar', ICON.cursor, L('Explorar a tela', 'Explorar la pantalla'), L('Clique à vontade', 'Haz clic libremente'))}
+            ${tile('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, L('Certificado', 'Certificado'), cert.ok ? L('Pronto para baixar', 'Listo para descargar') : L('Veja o que falta', 'Mira lo que falta'), cert.ok ? 'ok' : 'lock')}
           </nav>
 
-          <p class="hm-aviso">${ICON.info}<span><b>Treinamento ilustrativo.</b> ${AVISO}</span></p>
-          ${loja ? `<p class="hm-loja">Não é a sua loja? <a href="#/cadastro">Trocar loja</a></p>` : ''}
+          <p class="hm-aviso">${ICON.info}<span><b>${L('Treinamento ilustrativo.', 'Capacitación ilustrativa.')}</b> ${AVISO}</span></p>
+          ${loja ? `<p class="hm-loja">${L('Não é a sua loja?', '¿No es tu tienda?')} <a href="#/cadastro">${L('Trocar loja', 'Cambiar tienda')}</a></p>` : ''}
+          <p class="hm-idioma" aria-label="${L('Idioma', 'Idioma')}">${TREINO.IDIOMAS.map((id) => `<button type="button" data-idioma="${id}" lang="${id}" aria-pressed="${id === TREINO.idioma}">${id.toUpperCase()}</button>`).join('<span aria-hidden="true">·</span>')}</p>
         </main>
       </div>`;
   }
 
   /* ------------------------------ Datas de repasse ------------------------------ */
-  const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const SEMANA = L(
+    ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'],
+    ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  );
   function viewRepasses() {
     const R = TREINO.repasses, hoje = TREINO.hoje;
     const anos = R.anos.map((ano) => ({ ano, meses: R.datas(ano) }));
@@ -413,14 +425,14 @@
     if (prox) {
       const d = prox.data, dias = Math.round((d - hoje) / 864e5);
       const vendas = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-      const falta = dias === 0 ? 'É hoje' : dias === 1 ? 'Amanhã' : `Faltam ${dias} dias`;
+      const falta = dias === 0 ? L('É hoje', 'Es hoy') : dias === 1 ? L('Amanhã', 'Mañana') : L(`Faltam ${dias} dias`, `Faltan ${dias} días`);
       destaque = `
-        <section class="rp-prox" aria-label="Próximo repasse">
+        <section class="rp-prox" aria-label="${L('Próximo repasse', 'Próxima transferencia')}">
           <span class="rp-prox-ic">${ICON.calendario}</span>
           <div class="rp-prox-t">
-            <small>Próximo repasse</small>
+            <small>${L('Próximo repasse', 'Próxima transferencia')}</small>
             <b>${d.getDate()} de ${MESES[d.getMonth()]}</b>
-            <span>${SEMANA[d.getDay()]} · vendas de ${MESES[vendas.getMonth()]}${vendas.getFullYear() !== d.getFullYear() ? ` de ${vendas.getFullYear()}` : ''}</span>
+            <span>${SEMANA[d.getDay()]} · ${L('vendas de', 'ventas de')} ${MESES[vendas.getMonth()]}${vendas.getFullYear() !== d.getFullYear() ? ` de ${vendas.getFullYear()}` : ''}</span>
           </div>
           <span class="rp-prox-falta">${falta}</span>
         </section>`;
@@ -431,25 +443,25 @@
         ${meses.map((r) => {
           const d = r.data, st = r === prox ? 'prox' : d < hoje ? 'foi' : 'vem';
           const fer = r.feriados.map((f) => `${f.nome} (${f.dia}/${d.getMonth() + 1})`).join(', ');
-          const label = `${d.getDate()} de ${MESES[d.getMonth()]}, ${SEMANA[d.getDay()]}${st === 'foi' ? ', já realizado' : st === 'prox' ? ', próximo repasse' : ''}${fer ? `. Feriado: ${fer}` : ''}`;
+          const label = `${d.getDate()} de ${MESES[d.getMonth()]}, ${SEMANA[d.getDay()]}${st === 'foi' ? L(', já realizado', ', ya realizada') : st === 'prox' ? L(', próximo repasse', ', próxima transferencia') : ''}${fer ? `. ${L('Feriado', 'Feriado')}: ${fer}` : ''}`;
           return `
           <li class="rp-m ${st}" aria-label="${label}"${st === 'prox' ? ' aria-current="date"' : ''}>
             <small>${MESES[d.getMonth()].slice(0, 3)}</small>
             <b>${dd(d)}</b>
             <span>${SEMANA[d.getDay()].slice(0, 3)}</span>
             ${st === 'foi' ? `<i class="rp-ok">${ICON.check}</i>` : ''}
-            ${st === 'prox' ? '<em>Próximo</em>' : r.feriados.length ? `<em class="rp-fer" title="${fer}">Feriado ${r.feriados.map((f) => `${f.dia}/${d.getMonth() + 1}`).join(', ')}</em>` : ''}
+            ${st === 'prox' ? `<em>${L('Próximo', 'Próxima')}</em>` : r.feriados.length ? `<em class="rp-fer" title="${fer}">${L('Feriado', 'Feriado')} ${r.feriados.map((f) => `${f.dia}/${d.getMonth() + 1}`).join(', ')}</em>` : ''}
           </li>`;
         }).join('')}
       </ol>`;
 
     const blocoAno = ({ ano, meses }) => {
       const pagos = meses.filter((r) => r.data < hoje).length;
-      const resumo = pagos === 12 ? 'Todos realizados' : pagos ? `${pagos} de 12 realizados` : '12 datas';
+      const resumo = pagos === 12 ? L('Todos realizados', 'Todas realizadas') : pagos ? L(`${pagos} de 12 realizados`, `${pagos} de 12 realizadas`) : L('12 datas', '12 fechas');
       if (ano === anoAberto) return `<section class="rp-ano"><h2>${ano}<small>${resumo}</small></h2>${grade(meses)}</section>`;
       return `
         <details class="rp-ano rp-mais">
-          <summary><b>${ano > anoAberto ? 'Ver datas de' : 'Rever datas de'} ${ano}</b><small>${resumo}</small><span class="rp-chev" aria-hidden="true"></span></summary>
+          <summary><b>${ano > anoAberto ? L('Ver datas de', 'Ver fechas de') : L('Rever datas de', 'Repasar fechas de')} ${ano}</b><small>${resumo}</small><span class="rp-chev" aria-hidden="true"></span></summary>
           ${grade(meses)}
         </details>`;
     };
@@ -457,17 +469,17 @@
     app.innerHTML = `
       <div class="tv tv-rp">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="dc rp">
-          <h1>Datas de repasse</h1>
-          <p class="hm-sub">O saldo positivo do mês é enviado no <b>2º dia útil</b> do mês seguinte.</p>
+          <h1>${L('Datas de repasse', 'Fechas de transferencia')}</h1>
+          <p class="hm-sub">${L('O saldo positivo do mês é enviado no <b>2º dia útil</b> do mês seguinte.', 'El saldo positivo del mes se envía el <b>2.º día hábil</b> del mes siguiente.')}</p>
           ${destaque}
           ${anos.filter((a) => a.ano <= anoAberto).sort((a, b) => b.ano - a.ano).map(blocoAno).join('')}
           ${anos.filter((a) => a.ano > anoAberto).map(blocoAno).join('')}
-          <p class="rp-nota">${ICON.info}<span>Sábados, domingos e feriados nacionais não contam como dia útil. Quer receber antes? Você pode <b>solicitar antecipação</b> a qualquer momento no app.</span></p>
+          <p class="rp-nota">${ICON.info}<span>${L('Sábados, domingos e feriados nacionais não contam como dia útil. Quer receber antes? Você pode <b>solicitar antecipação</b> a qualquer momento no app, confira as condições.', 'Los sábados, domingos y feriados nacionales no cuentan como días hábiles. ¿Quieres recibir antes? Puedes <b>solicitar un anticipo</b> en cualquier momento en la app, consulta las condiciones.')}</span></p>
         </main>
       </div>`;
   }
@@ -478,15 +490,15 @@
     app.innerHTML = `
       <div class="tv tv-mods">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="t-mods">
           <div class="t-mods-head">
             <div>
-              <h1>Módulos</h1>
-              <p class="t-lead sm">Escolha qualquer módulo. Você pode repetir quando quiser.</p>
+              <h1>${L('Módulos', 'Módulos')}</h1>
+              <p class="t-lead sm">${L('Escolha qualquer módulo. Você pode repetir quando quiser.', 'Elige cualquier módulo. Puedes repetirlo cuando quieras.')}</p>
             </div>
             ${progressBlock()}
           </div>
@@ -494,7 +506,7 @@
             ${A.mods
               .map((m) => {
                 const st = status(m.n);
-                const btn = st === 'done' ? `${ICON.redo}Repetir` : st === 'prog' ? `${ICON.play}Continuar` : `${ICON.play}Começar`;
+                const btn = st === 'done' ? `${ICON.redo}${L('Repetir', 'Repetir')}` : st === 'prog' ? `${ICON.play}${L('Continuar', 'Continuar')}` : `${ICON.play}${L('Começar', 'Comenzar')}`;
                 return `
                 <li class="t-mod s-${st}">
                   <a href="#/modulo/${m.n}" class="t-mod-a">
@@ -510,17 +522,17 @@
           <div class="t-extra">
             <a class="t-extra-card" href="#/explorar">
               <span class="t-extra-ic">${ICON.cursor}</span>
-              <span><b>Explorar a tela livremente</b><small>Clique onde quiser na tela, sem explicações.</small></span>
+              <span><b>${L('Explorar a tela livremente', 'Explorar la pantalla libremente')}</b><small>${L('Clique onde quiser na tela, sem explicações.', 'Haz clic donde quieras en la pantalla, sin explicaciones.')}</small></span>
               ${ICON.arrowR}
             </a>
             ${allDone && certStatus().ok ? `<a class="t-extra-card destaque" href="#/certificado">
               <span class="t-extra-ic">${ICON.certificado}</span>
-              <span><b>Seu certificado</b><small>Baixe ou imprima o certificado de conclusão.</small></span>
+              <span><b>${L('Seu certificado', 'Tu certificado')}</b><small>${L('Baixe ou imprima o certificado de conclusão.', 'Descarga o imprime el certificado de finalización.')}</small></span>
               ${ICON.arrowR}
             </a>` : ''}
             <a class="t-extra-card ${allDone ? '' : 'muted'}" href="#/revisao">
               <span class="t-extra-ic">${ICON.check}</span>
-              <span><b>O que você aprendeu</b><small>${allDone ? 'Revise tudo em uma tela.' : 'Disponível ao concluir todos os módulos.'}</small></span>
+              <span><b>${L('O que você aprendeu', 'Lo que aprendiste')}</b><small>${allDone ? L('Revise tudo em uma tela.', 'Repasa todo en una pantalla.') : L('Disponível ao concluir todos os módulos.', 'Disponible al completar todos los módulos.')}</small></span>
               ${ICON.arrowR}
             </a>
           </div>
@@ -538,11 +550,11 @@
   function playerBar(title, sub, n) {
     return `
       <div class="pb" id="pb">
-        <a class="pb-back" href="#/modulos">${ICON.arrowL}<span>Módulos</span></a>
-        <div class="pb-mid"><small>${sub}<span class="pb-tag">Ilustrativo</span></small><b>${title}</b></div>
+        <a class="pb-back" href="#/modulos">${ICON.arrowL}<span>${L('Módulos', 'Módulos')}</span></a>
+        <div class="pb-mid"><small>${sub}<span class="pb-tag">${L('Ilustrativo', 'Ilustrativo')}</span></small><b>${title}</b></div>
         <div class="pb-dots">${n ? dots(n) : ''}</div>
         ${vozToggle('bar')}
-        <a class="pb-exit" href="#/" aria-label="Sair do treinamento">${ICON.x}<span>Sair</span></a>
+        <a class="pb-exit" href="#/" aria-label="${L('Sair do treinamento', 'Salir de la capacitación')}">${ICON.x}<span>${L('Sair', 'Salir')}</span></a>
         <div class="pb-line"><i id="pb-line"></i></div>
       </div>`;
   }
@@ -580,31 +592,31 @@
           <h3>${m.titulo}</h3>
           <p>${m.intro}</p>
           ${m.aviso ? `<div class="tr-aviso">${ICON.info}<span>${m.aviso}</span></div>` : ''}
-          <div class="tr-learn-t">Neste módulo:</div>
+          <div class="tr-learn-t">${L('Neste módulo:', 'En este módulo:')}</div>
           <ul class="tr-learn">${m.aprender.map((x) => `<li>${x}</li>`).join('')}</ul>
           <div class="tr-actions">
-            <button type="button" class="tr-back" data-tr="cb:modules">Ver módulos</button>
-            <button type="button" class="tr-next" data-tr="next">Vamos lá</button>
+            <button type="button" class="tr-back" data-tr="cb:modules">${L('Ver módulos', 'Ver módulos')}</button>
+            <button type="button" class="tr-next" data-tr="next">${L('Vamos lá', 'Vamos')}</button>
           </div>
         </div>`,
     };
     const summary = {
       kind: 'summary',
       state: lastState,
-      fala: [`Pronto${loja ? ', ' + loja : ''}! Você concluiu este módulo.`].concat(fechaFase ? [`Fase concluída: ${fase.t}.`] : [], [next ? 'Toque em Continuar para seguir.' : 'Toque em Ver o que aprendi para revisar tudo.']),
+      fala: [L(`Pronto${loja ? ', ' + loja : ''}! Você concluiu este módulo.`, `¡Listo${loja ? ', ' + loja : ''}! Completaste este módulo.`)].concat(fechaFase ? [L(`Fase concluída: ${fase.t}.`, `Fase completada: ${fase.t}.`)] : [], [next ? L('Toque em Continuar para seguir.', 'Toca Continuar para seguir.') : L('Toque em Ver o que aprendi para revisar tudo.', 'Toca Concluir para repasar todo.')]),
       html: `
         <div class="tr-sum">
           <div class="tr-check">${ICON.check}</div>
-          <h3>${loja ? `Mandou bem, ${esc(loja)}!` : 'Mandou bem!'}</h3>
-          <p class="tr-sum-sub">Você concluiu o Módulo ${m.n}${next ? ` · faltam ${A.mods.length - n} módulos` : ''}.</p>
-          ${fechaFase ? `<div class="tr-fase">${ICON.medalha}<span><small>Fase concluída</small><b>${fase.t}</b></span></div>` : ''}
+          <h3>${loja ? L(`Mandou bem, ${esc(loja)}!`, `¡Muy bien, ${esc(loja)}!`) : L('Mandou bem!', '¡Muy bien!')}</h3>
+          <p class="tr-sum-sub">${L(`Você concluiu o Módulo ${m.n}${next ? ` · faltam ${A.mods.length - n} módulos` : ''}.`, `Completaste el Módulo ${m.n}${next ? ` · faltan ${A.mods.length - n} módulos` : ''}.`)}</p>
+          ${fechaFase ? `<div class="tr-fase">${ICON.medalha}<span><small>${L('Fase concluída', 'Fase completada')}</small><b>${fase.t}</b></span></div>` : ''}
           <ul class="tr-sum-list">${m.resumo.map((x) => `<li>${ICON.check}<span>${x}</span></li>`).join('')}</ul>
           <div class="tr-actions col">
-            <button type="button" class="tr-next" data-tr="cb:continue">${next ? 'Continuar' : 'Concluir'}</button>
+            <button type="button" class="tr-next" data-tr="cb:continue">${next ? L('Continuar', 'Continuar') : L('Concluir', 'Finalizar')}</button>
             <div class="tr-row">
-              <button type="button" class="tr-back" data-tr="back">Voltar</button>
-              <button type="button" class="tr-back" data-tr="cb:repeat">Repetir módulo</button>
-              <button type="button" class="tr-back" data-tr="cb:modules">Ver módulos</button>
+              <button type="button" class="tr-back" data-tr="back">${L('Voltar', 'Volver')}</button>
+              <button type="button" class="tr-back" data-tr="cb:repeat">${L('Repetir módulo', 'Repetir módulo')}</button>
+              <button type="button" class="tr-back" data-tr="cb:modules">${L('Ver módulos', 'Ver módulos')}</button>
             </div>
           </div>
         </div>`,
@@ -614,7 +626,7 @@
     // Retomar de onde parou (o tour reconstrói a tela pelo estado do passo)
     const salvo = passos()[n];
     const inicio = salvo > 1 && salvo < seq.length - 1 ? salvo : 0;
-    if (inicio) TREINO.toast(`Continuando do passo ${inicio} de ${m.steps.length}.`, { label: 'Recomeçar', href: `#/modulo/${n}/inicio` });
+    if (inicio) TREINO.toast(L(`Continuando do passo ${inicio} de ${m.steps.length}.`, `Continuando desde el paso ${inicio} de ${m.steps.length}.`), { label: L('Recomeçar', 'Reiniciar'), href: `#/modulo/${n}/inicio` });
 
     window.scrollTo(0, 0);
     TREINO.Tour.play(seq, inicio, {
@@ -691,7 +703,7 @@
     const erradas = perguntasErradas();
     if (!erradas.length) { location.replace('#/certificado'); return; }
     document.body.classList.add('in-player');
-    app.innerHTML = playerBar('Refazer as que errei', `${erradas.length} ${erradas.length === 1 ? 'pergunta' : 'perguntas'}`) + '<div id="clone"></div>';
+    app.innerHTML = playerBar(L('Refazer as que errei', 'Rehacer las que fallé'), `${erradas.length} ${erradas.length === 1 ? L('pergunta', 'pregunta') : L('perguntas', 'preguntas')}`) + '<div id="clone"></div>';
     TREINO.Clone.reset();
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
     ev('refazer_inicio', { detalhe: { perguntas: erradas.length } });
@@ -700,15 +712,15 @@
     const intro = {
       kind: 'intro',
       state: erradas[0].state,
-      fala: ['Vamos refazer as perguntas que você errou.', 'Vale a primeira resposta de cada uma.'],
+      fala: [L('Vamos refazer as perguntas que você errou.', 'Vamos a rehacer las preguntas que fallaste.'), L('Vale a primeira resposta de cada uma.', 'Cuenta la primera respuesta de cada una.')],
       html: `
         <div class="tr-intro">
-          <div class="tr-intro-top"><span class="tr-intro-ic">${ICON.redo}</span><span class="tr-kicker">${erradas.length} ${erradas.length === 1 ? 'pergunta' : 'perguntas'}</span></div>
-          <h3>Refazer as que errei</h3>
-          <p>Você vai responder de novo só as perguntas que errou. Vale a primeira resposta de cada uma, e ela substitui a anterior.</p>
+          <div class="tr-intro-top"><span class="tr-intro-ic">${ICON.redo}</span><span class="tr-kicker">${erradas.length} ${erradas.length === 1 ? L('pergunta', 'pregunta') : L('perguntas', 'preguntas')}</span></div>
+          <h3>${L('Refazer as que errei', 'Rehacer las que fallé')}</h3>
+          <p>${L('Você vai responder de novo só as perguntas que errou. Vale a primeira resposta de cada uma, e ela substitui a anterior.', 'Vas a responder de nuevo solo las preguntas que fallaste. Cuenta la primera respuesta de cada una, y reemplaza la anterior.')}</p>
           <div class="tr-actions">
-            <button type="button" class="tr-back" data-tr="cb:certificado">Voltar</button>
-            <button type="button" class="tr-next" data-tr="next">Vamos lá</button>
+            <button type="button" class="tr-back" data-tr="cb:certificado">${L('Voltar', 'Volver')}</button>
+            <button type="button" class="tr-next" data-tr="next">${L('Vamos lá', 'Vamos')}</button>
           </div>
         </div>`,
     };
@@ -716,24 +728,24 @@
     const summary = {
       kind: 'summary',
       state: Object.assign({}, erradas[erradas.length - 1].state, { modals: [] }),
-      get fala() { const c = certStatus(); return [c.acertoOk ? 'Muito bem! Seu certificado está liberado.' : `Você está com ${pct(c.taxa)} de acertos. Precisa de mais de 70%.`]; },
+      get fala() { const c = certStatus(); return [c.acertoOk ? L('Muito bem! Seu certificado está liberado.', '¡Muy bien! Tu certificado está desbloqueado.') : L(`Você está com ${pct(c.taxa)} de acertos. Precisa de mais de 70%.`, `Tienes ${pct(c.taxa)} de aciertos. Necesitas más del 70%.`)]; },
       get html() {
         const c = certStatus(), resta = perguntasErradas().length;
         return `
         <div class="tr-sum">
           <div class="tr-check">${c.acertoOk ? ICON.check : ICON.redo}</div>
-          <h3>${c.acertoOk ? 'Certificado liberado!' : 'Quase lá!'}</h3>
-          <p class="tr-sum-sub">Agora você tem ${pct(c.taxa)} de acertos (${c.acertos} de ${c.perguntas}).${c.acertoOk ? '' : ' Precisa de mais de 70%.'}</p>
+          <h3>${c.acertoOk ? L('Certificado liberado!', '¡Certificado desbloqueado!') : L('Quase lá!', '¡Casi listo!')}</h3>
+          <p class="tr-sum-sub">${L(`Agora você tem ${pct(c.taxa)} de acertos (${c.acertos} de ${c.perguntas}).`, `Ahora tienes ${pct(c.taxa)} de aciertos (${c.acertos} de ${c.perguntas}).`)}${c.acertoOk ? '' : L(' Precisa de mais de 70%.', ' Necesitas más del 70%.')}</p>
           <div class="tr-actions col">
-            ${c.ok ? '<button type="button" class="tr-next" data-tr="cb:certificado">Ver meu certificado</button>'
-              : resta ? `<button type="button" class="tr-next" data-tr="cb:repeat">Refazer as ${resta === 1 ? 'que falta' : `${resta} que faltam`}</button>`
-              : '<button type="button" class="tr-next" data-tr="cb:certificado">Ver o que falta</button>'}
-            <div class="tr-row"><button type="button" class="tr-back" data-tr="cb:home">Início</button></div>
+            ${c.ok ? `<button type="button" class="tr-next" data-tr="cb:certificado">${L('Ver meu certificado', 'Ver mi certificado')}</button>`
+              : resta ? `<button type="button" class="tr-next" data-tr="cb:repeat">${resta === 1 ? L('Refazer a que falta', 'Rehacer la que falta') : L(`Refazer as ${resta} que faltam`, `Rehacer las ${resta} que faltan`)}</button>`
+              : `<button type="button" class="tr-next" data-tr="cb:certificado">${L('Ver o que falta', 'Ver lo que falta')}</button>`}
+            <div class="tr-row"><button type="button" class="tr-back" data-tr="cb:home">${L('Início', 'Inicio')}</button></div>
           </div>
         </div>`;
       },
     };
-    const seq = [intro].concat(erradas.map((x) => Object.assign({ kind: 'step' }, x.s, { state: x.state, kicker: `Refazer · Módulo ${x.m.n}`, _q: x })), [summary]);
+    const seq = [intro].concat(erradas.map((x) => Object.assign({ kind: 'step' }, x.s, { state: x.state, kicker: L(`Refazer · Módulo ${x.m.n}`, `Rehacer · Módulo ${x.m.n}`), _q: x })), [summary]);
 
     window.scrollTo(0, 0);
     TREINO.Tour.play(seq, 0, {
@@ -763,17 +775,17 @@
   /* ------------------------------ Modo livre ------------------------------ */
   function viewExplore() {
     document.body.classList.add('in-player');
-    app.innerHTML = playerBar('Explore à vontade', 'Modo livre', 0) + '<div id="clone"></div>';
+    app.innerHTML = playerBar(L('Explore à vontade', 'Explora libremente'), L('Modo livre', 'Modo libre'), 0) + '<div id="clone"></div>';
     TREINO.Clone.reset();
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
     ev('explorar');
-    TREINO.toast('Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro.');
+    TREINO.toast(L('Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro.', 'Haz clic donde quieras. Usa el menú para cambiar entre Informe y Finanzas.'));
   }
 
   /* ------------------------------ Revisão ------------------------------ */
   function viewReview() {
     if (doneCount() < A.mods.length) {
-      TREINO.toast('“O que você aprendeu” é liberado ao concluir todos os módulos.');
+      TREINO.toast(L('“O que você aprendeu” é liberado ao concluir todos os módulos.', '“Lo que aprendiste” se desbloquea al completar todos los módulos.'));
       location.replace('#/modulos');
       return;
     }
@@ -782,21 +794,21 @@
     app.innerHTML = `
       <div class="tv tv-review">
         <header class="t-top">
-          <a class="t-link" href="#/modulos">${ICON.arrowL}Módulos</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/modulos">${ICON.arrowL}${L('Módulos', 'Módulos')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="t-review">
           <div class="t-review-badge">${ICON.check}</div>
-          <h1>O que você aprendeu?</h1>
+          <h1>${L('O que você aprendeu?', '¿Qué aprendiste?')}</h1>
           <ul class="t-review-list">
             ${items.map(([t, s], i) => `<li style="animation-delay:${i * 70}ms"><span class="t-rv-ic">${ICON.check}</span><span><b>${t}</b><small>${s}</small></span></li>`).join('')}
           </ul>
-          <p class="t-review-msg">Agora você já consegue entender de onde vêm os valores apresentados.</p>
+          <p class="t-review-msg">${L('Agora você já consegue entender de onde vêm os valores apresentados.', 'Ahora ya puedes entender de dónde vienen los valores que se muestran.')}</p>
           <div class="t-cta center">
-            ${doneCount() === A.mods.length ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}${certStatus().ok ? 'Ver meu certificado' : 'Ver o que falta para o certificado'}</a>` : ''}
-            <a class="t-btn ${doneCount() === A.mods.length ? 'ghost' : 'primary'} lg" href="#/modulos">Voltar aos módulos</a>
-            <a class="t-btn ghost lg" href="#/explorar">${ICON.cursor}Explorar a tela</a>
+            ${doneCount() === A.mods.length ? `<a class="t-btn primary lg" href="#/certificado">${ICON.certificado}${certStatus().ok ? L('Ver meu certificado', 'Ver mi certificado') : L('Ver o que falta para o certificado', 'Ver lo que falta para el certificado')}</a>` : ''}
+            <a class="t-btn ${doneCount() === A.mods.length ? 'ghost' : 'primary'} lg" href="#/modulos">${L('Voltar aos módulos', 'Volver a los módulos')}</a>
+            <a class="t-btn ghost lg" href="#/explorar">${ICON.cursor}${L('Explorar a tela', 'Explorar la pantalla')}</a>
           </div>
         </main>
       </div>`;
@@ -846,29 +858,29 @@
     app.innerHTML = `
       <div class="tv tv-req">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="cr">
           <div class="cr-badge">${ICON.cadeado}</div>
-          <h1>Seu certificado</h1>
-          <p class="hm-sub">Para liberar, você precisa cumprir as duas condições:</p>
+          <h1>${L('Seu certificado', 'Tu certificado')}</h1>
+          <p class="hm-sub">${L('Para liberar, você precisa cumprir as duas condições:', 'Para desbloquearlo, necesitas cumplir las dos condiciones:')}</p>
           <ul class="cr-list">
-            ${item(c.conteudoOk, 'Ver todo o conteúdo', pct(c.conteudo), `${doneCount()} de ${A.mods.length} módulos concluídos`)}
-            ${item(c.acertoOk, 'Acertar mais de 70% das perguntas', pct(c.taxa), `${c.acertos} de ${c.perguntas} certas na primeira tentativa`)}
+            ${item(c.conteudoOk, L('Ver todo o conteúdo', 'Ver todo el contenido'), pct(c.conteudo), L(`${doneCount()} de ${A.mods.length} módulos concluídos`, `${doneCount()} de ${A.mods.length} módulos completados`))}
+            ${item(c.acertoOk, L('Acertar mais de 70% das perguntas', 'Acertar más del 70% de las preguntas'), pct(c.taxa), L(`${c.acertos} de ${c.perguntas} certas na primeira tentativa`, `${c.acertos} de ${c.perguntas} correctas en el primer intento`))}
           </ul>
           ${proximo
-            ? `<a class="t-btn primary lg cr-cta" href="#/modulo/${proximo.n}">${ICON.play}Continuar · Módulo ${proximo.n}</a>`
-            : `${c.acertoOk ? '' : `<a class="t-btn primary lg cr-cta" href="#/refazer">${ICON.redo}Refazer só as que errei · ${c.perguntas - c.acertos} ${c.perguntas - c.acertos === 1 ? 'pergunta' : 'perguntas'}</a>`}
-               <p class="cr-dica">${c.acertoOk ? 'Refaça os módulos abaixo para melhorar seus acertos.' : 'Ou refaça o módulo inteiro, se quiser rever o conteúdo.'} Vale a primeira resposta de cada pergunta.</p>
+            ? `<a class="t-btn primary lg cr-cta" href="#/modulo/${proximo.n}">${ICON.play}${L('Continuar', 'Continuar')} · Módulo ${proximo.n}</a>`
+            : `${c.acertoOk ? '' : `<a class="t-btn primary lg cr-cta" href="#/refazer">${ICON.redo}${L('Refazer só as que errei', 'Rehacer solo las que fallé')} · ${c.perguntas - c.acertos} ${c.perguntas - c.acertos === 1 ? L('pergunta', 'pregunta') : L('perguntas', 'preguntas')}</a>`}
+               <p class="cr-dica">${c.acertoOk ? L('Refaça os módulos abaixo para melhorar seus acertos.', 'Rehaz los módulos de abajo para mejorar tus aciertos.') : L('Ou refaça o módulo inteiro, se quiser rever o conteúdo.', 'O rehaz el módulo completo, si quieres repasar el contenido.')} ${L('Vale a primeira resposta de cada pergunta.', 'Cuenta la primera respuesta de cada pregunta.')}</p>
                <ul class="cr-refazer">${c.refazer.map((n) => { const m = A.mods.find((x) => x.n === n); return `<li><a href="#/modulo/${n}/inicio"><span class="cr-n">${ICON[m.icone] || n}</span><span><small>Módulo ${n}</small><b>${m.titulo}</b></span>${ICON.redo}</a></li>`; }).join('')}</ul>`}
         </main>
       </div>`;
   }
 
   /* ------------------------------ Avaliação (antes do certificado) ------------------------------ */
-  const ROTULO_ESTRELAS = ['Ruim', 'Regular', 'Bom', 'Muito bom', 'Excelente'];
+  const ROTULO_ESTRELAS = L(['Ruim', 'Regular', 'Bom', 'Muito bom', 'Excelente'], ['Malo', 'Regular', 'Bueno', 'Muy bueno', 'Excelente']);
   const limparTexto = (t) => (TREINO.Bot ? TREINO.Bot.limpar(t) : String(t || '').slice(0, 300));
 
   function viewAvaliacao() {
@@ -877,34 +889,34 @@
     app.innerHTML = `
       <div class="tv tv-req">
         <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="av">
           <div class="av-badge">${estrela}</div>
-          <h1>Antes do seu certificado</h1>
-          <p class="hm-sub">Sua opinião ajuda a melhorar o treinamento.</p>
+          <h1>${L('Antes do seu certificado', 'Antes de tu certificado')}</h1>
+          <p class="hm-sub">${L('Sua opinião ajuda a melhorar o treinamento.', 'Tu opinión ayuda a mejorar la capacitación.')}</p>
           <form id="av-form" novalidate>
             <fieldset class="av-q">
-              <legend>Esse treinamento te ajudou?</legend>
+              <legend>${L('Esse treinamento te ajudou?', '¿Esta capacitación te ayudó?')}</legend>
               <div class="av-sn">
-                <button type="button" class="av-op" data-sn="sim" aria-pressed="false">Sim</button>
-                <button type="button" class="av-op" data-sn="nao" aria-pressed="false">Não</button>
+                <button type="button" class="av-op" data-sn="sim" aria-pressed="false">${L('Sim', 'Sí')}</button>
+                <button type="button" class="av-op" data-sn="nao" aria-pressed="false">${L('Não', 'No')}</button>
               </div>
             </fieldset>
             <fieldset class="av-q">
-              <legend id="av-est-t">Como você avalia o treinamento?</legend>
+              <legend id="av-est-t">${L('Como você avalia o treinamento?', '¿Cómo calificas la capacitación?')}</legend>
               <div class="av-est" role="radiogroup" aria-labelledby="av-est-t">
-                ${ROTULO_ESTRELAS.map((r, i) => `<button type="button" role="radio" aria-checked="false" aria-label="${i + 1} ${i ? 'estrelas' : 'estrela'}: ${r}" data-e="${i + 1}" tabindex="${i ? -1 : 0}">${estrela}</button>`).join('')}
+                ${ROTULO_ESTRELAS.map((r, i) => `<button type="button" role="radio" aria-checked="false" aria-label="${i + 1} ${i ? L('estrelas', 'estrellas') : L('estrela', 'estrella')}: ${r}" data-e="${i + 1}" tabindex="${i ? -1 : 0}">${estrela}</button>`).join('')}
               </div>
-              <p class="av-est-l" id="av-est-l" aria-live="polite">Toque nas estrelas</p>
+              <p class="av-est-l" id="av-est-l" aria-live="polite">${L('Toque nas estrelas', 'Toca las estrellas')}</p>
             </fieldset>
             <label class="av-q av-com">
-              <span>Quer contar algo? <small>(opcional)</small></span>
-              <textarea id="av-com" maxlength="300" rows="3" placeholder="O que foi útil, o que ficou confuso…"></textarea>
+              <span>${L('Quer contar algo?', '¿Quieres contarnos algo?')} <small>(${L('opcional', 'opcional')})</small></span>
+              <textarea id="av-com" maxlength="300" rows="3" placeholder="${L('O que foi útil, o que ficou confuso…', 'Qué fue útil, qué quedó confuso…')}"></textarea>
             </label>
-            <button type="submit" class="t-btn primary lg av-ok" disabled>Enviar avaliação</button>
+            <button type="submit" class="t-btn primary lg av-ok" disabled>${L('Enviar avaliação', 'Enviar calificación')}</button>
           </form>
         </main>
       </div>`;
@@ -940,7 +952,7 @@
       A.saved.avaliacao = { ajudou: sn === 'sim', estrelas: nota, em: new Date().toISOString() };
       save();
       ev('avaliacao', { detalhe: { ajudou: sn === 'sim', estrelas: nota, comentario } });
-      TREINO.toast('Obrigado pela avaliação!');
+      TREINO.toast(L('Obrigado pela avaliação!', '¡Gracias por tu calificación!'));
       location.hash = '#/certificado';
     });
   }
@@ -954,37 +966,37 @@
     const k = 'bigou-treino-concluido-em';
     let quando = null;
     try { quando = localStorage.getItem(k); if (!quando) { quando = new Date().toISOString(); localStorage.setItem(k, quando); } } catch (e) { quando = new Date().toISOString(); }
-    const data = new Date(quando).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const data = new Date(quando).toLocaleDateString(L('pt-BR', 'es'), { day: '2-digit', month: 'long', year: 'numeric' });
     ev('certificado', { detalhe: { acertos: Math.round(c.taxa * 100) } });
     app.innerHTML = `
       <div class="tv tv-cert">
         <header class="t-top no-print">
-          <a class="t-link" href="#/">${ICON.arrowL}Início</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
+          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
+          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
         <main class="cert-wrap">
-          <article class="cert" aria-label="Certificado de conclusão">
+          <article class="cert" aria-label="${L('Certificado de conclusão', 'Certificado de finalización')}">
             <div class="cert-borda">
               <img class="cert-logo" src="assets/bigou-logo.png" alt="Bigou" width="64" height="64">
-              <span class="cert-kicker">Certificado de conclusão</span>
-              <p class="cert-txt">Certificamos que</p>
-              <h1 class="cert-loja">${esc(p.loja || 'Parceiro Bigou')}</h1>
+              <span class="cert-kicker">${L('Certificado de conclusão', 'Certificado de finalización')}</span>
+              <p class="cert-txt">${L('Certificamos que', 'Certificamos que')}</p>
+              <h1 class="cert-loja">${esc(p.loja || L('Parceiro Bigou', 'Socio Bigou'))}</h1>
               ${p.cidade ? `<p class="cert-cidade">${esc(p.cidade)}</p>` : ''}
-              <p class="cert-txt">concluiu o <b>Treinamento Financeiro</b>, com os ${A.mods.length} módulos: vendas e formas de pagamento, tela Financeiro, fatura, repasse e antecipação.</p>
+              <p class="cert-txt">${L(`concluiu o <b>Treinamento Financeiro</b>, com os ${A.mods.length} módulos: vendas e formas de pagamento, tela Financeiro, fatura, repasse e antecipação.`, `completó la <b>Capacitación Financiera</b>, con los ${A.mods.length} módulos: ventas y formas de pago, pantalla Finanzas, factura, transferencia y anticipo.`)}</p>
               <div class="cert-rodape">
-                <div><small>Concluído em</small><b>${data}</b></div>
+                <div><small>${L('Concluído em', 'Completado el')}</small><b>${data}</b></div>
                 <div class="cert-selo">${ICON.medalha}</div>
                 <div class="cert-emissor"><b>Bigou Delivery</b></div>
               </div>
-              <p class="cert-nota">Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.</p>
+              <p class="cert-nota">${L('Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.', 'Capacitación ilustrativa: los valores usados son ficticios. Consulta en tu contrato los valores que se aplican a tu tienda.')}</p>
             </div>
           </article>
           <div class="t-cta center no-print">
-            <button type="button" class="t-btn primary lg" id="cert-print">${ICON.impressora}Baixar ou imprimir</button>
-            <a class="t-btn ghost lg" href="#/revisao">${ICON.check}O que você aprendeu</a>
+            <button type="button" class="t-btn primary lg" id="cert-print">${ICON.impressora}${L('Baixar ou imprimir', 'Descargar o imprimir')}</button>
+            <a class="t-btn ghost lg" href="#/revisao">${ICON.check}${L('O que você aprendeu', 'Lo que aprendiste')}</a>
           </div>
-          <p class="cert-dica no-print">Para baixar, escolha "Salvar como PDF" na janela de impressão.</p>
+          <p class="cert-dica no-print">${L('Para baixar, escolha "Salvar como PDF" na janela de impressão.', 'Para descargarlo, elige "Guardar como PDF" en la ventana de impresión.')}</p>
         </main>
       </div>`;
     document.getElementById('cert-print').addEventListener('click', () => window.print());
@@ -1126,11 +1138,13 @@
   A.saved = load();
   A.d = TREINO.calc(TREINO.dados);
   A.mods = TREINO.buildModules(A.d);
-  // Perguntas editadas no painel: a última lista salva vale já; a do banco chega em seguida
-  if (An) {
+  // Perguntas editadas no painel: a última lista salva vale já; a do banco chega em seguida.
+  // O painel edita só em português: em espanhol ficam as perguntas do código.
+  if (An && !TREINO.es) {
     TREINO.aplicarPerguntas(A.mods, An.perguntasSalvas(), true);
     An.buscarPerguntas().then((lista) => { if (lista) TREINO.aplicarPerguntas(A.mods, lista, true); });
   }
+  if (TREINO.es) document.title = 'Capacitación Financiera · Bigou';
   TREINO.Tour.init();
   syncVoz();
   ev('acesso');
