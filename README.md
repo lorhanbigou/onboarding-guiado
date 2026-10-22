@@ -22,7 +22,7 @@ Há um único conjunto de dados fictícios, igual para todos os parceiros (`TREI
 
 **Tela inicial:** o mais simples possível. Uma ação principal grande (Começar, Continuar ou Ver meu certificado) e 4 botões quadrados: Módulos, Dicas, Explorar a tela e Certificado.
 
-**Dicas importantes** (`#/dicas`): 6 orientações recolhidas (cupons, pagamento online, antecipação, repasse mensal, boleto e pedidos com tempo expirado), em `js/dicas.js`. Versões curtas aparecem como "Dica" no rodapé dos balões relacionados.
+**Datas de repasse** (`#/repasses`): calendário dos repasses (2º dia útil de cada mês, sem sábados, domingos e feriados nacionais), calculado em `js/repasses.js`. O próximo repasse aparece em destaque; as datas que já passaram ficam apagadas. O ano do próximo repasse fica aberto e os outros (hoje 2026 e 2027) ficam recolhidos. Para testar outro dia: `?data=AAAA-MM-DD`.
 
 **Aviso:** a tela inicial, a abertura do Módulo 1 e o certificado deixam claro que tudo é fictício e ilustrativo, inclusive comissão e taxas, e que os valores reais estão no contrato.
 
@@ -53,7 +53,7 @@ Só aparecem telas que existem no sistema: Pedidos, Relatório, Total Bruto, Fin
 
 Antes de começar, o parceiro digita o **nome da loja** e escolhe a **cidade** (lista fixa em `js/cidades.js`). Isso identifica o parceiro no painel; a tela do treinamento continua com "Loja de Treinamento". O link "Trocar loja" na tela inicial permite cadastrar outra loja no mesmo aparelho.
 
-O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas dos desafios e do exercício, narração, dicas abertas, certificado). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.
+O treinamento registra eventos (acesso, início e fim de módulo, cada passo e o tempo nele, saídas no meio, etapas puladas, respostas dos desafios e do exercício, narração, certificado). Eles ficam numa fila no aparelho e são enviados em lote para o Supabase; sem internet, são reenviados depois.
 
 **Painel:** fica em `admin/index.html` e abre em dois endereços:
 - na raiz de qualquer endereço que comece com `admin.`: localmente <http://admin.localhost:5178>; publicado, aponte o subdomínio (ex.: `admin.seudominio`) para o mesmo site. O `serve.js` já faz isso; em outra hospedagem, configure o subdomínio para servir a pasta `admin/`;
@@ -179,7 +179,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `js/calc.js` | Lógica de cálculo |
 | `js/clone.js` | Tela clonada: Pedidos, Relatório, Financeiro, fatura e modais |
 | `js/modules.js` | Conteúdo dos 10 módulos (textos, passos, desafios e exercício final) |
-| `js/dicas.js` | Dicas importantes da tela inicial |
+| `js/repasses.js` | Datas de repasse (2º dia útil do mês) |
 | `js/bot.js` | Assistente de dúvidas: respostas, entendimento e chat |
 | `js/cidades.js` | Lista de cidades do cadastro |
 | `js/narracao.js`, `assets/audio/`, `scripts/narracao/` | Narração gravada: índice balão → mp3, os áudios e o cortador |
@@ -191,7 +191,7 @@ Vozes, em ordem de preferência: vozes neurais do Edge/Windows ("Francisca" ou "
 | `.env.example` | Modelo do `.env.stage` / `.env.main` para rodar local |
 | `js/voz.js` | Narração: escolhe a voz pt-BR, transforma valores e datas em fala e lê o balão |
 | `js/tour.js` | Motor do spotlight / balões / passos de clique / quiz |
-| `js/app.js` | Tela inicial, dicas, lista de módulos, modo livre, revisão, certificado e progresso |
+| `js/app.js` | Tela inicial, datas de repasse, lista de módulos, modo livre, revisão, certificado e progresso |
 
 ## Regras de cálculo
 

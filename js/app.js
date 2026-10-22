@@ -1,7 +1,7 @@
 /* =========================================================================
    APLICAÇÃO — telas do treinamento, navegação e progresso
    Rotas: #/  #/cadastro  #/modulos  #/modulo/N  #/modulo/N/inicio (recomeçar)
-          #/explorar  #/dicas  #/revisao  #/avaliacao  #/certificado  #/comecar
+          #/explorar  #/repasses  #/revisao  #/avaliacao  #/certificado  #/comecar
           #/refazer (só as perguntas erradas)
    ========================================================================= */
 (function () {
@@ -109,7 +109,7 @@
     impressora: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3.5h10V9M7 17.5H4.5v-7a1.5 1.5 0 0 1 1.5-1.5h12a1.5 1.5 0 0 1 1.5 1.5v7H17"/><rect x="7" y="14" width="10" height="7"/></svg>',
     grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
     percent: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18.5 5.5l-13 13"/></svg>',
-    lampada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
+    calendario: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9.5 15l2 2 3.5-3.5"/></svg>',
     cadeado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
   };
 
@@ -387,7 +387,7 @@
 
           <nav class="hm-grid" aria-label="Atalhos">
             ${tile('#/modulos', ICON.grid, 'Módulos', started ? `${done} de ${total} concluídos` : `${total} módulos curtos`)}
-            ${tile('#/dicas', ICON.lampada, 'Dicas', 'Orientações rápidas')}
+            ${tile('#/repasses', ICON.calendario, 'Datas de repasse', 'Calendário do ano')}
             ${tile('#/explorar', ICON.cursor, 'Explorar a tela', 'Clique à vontade')}
             ${tile('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, 'Certificado', cert.ok ? 'Pronto para baixar' : 'Veja o que falta', cert.ok ? 'ok' : 'lock')}
           </nav>
@@ -398,28 +398,76 @@
       </div>`;
   }
 
-  /* ------------------------------ Dicas ------------------------------ */
-  function viewDicas() {
+  /* ------------------------------ Datas de repasse ------------------------------ */
+  const SEMANA = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  function viewRepasses() {
+    const R = TREINO.repasses, hoje = TREINO.hoje;
+    const anos = R.anos.map((ano) => ({ ano, meses: R.datas(ano) }));
+    const todas = anos.flatMap((a) => a.meses);
+    const prox = todas.find((r) => r.data >= hoje);
+    // O ano do próximo repasse fica aberto; os outros, recolhidos
+    const anoAberto = prox ? prox.data.getFullYear() : R.anos[R.anos.length - 1];
+    const dd = (d) => String(d.getDate()).padStart(2, '0');
+
+    let destaque = '';
+    if (prox) {
+      const d = prox.data, dias = Math.round((d - hoje) / 864e5);
+      const vendas = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+      const falta = dias === 0 ? 'É hoje' : dias === 1 ? 'Amanhã' : `Faltam ${dias} dias`;
+      destaque = `
+        <section class="rp-prox" aria-label="Próximo repasse">
+          <span class="rp-prox-ic">${ICON.calendario}</span>
+          <div class="rp-prox-t">
+            <small>Próximo repasse</small>
+            <b>${d.getDate()} de ${MESES[d.getMonth()]}</b>
+            <span>${SEMANA[d.getDay()]} · vendas de ${MESES[vendas.getMonth()]}${vendas.getFullYear() !== d.getFullYear() ? ` de ${vendas.getFullYear()}` : ''}</span>
+          </div>
+          <span class="rp-prox-falta">${falta}</span>
+        </section>`;
+    }
+
+    const grade = (meses) => `
+      <ol class="rp-grid">
+        ${meses.map((r) => {
+          const d = r.data, st = r === prox ? 'prox' : d < hoje ? 'foi' : 'vem';
+          const fer = r.feriados.map((f) => `${f.nome} (${f.dia}/${d.getMonth() + 1})`).join(', ');
+          const label = `${d.getDate()} de ${MESES[d.getMonth()]}, ${SEMANA[d.getDay()]}${st === 'foi' ? ', já realizado' : st === 'prox' ? ', próximo repasse' : ''}${fer ? `. Feriado: ${fer}` : ''}`;
+          return `
+          <li class="rp-m ${st}" aria-label="${label}"${st === 'prox' ? ' aria-current="date"' : ''}>
+            <small>${MESES[d.getMonth()].slice(0, 3)}</small>
+            <b>${dd(d)}</b>
+            <span>${SEMANA[d.getDay()].slice(0, 3)}</span>
+            ${st === 'foi' ? `<i class="rp-ok">${ICON.check}</i>` : ''}
+            ${st === 'prox' ? '<em>Próximo</em>' : r.feriados.length ? `<em class="rp-fer" title="${fer}">Feriado ${r.feriados.map((f) => `${f.dia}/${d.getMonth() + 1}`).join(', ')}</em>` : ''}
+          </li>`;
+        }).join('')}
+      </ol>`;
+
+    const blocoAno = ({ ano, meses }) => {
+      const pagos = meses.filter((r) => r.data < hoje).length;
+      const resumo = pagos === 12 ? 'Todos realizados' : pagos ? `${pagos} de 12 realizados` : '12 datas';
+      if (ano === anoAberto) return `<section class="rp-ano"><h2>${ano}<small>${resumo}</small></h2>${grade(meses)}</section>`;
+      return `
+        <details class="rp-ano rp-mais">
+          <summary><b>${ano > anoAberto ? 'Ver datas de' : 'Rever datas de'} ${ano}</b><small>${resumo}</small><span class="rp-chev" aria-hidden="true"></span></summary>
+          ${grade(meses)}
+        </details>`;
+    };
+
     app.innerHTML = `
-      <div class="tv tv-dicas">
+      <div class="tv tv-rp">
         <header class="t-top">
           <a class="t-link" href="#/">${ICON.arrowL}Início</a>
           <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>Treinamento Financeiro</span></div>
           <span></span>
         </header>
-        <main class="dc">
-          <h1>Dicas importantes</h1>
-          <p class="hm-sub">Toque em um assunto para ver as orientações.</p>
-          <div class="h-dicas-list">
-            ${(TREINO.dicas || []).map((dc, i) => `
-              <details class="h-dica">
-                <summary><span class="h-dica-n">${i + 1}</span><b>${dc.t}</b><span class="h-dica-chev" aria-hidden="true"></span></summary>
-                <div class="h-dica-c">
-                  ${dc.p.map((x) => `<p>${x}</p>`).join('')}
-                  ${dc.passos ? `<div class="h-dica-passos"><small>Como solicitar</small><ol>${dc.passos.map((x) => `<li>${x}</li>`).join('')}</ol></div>` : ''}
-                </div>
-              </details>`).join('')}
-          </div>
+        <main class="dc rp">
+          <h1>Datas de repasse</h1>
+          <p class="hm-sub">O saldo positivo do mês é enviado no <b>2º dia útil</b> do mês seguinte.</p>
+          ${destaque}
+          ${anos.filter((a) => a.ano <= anoAberto).sort((a, b) => b.ano - a.ano).map(blocoAno).join('')}
+          ${anos.filter((a) => a.ano > anoAberto).map(blocoAno).join('')}
+          <p class="rp-nota">${ICON.info}<span>Sábados, domingos e feriados nacionais não contam como dia útil. Quer receber antes? Você pode <b>solicitar antecipação</b> a qualquer momento no app.</span></p>
         </main>
       </div>`;
   }
@@ -975,7 +1023,7 @@
     else if (view === 'certificado') viewCertificado();
     else if (view === 'refazer') viewRefazer();
     else if (view === 'explorar') viewExplore();
-    else if (view === 'dicas') viewDicas();
+    else if (view === 'repasses') viewRepasses();
     else if (view === 'avaliacao') viewAvaliacao();
     else if (view === 'revisao') viewReview();
     else if (view === 'comecar') { location.replace('#/modulo/' + firstPending()); return; }
@@ -1086,11 +1134,6 @@
   TREINO.Tour.init();
   syncVoz();
   ev('acesso');
-  // Dica aberta na tela inicial ("toggle" não borbulha: escuta na captura)
-  document.addEventListener('toggle', (e) => {
-    const d = e.target;
-    if (d.classList && d.classList.contains('h-dica') && d.open) ev('dica', { detalhe: { dica: d.querySelector('summary b').textContent } });
-  }, true);
   window.addEventListener('hashchange', route);
   route();
 })();
