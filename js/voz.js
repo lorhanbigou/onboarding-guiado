@@ -201,11 +201,11 @@
     setEstado('parado');
   };
 
-  function tocar(src) {
+  function tocar(src, depois) {
     const minha = sessao;
     if (!player) { player = new Audio(); player.preload = 'auto'; }
     player.src = src;
-    const fim = () => { if (minha === sessao) setEstado('parado'); };
+    const fim = () => { if (minha !== sessao) return; if (depois && player.error == null) depois(); else setEstado('parado'); };
     player.onended = fim;
     player.onerror = fim;
     setEstado('falando');
@@ -266,6 +266,16 @@
     Voz.falar(partes);
   };
   Voz.esquecerPasso = () => { ultimaChave = null; };
+
+  /** Toca vários trechos gravados em sequência (explicação de uma tela no modo livre).
+      É um pedido explícito do parceiro: toca mesmo com a narração desligada. */
+  Voz.tocarLista = function (chaves) {
+    Voz.parar();
+    ultimaChave = null;
+    const fila = chaves.map((k) => GRAVADA[k]).filter(Boolean);
+    const seguinte = () => { const src = fila.shift(); if (src) tocar(src, fila.length ? seguinte : null); else setEstado('parado'); };
+    seguinte();
+  };
 
   Voz.ligar = function (on) {
     Voz.ligada = !!on;

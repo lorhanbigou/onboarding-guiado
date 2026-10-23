@@ -362,6 +362,7 @@ svg { flex: none; }
 .t-voz.on { background: var(--t-gsoft); border-color: #b7dfc8; color: var(--t-g2); }
 .t-voz:disabled { opacity: .5; cursor: default; }
 .t-voz.bar { font-size: 13.5px; font-weight: 500; padding: 7px 12px; }
+.t-explicar { white-space: nowrap; }
 .t-voz.home { font-size: 14.5px; font-weight: 500; padding: 10px 14px 10px 16px; }
 .t-switch { width: 36px; height: 20px; border-radius: 99px; background: #d1d5db; position: relative; transition: background .2s; margin-left: 4px; }
 .t-switch i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .2s; }
@@ -396,6 +397,8 @@ body.voz-falando .tr-voz { background: var(--t-g); color: #fff; animation: vozPu
   .pb { height: 56px; padding: 0 8px; gap: 6px; }
   .pb-back span, .pb-exit span, .t-voz.bar .t-voz-l { display: none; }
   .t-voz.bar { padding: 7px 8px; }
+  /* "Ouvir explicação" mantém o rótulo para não se confundir com o botão da narração */
+  .t-explicar.t-voz.bar .t-voz-l { display: inline; font-size: 12.5px; white-space: nowrap; }
   .pb-mid b { font-size: 14px; }
   .t-top { padding: 14px 16px; }
   .t-logo { font-size: 12px; }

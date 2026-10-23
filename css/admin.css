@@ -235,15 +235,9 @@ td.sit small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--
 .badge.off { background: #f1f2f4; color: var(--ink2); } .badge.off::before { background: #9ca3af; }
 .badge.bad { background: #fdecec; color: #b42318; } .badge.bad::before { background: var(--crit); }
 .badge.info { background: #eef3fb; color: #1f5fae; } .badge.info::before { background: #2a78d6; }
-.chip.warn:not(.on) { border-color: #f1c9c4; color: #b42318; }
 .pg-mini { display: inline-block; width: 44px; height: 6px; background: #eef0ee; border-radius: 3px; margin-right: 8px; vertical-align: 1px; overflow: hidden; }
 .pg-mini i { display: block; height: 100%; background: var(--g); }
 .lj-top { display: grid; gap: 10px; margin-bottom: 10px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font: inherit; font-size: 13px; font-weight: 500; flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink2); cursor: pointer; }
-.chip em { font-style: normal; font-size: 11.5px; font-weight: 700; background: var(--soft); border-radius: 999px; padding: 0 7px; }
-.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
-.chip.on em { background: rgba(255,255,255,.18); }
 .lj-act { display: flex; gap: 8px; }
 .lj-act .busca { margin: 0; }
 .lj-act .btn span { display: none; }
@@ -359,6 +353,20 @@ body.fx-on { overflow: hidden; }
 .fx-form label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink2); }
 .fx-form select, .fx-form input, .fx-form textarea { font: inherit; font-size: 14px; font-weight: 400; color: var(--ink); padding: 9px 11px; border: 1px solid #d6dbe1; border-radius: 10px; background: #fff; width: 100%; }
 .fx-form textarea { resize: vertical; min-height: 72px; }
+/* Contato feito e certificado */
+.ct-btn { white-space: nowrap; padding: 6px 11px; font-size: 13px; }
+.tb .ct-btn { padding: 4px 10px; font-size: 12.5px; }
+/* Tabela de lojas cabe inteira (com o botão de contato no fim): cabeçalhos quebram linha, situação mais estreita */
+.tb-lojas th { white-space: normal; }
+.tb-lojas td.sit { min-width: 190px; }
+.tb-lojas td:last-child { white-space: nowrap; }
+.ct-btn svg { stroke: var(--g); }
+.fx-ct { border-color: #b7dfc8; background: var(--gsoft); }
+.fx-ct > small { font-size: 12.5px; color: var(--ink2); }
+.fx-ct .ct-btn { justify-self: start; }
+.fx-ct-ok { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13.5px; color: #0a6b0a; }
+.fx-ct-ok svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--ok); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fx-cert { justify-self: start; }
 .fx-form :focus { outline: none; border-color: var(--g); box-shadow: 0 0 0 3px var(--gsoft); }
 .fx-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .fx-btns { display: flex; justify-content: flex-end; gap: 8px; }
@@ -532,8 +540,7 @@ body.fx-on { overflow: hidden; }
 .pg { max-width: none; width: 100%; }
 .pq { grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)) !important; }
 .ex { grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)) !important; }
-.lj-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.lj-top .chips { flex: 1 1 600px; }
+.lj-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .lj-act { flex: 0 1 320px; }
 .lj-act .busca { width: 100%; }
 @media (min-width: 1400px) { .kpis.k4 { gap: 16px; } .cols { gap: 16px; } }

@@ -84,6 +84,7 @@
       acertou: op ? !!op.ok : !!d.acertou,
     };
   }
+  const ASSUNTO_CONTATO = 'Contato feito';   // anotação que registra o contato com a loja
   const ACERTO_MIN = 0.7;        // certificado: mais de 70% de acerto (igual ao treinamento)
   const PARADA_DIAS = 7;         // começou e está sem atividade há 7 dias ou mais
   const SEM_INICIO_DIAS = 3;     // cadastrou há 3 dias ou mais e não abriu nenhum módulo
@@ -307,7 +308,7 @@
     const evs = D.eventos.map((e) => Object.assign({ t: +new Date(e.criado_em) }, e)).filter((e) => e.t <= agora);
 
     // Resumo por participante
-    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, notaQ: {}, primeiraQ: {}, refeitas: new Set(), aval: null, erros: [], notas: [] }]));
+    const S = new Map(parts.map((p) => [p.id, { p, ini: new Set(), fim: new Set(), msMod: {}, saidas: [], ultimo: +new Date(p.criado_em), primeiroIni: null, concluiuEm: null, voz: false, cert: false, certEm: null, idioma: null, notaQ: {}, primeiraQ: {}, refeitas: new Set(), aval: null, erros: [], notas: [] }]));
     for (const e of evs) {
       const s = S.get(e.participante_id);
       if (!s) continue;
@@ -317,7 +318,8 @@
       else if (e.tipo === 'treino_concluido') { if (!s.concluiuEm) s.concluiuEm = e.t; }
       else if (e.tipo === 'modulo_saida') s.saidas.push(e);
       else if (e.tipo === 'voz' && e.detalhe && e.detalhe.ligada) s.voz = true;
-      else if (e.tipo === 'certificado') s.cert = true;
+      else if (e.tipo === 'certificado') { s.cert = true; if (!s.certEm) s.certEm = e.t; }
+      else if ((e.tipo === 'cadastro' || e.tipo === 'sessao_retomada') && e.detalhe && typeof e.detalhe.idioma === 'string') s.idioma = e.detalhe.idioma;
       else if (e.tipo === 'avaliacao' && e.detalhe) s.aval = lerAvaliacao(e);
     }
     const L = [...S.values()];
@@ -413,7 +415,12 @@
         : s.concluiu ? 'semcert'
         : s.comecou ? (parado >= PARADA_DIAS * DIA ? 'parada' : 'andamento')
         : cadastro >= SEM_INICIO_DIAS * DIA ? 'naocomecou' : 'recente';
-      s.contato = ['parada', 'naocomecou', 'semcert'].includes(s.sit);
+      // Contato feito: anotação "Contato feito" depois da última atividade. Se a loja voltar a mexer
+      // no treinamento e ficar parada de novo, volta a precisar de contato.
+      s.contatoFeito = s.notas.find((a) => a.assunto === ASSUNTO_CONTATO && +new Date(a.criado_em) >= s.ultimo) || null;
+      const precisa = ['parada', 'naocomecou', 'semcert'].includes(s.sit);
+      s.contato = precisa && !s.contatoFeito;
+      s.contatada = precisa && !!s.contatoFeito;
       const k = (ms) => Math.floor(ms / DIA);
       const ondeParou = s.parou ? (s.parou.proximo ? `antes do Módulo ${s.parou.m}` : `no Módulo ${s.parou.m}${s.parou.p ? ` · ${tituloPasso(s.parou.m, s.parou.p)}` : ''}`) : '';
       s.motivo = {
@@ -427,7 +434,8 @@
     });
     const conta = (sit) => L.filter((s) => s.sit === sit).length;
     const sit = { parada: conta('parada'), naocomecou: conta('naocomecou'), semcert: conta('semcert'), certificada: conta('certificada'), reincidente: L.filter((s) => s.reincidente).length, andamento: conta('andamento'), recente: conta('recente') };
-    sit.contato = sit.parada + sit.naocomecou + sit.semcert;
+    sit.contato = L.filter((s) => s.contato).length;
+    sit.contatadas = L.filter((s) => s.contatada).length;
 
     /* ---------- Jornada: 5 marcos ---------- */
     const META = Math.ceil(NMOD / 2);
@@ -764,7 +772,7 @@
      ===================================================================== */
   const st = {
     dados: null, filtros: { dias: 28, cidade: '' }, R: null, P: null, menu: false,
-    busca: '', status: 'contato', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
+    busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
     pag: {}, fModulo: '', fTema: '', fBaixo: false, editPerg: null, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
   };
   // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
@@ -893,12 +901,12 @@
   /* ------------------------------ Páginas da sidebar ------------------------------ */
   const PAGINAS = [
     { id: 'visao', t: 'Visão geral', ic: 'casa', d: (ctx) => `Lojas que se cadastraram ${ctx.periodoTxt}${ctx.f.cidade ? ` em ${esc(ctx.f.cidade)}` : ''}.` },
+    { id: 'lojas', t: 'Lojas', ic: 'loja', d: () => 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.' },
     { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, módulo por módulo, e onde ficam pelo caminho.' },
     { id: 'passos', t: 'Passo a passo', ic: 'lista', d: () => 'Cada passo de cada módulo: quantas lojas viram, onde saem, o que pulam e quanto tempo levam.' },
     { id: 'assuntos', t: 'Assuntos', ic: 'livro', d: () => `Acerto de primeira por assunto, nas perguntas atuais. Com menos de ${POUCOS} respostas, mostramos "poucos dados".` },
     { id: 'perguntas', t: 'Perguntas', ic: 'pergunta', d: () => 'As 19 perguntas com a distribuição completa das respostas. Toque em Editar para mudar a pergunta e as alternativas.' },
   ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
-    { id: 'lojas', t: 'Lojas', ic: 'loja', d: () => 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.' },
     { id: 'anotacoes', t: 'Anotações', ic: 'nota', d: () => 'Tudo o que a equipe registrou sobre as dúvidas dos parceiros.' },
     { id: 'avaliacoes', t: 'Avaliações', ic: 'estrela', d: () => 'O que as lojas acharam do treinamento, respondido antes do certificado.' },
     { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Desempenho e contatos pendentes por cidade.' },
@@ -932,13 +940,31 @@
   const TABELAS = {};   // chave → função que redesenha só a tabela (mantém o foco na busca)
   const redesenhar = (chave) => { const el = document.getElementById('t-' + chave); if (el && TABELAS[chave]) el.innerHTML = TABELAS[chave](); };
 
+  // Badges do sidebar: só o que é novo desde a última vez que a página foi aberta (ids vistos ficam no aparelho)
+  const K_VISTO = 'bigou-admin-visto';
+  function novidades(pg, ids) {
+    let visto = {};
+    try { visto = JSON.parse(localStorage.getItem(K_VISTO)) || {}; } catch (e) { /* sem armazenamento */ }
+    if (ids[pg]) {
+      visto[pg] = [...new Set((visto[pg] || []).concat(ids[pg]))];
+      try { localStorage.setItem(K_VISTO, JSON.stringify(visto)); } catch (e) { /* */ }
+    }
+    const out = {};
+    Object.keys(ids).forEach((k) => { const v = new Set(visto[k] || []); out[k] = ids[k].filter((id) => !v.has(id)).length; });
+    return out;
+  }
+
   function render() {
     const f = st.filtros;
     const R = (st.R = calcular(st.dados, f));
     const P = (st.P = f.dias ? calcular(st.dados, Object.assign({}, f, { ate: Date.now() - f.dias * DIA })) : null);
     const pg = paginaAtual();
     const ctx = { R, P, f, periodoTxt: f.dias ? `nos últimos ${f.dias} dias` : 'desde o início' };
-    const cont = { lojas: R.sit.contato, anotacoes: (st.dados.anotacoes || []).filter((a) => R.lojas.some((s) => s.p.id === a.participante_id)).length, avaliacoes: R.avaliacao.n };
+    const cont = novidades(pg, {
+      lojas: R.lojas.filter((s) => s.contato).map((s) => `${s.p.id}|${s.sit}|${s.ultimo}`),   // volta a avisar se a loja precisar de contato de novo
+      anotacoes: (st.dados.anotacoes || []).filter((a) => R.lojas.some((s) => s.p.id === a.participante_id)).map((a) => a.id),
+      avaliacoes: R.lojas.filter((s) => s.aval).map((s) => s.p.id),
+    });
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const atual = PAGINAS.find((p) => p.id === pg);
 
@@ -995,8 +1021,9 @@
     const dl = (k, menor) => (KP ? delta(K[k], KP[k], menor) : '');
     const sd = saude(K.taxa), deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
     const pa = R.paradas[0], pior = R.assuntos.find((t) => t.tot >= POUCOS && t.taxa < 0.7);
+    const pend = (sit) => R.lojas.filter((s) => s.contato && s.sit === sit).length;   // ainda sem contato feito
     const acoes = [
-      SI.contato && ['parado', 'lojas', `<b>${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato</b>: ${[SI.parada && `${n(SI.parada)} paradas há ${PARADA_DIAS}+ dias`, SI.naocomecou && `${n(SI.naocomecou)} não começaram`, SI.semcert && `${n(SI.semcert)} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lojas'],
+      SI.contato && ['parado', 'lojas', `<b>${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato</b>: ${[pend('parada') && `${n(pend('parada'))} paradas há ${PARADA_DIAS}+ dias`, pend('naocomecou') && `${n(pend('naocomecou'))} não começaram`, pend('semcert') && `${n(pend('semcert'))} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lojas'],
       pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver assunto'],
       CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta.</b>`, 'Ver dúvidas'],
       pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${plural(pa.pararam, 'loja', 'lojas')}.`, 'Ver jornada'],
@@ -1102,10 +1129,10 @@
   /* Lojas */
   PG.lojas = ({ R }) => {
     const SI = R.sit;
-    const contagem = { contato: SI.contato, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, reincidente: SI.reincidente, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
+    const contagem = { contato: SI.contato, contatadas: SI.contatadas, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, reincidente: SI.reincidente, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
     return card('', '', `
       <div class="lj-top">
-        <div class="chips" role="group" aria-label="Situação">${[['contato', 'Precisam de contato'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['reincidente', 'Certificadas após refazer'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<button class="chip ${k === 'contato' ? 'warn' : ''} ${st.status === k ? 'on' : ''}" data-st="${k}" aria-pressed="${st.status === k}">${t}<em>${n(contagem[k])}</em></button>`).join('')}</div>
+        <label class="sel"><span>Situação</span><select data-loc="status">${[['contato', 'Precisam de contato'], ['contatadas', 'Contatadas'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['reincidente', 'Certificadas após refazer'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<option value="${k}" ${st.status === k ? 'selected' : ''}>${t} (${n(contagem[k])})</option>`).join('')}</select></label>
         <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"></div>
       </div>
       <div id="t-lojas">${TABELAS.lojas()}</div>`);
@@ -1214,7 +1241,7 @@
   };
   function linhasLojas() {
     const b = st.busca.trim().toLowerCase();
-    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'notas' ? s.notas.length > 0 : st.status === 'reincidente' ? s.reincidente : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
+    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'contatadas' ? s.contatada : st.status === 'notas' ? s.notas.length > 0 : st.status === 'reincidente' ? s.reincidente : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
     const rows = st.R.lojas.filter((s) => filtro(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
     const k = st.ordem.k, d = st.ordem.dir;
     const val = (s) => (k === 'loja' ? s.p.loja : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : k === 'erros' ? s.erros.length : k === 'notas' ? s.notas.length : k === 'tempo' ? s.tempoTotal : k === 'concl' ? s.concluiuEm || 0 : s.ultimo);
@@ -1224,27 +1251,29 @@
   TABELAS.lojas = () => {
     const { itens, ctrl } = paginar('lojas', linhasLojas());
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}</tr></thead>
+    const acao = itens.some((s) => s.contato);   // coluna do botão "Contato feito" (só nas lojas que precisam)
+    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}${acao ? '<th aria-label="Contato"></th>' : ''}</tr></thead>
       <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
         <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
         <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
-        <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span>${s.reincidente ? ' <span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}<small>${esc(s.motivo)}</small></td>
+        <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span>${s.reincidente ? ' <span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}${s.contatada ? ` <span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}<small>${esc(s.motivo)}</small></td>
         <td class="num">${s.erros.length ? `<b class="ct">${n(s.erros.length)}</b>` : '<span class="mut">0</span>'}</td>
         <td class="num">${s.notas.length ? `<span class="nt">${n(s.notas.length)}</span>` : '<span class="mut">—</span>'}</td>
         <td class="num">${s.tempoTotal ? dur(s.tempoTotal) : '<span class="mut">—</span>'}</td>
         <td>${s.concluiuEm ? dataBR(s.concluiuEm) : '<span class="mut">—</span>'}</td>
-        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : 'Nenhuma loja com esse filtro.'}</p>`;
+        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>${acao ? `<td>${s.contato ? `<button type="button" class="btn ct-btn" data-contato="${esc(s.p.id)}">${IC.ok}<span>Contato feito</span></button>` : ''}</td>` : ''}</tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : st.status === 'contatadas' ? 'Nenhum contato registrado.' : 'Nenhuma loja com esse filtro.'}</p>`;
   };
   const desenharLojas = () => redesenhar('lojas');
+  const contatoTxt = (a) => `Contato feito em ${dataHoraBR(+new Date(a.criado_em))}${a.autor ? ` por ${a.autor}` : ''}`;
 
   /* ------------------------------ Ficha da loja ------------------------------ */
-  const ASSUNTOS_NOTA = [...new Set(MODS.flatMap((m) => m.steps.filter((x) => x.tema).map((x) => x.tema)))].concat(['Plataforma', 'Atendimento', 'Outro']);
+  const ASSUNTOS_NOTA = [...new Set(MODS.flatMap((m) => m.steps.filter((x) => x.tema).map((x) => x.tema)))].concat(['Plataforma', 'Atendimento', ASSUNTO_CONTATO, 'Outro']);
   const autorSalvo = () => { try { return localStorage.getItem('bigou-admin-autor') || ''; } catch (e) { return ''; } };
   const fx = document.createElement('div');
   fx.className = 'fx-wrap';
   fx.hidden = true;
   document.body.appendChild(fx);
-  let fxId = null, fxEditando = null;
+  let fxId = null, fxEditando = null, fxContato = false;   // fxContato: caixinha "Contato feito" aberta
 
   function abrirFicha(id) {
     const s = st.R.lojas.find((x) => x.p.id === id);
@@ -1263,6 +1292,18 @@
         <div class="fx-btns">${a ? '<button type="button" class="btn" data-fx="cancelar">Cancelar</button>' : ''}<button type="submit" class="btn primary">${a ? 'Salvar alterações' : 'Adicionar anotação'}</button></div>
         <p class="fx-err" role="alert"></p>
       </form>`;
+    // Igual à anotação, com o assunto fixo: registra o contato e tira a loja de "Precisam de contato"
+    const formContato = () => `
+      <form class="fx-form fx-contato" data-fx-form="nova">
+        <input type="hidden" name="assunto" value="${esc(ASSUNTO_CONTATO)}">
+        <label><span>O que foi feito no contato?</span><textarea name="texto" rows="3" maxlength="2000" required placeholder="Como foi o contato (ligação, WhatsApp…), o que o parceiro disse e o que ficou combinado."></textarea></label>
+        <label><span>Seu nome</span><input name="autor" maxlength="60" value="${esc(autorSalvo())}" placeholder="Quem fez o contato" required></label>
+        <div class="fx-btns"><button type="button" class="btn" data-fx="contato-cancelar">Cancelar</button><button type="submit" class="btn primary">Salvar contato</button></div>
+        <p class="fx-err" role="alert"></p>
+      </form>`;
+    const contato = s.contato
+      ? `<section class="fx-s fx-ct">${fxContato ? formContato() : `<button type="button" class="btn ct-btn" data-fx="contato">${IC.ok}<span>Contato feito</span></button><small>Registre o contato para tirar a loja de "Precisam de contato".</small>`}</section>`
+      : s.contatada ? `<p class="fx-ct-ok">${IC.ok}<span>${esc(contatoTxt(s.contatoFeito))}</span></p>` : '';
     const anot = s.notas.map((a) => fxEditando === a.id ? `<li class="fx-nota ed">${form(a)}</li>` : `
       <li class="fx-nota">
         <div class="fx-nota-h"><span class="tag">${esc(a.assunto || 'Outro')}</span><small>${esc(a.autor || 'Equipe')} · ${dataHoraBR(+new Date(a.criado_em))}${a.atualizado_em ? ' · editada' : ''}</small></div>
@@ -1278,6 +1319,7 @@
         </header>
         <div class="fx-b">
           <div class="fx-sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span>${s.reincidente ? '<span class="badge warn">Reincidente</span>' : ''}<span>${esc(s.motivo)}</span></div>
+          ${contato}
 
           <section class="fx-s">
             <h3>Progresso</h3>
@@ -1287,6 +1329,7 @@
               <div><b>${acerto == null ? '—' : acerto + '%'}</b><small>${s.respondidas ? `acerto de primeira (${s.certas} de ${s.respondidas})` : 'ainda sem respostas'}</small></div>
               <div><b>${s.certificada ? (s.reincidente ? 'Sim, refazendo' : 'Sim') : 'Não'}</b><small>${s.reincidente ? `certificada · na 1ª vez acertou ${Math.round(s.notaPrimeira * 100)}%` : 'certificada'}</small></div>
             </div>
+            ${s.certificada ? `<button type="button" class="btn ic fx-cert" data-fx="certificado">${IC.trofeu}<span>Ver certificado</span></button>` : ''}
           </section>
 
           <section class="fx-s">
@@ -1310,10 +1353,17 @@
         </div>
       </aside>`;
     if (fx.hidden) { fx.hidden = false; document.body.classList.add('fx-on'); requestAnimationFrame(() => fx.classList.add('in')); fx.querySelector('.fx-x').focus(); }
+    if (fxContato) fx.querySelector('.fx-contato textarea').focus();
+  }
+
+  // Reemite o certificado de uma loja certificada (quando ela pede), numa aba própria para imprimir ou salvar em PDF
+  function abrirCertificado(s) {
+    const c = { loja: s.p.loja, cidade: s.p.cidade, quando: s.certEm || s.concluiuEm || Date.now(), nMods: NMOD, es: s.idioma === 'es' };
+    if (!window.open('certificado.html#' + encodeURIComponent(JSON.stringify(c)), '_blank')) alert('O navegador bloqueou a nova aba. Permita pop-ups para este site e tente de novo.');
   }
 
   function fecharFicha() {
-    fxId = null; fxEditando = null;
+    fxId = null; fxEditando = null; fxContato = false;
     fx.classList.remove('in');
     document.body.classList.remove('fx-on');
     setTimeout(() => { if (!fxId) { fx.hidden = true; fx.innerHTML = ''; } }, 200);
@@ -1334,6 +1384,9 @@
     if (a === 'fechar') fecharFicha();
     else if (a === 'editar') { fxEditando = b.dataset.id; abrirFicha(fxId); }
     else if (a === 'cancelar') { fxEditando = null; abrirFicha(fxId); }
+    else if (a === 'contato') { fxContato = true; abrirFicha(fxId); }
+    else if (a === 'contato-cancelar') { fxContato = false; abrirFicha(fxId); }
+    else if (a === 'certificado') { const s = st.R.lojas.find((x) => x.p.id === fxId); if (s) abrirCertificado(s); }
     else if (a === 'excluir') {
       if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
       try { await Notas.excluir(b.dataset.id); atualizarDepois(fxId); } catch (err) { alert(err.message); }
@@ -1352,7 +1405,7 @@
     try {
       if (f.dataset.fxForm === 'nova') await Notas.criar(fxId, dados.assunto, dados.texto, dados.autor);
       else await Notas.editar(f.dataset.fxForm, dados.assunto, dados.texto, dados.autor);
-      fxEditando = null;
+      fxEditando = null; fxContato = false;
       atualizarDepois(fxId);
     } catch (err) {
       erro.textContent = err.message;
@@ -1429,7 +1482,7 @@
   }
 
   /* ------------------------------ Interações ------------------------------ */
-  window.addEventListener('hashchange', () => { if (!st.dados) return; st.menu = false; render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', () => { if (!st.dados) return; st.menu = false; if (paginaAtual() === 'lojas') { st.status = 'todas'; st.pag.lojas = 1; } render(); window.scrollTo(0, 0); });
   root.addEventListener('change', (e) => {
     const s = e.target.closest('[data-f]');
     if (s) { st.filtros[s.dataset.f] = s.dataset.f === 'dias' ? +s.value : s.value; st.pag = {}; render(); return; }
@@ -1465,13 +1518,6 @@
       if (el && el.getBoundingClientRect().top < 0) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 90 });
       return;
     }
-    const chip = e.target.closest('[data-st]');
-    if (chip) {
-      st.status = chip.dataset.st; st.pag.lojas = 1;
-      document.querySelectorAll('[data-st]').forEach((c) => { const on = c.dataset.st === st.status; c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); });
-      desenharLojas();
-      return;
-    }
     const pq = e.target.closest('[data-pq]');
     if (pq) {
       const y = scrollY;
@@ -1485,7 +1531,9 @@
       return;
     }
     const fi = e.target.closest('[data-ficha]');
-    if (fi) { fxEditando = fi.dataset.editar || null; abrirFicha(fi.dataset.ficha); return; }
+    if (fi) { fxEditando = fi.dataset.editar || null; fxContato = false; abrirFicha(fi.dataset.ficha); return; }
+    const ct = e.target.closest('[data-contato]');
+    if (ct) { fxEditando = null; fxContato = true; abrirFicha(ct.dataset.contato); return; }
     const ex = e.target.closest('[data-excluir]');
     if (ex) {
       if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
@@ -1493,7 +1541,7 @@
       return;
     }
     const row = e.target.closest('.lj-row');
-    if (row) { abrirFicha(row.dataset.loja); return; }
+    if (row) { fxContato = false; abrirFicha(row.dataset.loja); return; }
     const th = e.target.closest('th.sort');
     if (th) { const k = th.dataset.k; st.ordem = { k, dir: st.ordem.k === k ? -st.ordem.dir : k === 'loja' ? 1 : -1 }; desenharLojas(); }
   });
@@ -1544,7 +1592,7 @@
   });
   root.addEventListener('focusin', (e) => { const el = e.target.closest('[data-tip]'); if (el) { const r = el.getBoundingClientRect(); mostrarTip(el.dataset.tip, r.left + r.width / 2, r.top); } });
   root.addEventListener('focusout', esconderTip);
-  root.addEventListener('keydown', (e) => { const row = e.target.closest && e.target.closest('.lj-row'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(row.dataset.loja); } });
+  root.addEventListener('keydown', (e) => { const row = e.target.closest && !e.target.closest('button') && e.target.closest('.lj-row'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(row.dataset.loja); } });
   root.addEventListener('touchstart', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); else { const el = e.target.closest('[data-tip]'); if (el) mostrarTip(el.dataset.tip, e.touches[0].clientX, e.touches[0].clientY); else esconderTip(); } }, { passive: true });
   root.addEventListener('touchmove', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); }, { passive: true });
   window.addEventListener('scroll', esconderTip, { passive: true });

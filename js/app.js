@@ -547,13 +547,13 @@
       .join('');
   }
 
-  function playerBar(title, sub, n) {
+  function playerBar(title, sub, n, extra) {
     return `
       <div class="pb" id="pb">
         <a class="pb-back" href="#/modulos">${ICON.arrowL}<span>${L('Módulos', 'Módulos')}</span></a>
         <div class="pb-mid"><small>${sub}<span class="pb-tag">${L('Ilustrativo', 'Ilustrativo')}</span></small><b>${title}</b></div>
         <div class="pb-dots">${n ? dots(n) : ''}</div>
-        ${vozToggle('bar')}
+        ${extra || ''}${vozToggle('bar')}
         <a class="pb-exit" href="#/" aria-label="${L('Sair do treinamento', 'Salir de la capacitación')}">${ICON.x}<span>${L('Sair', 'Salir')}</span></a>
         <div class="pb-line"><i id="pb-line"></i></div>
       </div>`;
@@ -773,13 +773,65 @@
   }
 
   /* ------------------------------ Modo livre ------------------------------ */
+  // Explicação em áudio de cada tela do modo livre: trechos já gravados dos módulos (só em português)
+  const EXPLICACAO = {
+    relatorio: ['1-1', '1-2', '1-3'],
+    totalBruto: ['1-4', '1-5'],
+    pedidos: ['6-10', '6-11'],
+    financeiro: ['4-2', '4-3', '4-4', '4-5', '4-8', '4-9'],
+    fatura: ['5-2', '5-3', '5-4', '6-2', '9-1'],
+    comissao: ['6-5', '6-7', '6-8'],
+    taxaOnline: ['7-1', '7-3'],
+    taxaServico: ['8-1', '8-2', '8-4'],
+    antecipacao: ['9-6', '9-7', '9-8'],
+  };
+  const temExplicacao = () => !!(Voz && Voz.gravada);
+  // Tela atual: o último modal aberto que tem explicação; senão, a página
+  function telaAtual() {
+    const s = TREINO.Clone.st || {};
+    const m = (s.modals || []).filter((x) => EXPLICACAO[x]).pop();
+    return m || (EXPLICACAO[s.page] ? s.page : 'relatorio');
+  }
+  let explicando = null;   // tela cuja explicação está tocando
+  function botaoExplicar() {
+    const on = !!explicando && Voz.estado === 'falando';
+    return `<button type="button" class="t-voz bar t-explicar ${on ? 'on' : ''}" data-explicar aria-pressed="${on}">
+      <span class="t-voz-ic">${on ? ICON.mudo : ICON.som}</span><span class="t-voz-l">${on ? L('Parar', 'Detener') : L('Ouvir explicação', 'Escuchar explicación')}</span>
+    </button>`;
+  }
+  function syncExplicar() {
+    if (Voz.estado !== 'falando') explicando = null;
+    const b = document.querySelector('[data-explicar]');
+    if (!b) return;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = botaoExplicar();
+    b.replaceWith(tmp.firstElementChild);
+  }
+  if (Voz) Voz.aoEstado(syncExplicar);
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-explicar]')) {
+      if (explicando) { Voz.parar(); return; }
+      const tela = telaAtual();
+      explicando = tela;
+      Voz.tocarLista(EXPLICACAO[tela]);
+      syncExplicar();
+      ev('explicacao', { detalhe: { tela } });
+      return;
+    }
+    // Trocou de tela no modo livre: a explicação da tela anterior para (o clone redesenha a tela,
+    // então o alvo do clique já saiu da página; o caminho do evento ainda tem o #clone)
+    if (explicando && e.composedPath().some((n) => n.id === 'clone') && telaAtual() !== explicando) Voz.parar();
+  });
+
   function viewExplore() {
     document.body.classList.add('in-player');
-    app.innerHTML = playerBar(L('Explore à vontade', 'Explora libremente'), L('Modo livre', 'Modo libre'), 0) + '<div id="clone"></div>';
+    app.innerHTML = playerBar(L('Explore à vontade', 'Explora libremente'), L('Modo livre', 'Modo libre'), 0, temExplicacao() ? botaoExplicar() : '') + '<div id="clone"></div>';
     TREINO.Clone.reset();
     TREINO.Clone.mount(document.getElementById('clone'), A.d);
     ev('explorar');
-    TREINO.toast(L('Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro.', 'Haz clic donde quieras. Usa el menú para cambiar entre Informe y Finanzas.'));
+    TREINO.toast(temExplicacao()
+      ? 'Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro. Toque em "Ouvir explicação" para ouvir sobre a tela em que você está.'
+      : L('Clique onde quiser. Use o menu para trocar entre Relatório e Financeiro.', 'Haz clic donde quieras. Usa el menú para cambiar entre Informe y Finanzas.'));
   }
 
   /* ------------------------------ Revisão ------------------------------ */
@@ -966,7 +1018,6 @@
     const k = 'bigou-treino-concluido-em';
     let quando = null;
     try { quando = localStorage.getItem(k); if (!quando) { quando = new Date().toISOString(); localStorage.setItem(k, quando); } } catch (e) { quando = new Date().toISOString(); }
-    const data = new Date(quando).toLocaleDateString(L('pt-BR', 'es'), { day: '2-digit', month: 'long', year: 'numeric' });
     ev('certificado', { detalhe: { acertos: Math.round(c.taxa * 100) } });
     app.innerHTML = `
       <div class="tv tv-cert">
@@ -976,22 +1027,7 @@
           <span></span>
         </header>
         <main class="cert-wrap">
-          <article class="cert" aria-label="${L('Certificado de conclusão', 'Certificado de finalización')}">
-            <div class="cert-borda">
-              <img class="cert-logo" src="assets/bigou-logo.png" alt="Bigou" width="64" height="64">
-              <span class="cert-kicker">${L('Certificado de conclusão', 'Certificado de finalización')}</span>
-              <p class="cert-txt">${L('Certificamos que', 'Certificamos que')}</p>
-              <h1 class="cert-loja">${esc(p.loja || L('Parceiro Bigou', 'Socio Bigou'))}</h1>
-              ${p.cidade ? `<p class="cert-cidade">${esc(p.cidade)}</p>` : ''}
-              <p class="cert-txt">${L(`concluiu o <b>Treinamento Financeiro</b>, com os ${A.mods.length} módulos: vendas e formas de pagamento, tela Financeiro, fatura, repasse e antecipação.`, `completó la <b>Capacitación Financiera</b>, con los ${A.mods.length} módulos: ventas y formas de pago, pantalla Finanzas, factura, transferencia y anticipo.`)}</p>
-              <div class="cert-rodape">
-                <div><small>${L('Concluído em', 'Completado el')}</small><b>${data}</b></div>
-                <div class="cert-selo">${ICON.medalha}</div>
-                <div class="cert-emissor"><b>Bigou Delivery</b></div>
-              </div>
-              <p class="cert-nota">${L('Treinamento ilustrativo: os valores usados são fictícios. Confira no seu contrato os valores praticados na sua loja.', 'Capacitación ilustrativa: los valores usados son ficticios. Consulta en tu contrato los valores que se aplican a tu tienda.')}</p>
-            </div>
-          </article>
+          ${TREINO.certificadoHTML({ loja: p.loja, cidade: p.cidade, quando, nMods: A.mods.length, es: TREINO.es })}
           <div class="t-cta center no-print">
             <button type="button" class="t-btn primary lg" id="cert-print">${ICON.impressora}${L('Baixar ou imprimir', 'Descargar o imprimir')}</button>
             <a class="t-btn ghost lg" href="#/revisao">${ICON.check}${L('O que você aprendeu', 'Lo que aprendiste')}</a>
