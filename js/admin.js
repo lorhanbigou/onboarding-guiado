@@ -119,7 +119,28 @@
     grafico: sv('<path d="M4 20h16"/><path d="M7 16v-4M11 16V8M15 16v-6M19 16V5"/>'),
     chat: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/>'),
     menu: sv('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+    calendario: sv('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'),
+    seta: sv('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    chevron: sv('<path d="M9.5 6l6 6-6 6"/>'),
+    abaixo: sv('<path d="M6 9.5l6 6 6-6"/>'),
+    x: sv('<path d="M6 6l12 12M18 6L6 18"/>'),
+    check: sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    joinha: sv('<path d="M7.5 10.5V20H4.5v-9.5zM7.5 10.5l3.8-6.2a1.8 1.8 0 0 1 3.2 1.5L13.6 9.5h5a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7.5"/>'),
+    naojoinha: sv('<path d="M16.5 13.5V4h3v9.5zM16.5 13.5l-3.8 6.2a1.8 1.8 0 0 1-3.2-1.5l.9-3.7h-5a2 2 0 0 1-2-2.4l1.3-6.5A2 2 0 0 1 6.7 4h9.8"/>'),
+    medalha: sv('<circle cx="12" cy="9" r="5.5"/><path d="M12 6.5l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z"/><path d="M8.5 13.3L7 21l5-2.5 5 2.5-1.5-7.7"/>'),
+    foguete: sv('<path d="M12.5 15.5l-4-4c1.5-4.5 5-8 11-8.5-.5 6-4 9.5-7 12.5z"/><path d="M8.5 11.5l-3.5-.5 2.5-3.5h4M12.5 15.5l.5 3.5 3.5-2.5v-4"/><circle cx="15" cy="9" r="1.5"/><path d="M6.5 15.5c-1.5.5-2.5 2.5-2.5 4.5 2 0 4-1 4.5-2.5"/>'),
+    lampada: sv('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>'),
+    lupa: sv('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>'),
+    pulso: sv('<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>'),
+    alvo: sv('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>'),
   };
+  // Estrela preenchida (avaliações) e as 5 estrelas de uma nota
+  const EST = '<span class="est" aria-hidden="true">' + IC.estrela + '</span>';
+  const EST_OFF = '<span class="est off" aria-hidden="true">' + IC.estrela + '</span>';
+  function estrelas(k) {
+    k = Math.max(0, Math.min(5, Math.round(k || 0)));
+    return `<span class="estrelas" role="img" aria-label="${k} de 5 estrelas">${EST.repeat(k)}${EST_OFF.repeat(5 - k)}</span>`;
+  }
 
   /* ------------------------------ Formatação ------------------------------ */
   const nf = new Intl.NumberFormat('pt-BR');
@@ -623,13 +644,23 @@
     return `<span class="dl ${bom ? 'bom' : 'ruim'}">${v > 0 ? IC.sobe : IC.desce}${Math.abs(Math.round(v * 100))}%<small> vs. anterior</small></span>`;
   }
 
-  function kpi(icone, rotulo, valor, sub, dl, ajudaTxt, cls) {
+  // ir: '#pagina' (link) ou uma situação da lista de lojas (filtra a tabela)
+  function kpi(icone, rotulo, valor, sub, dl, ajudaTxt, cls, ir) {
+    const go = !ir ? '' : ir[0] === '#'
+      ? `<a class="kpi-go" href="${ir}" aria-label="Ver ${esc(rotulo)}">${IC.seta}</a>`
+      : `<button type="button" class="kpi-go" data-status="${ir}" aria-label="Filtrar: ${esc(rotulo)}">${IC.seta}</button>`;
     return `<div class="kpi ${cls || ''}">
-      <div class="kpi-h"><span class="kpi-ic">${IC[icone]}</span><span class="kpi-r">${rotulo}</span>${ajudaTxt ? ajuda(ajudaTxt) : ''}</div>
-      <b class="kpi-v">${valor}</b>
-      <div class="kpi-f">${sub ? `<small>${sub}</small>` : ''}${dl || ''}</div>
+      <span class="kpi-ic">${IC[icone]}</span>
+      <div class="kpi-c">
+        <div class="kpi-h"><span class="kpi-r">${rotulo}</span>${ajudaTxt ? ajuda(ajudaTxt) : ''}</div>
+        <b class="kpi-v">${valor}</b>
+        <div class="kpi-f">${sub ? `<small>${sub}</small>` : ''}${dl || ''}</div>
+      </div>
+      ${go}
+      ${cls && cls.split(' ').includes('hl') ? `<span class="kpi-deco" aria-hidden="true">${IC[icone]}</span>` : ''}
     </div>`;
   }
+  const kpiBar = (v, cls) => `<span class="kpi-bar ${cls || ''}"><i style="width:${Math.round(Math.max(0, Math.min(1, v || 0)) * 100)}%"></i></span>`;
 
   // Status sempre com ícone + rótulo (nunca só cor)
   function saude(taxa) {
@@ -642,10 +673,10 @@
   function anel(taxa) {
     const r = 46, c = 2 * Math.PI * r, v = taxa == null ? 0 : Math.max(0, Math.min(1, taxa));
     return `<svg class="anel" viewBox="0 0 120 120" role="img" aria-label="Taxa de conclusão ${Math.round(v * 100)}%">
-      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#e9efeb" stroke-width="12"/>
-      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#0b8a47" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
-      <text x="60" y="58" text-anchor="middle" class="anel-v">${taxa == null ? '—' : Math.round(v * 100) + '%'}</text>
-      <text x="60" y="76" text-anchor="middle" class="anel-r">concluem</text>
+      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#e6f2ea" stroke-width="11"/>
+      <circle cx="60" cy="60" r="${r}" fill="none" stroke="#14a04f" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
+      <text x="60" y="62" text-anchor="middle" class="anel-v">${taxa == null ? '—' : Math.round(v * 100) + '%'}</text>
+      <text x="60" y="80" text-anchor="middle" class="anel-r">de conclusão</text>
     </svg>`;
   }
 
@@ -667,10 +698,14 @@
     const J = R.jornada, base = Math.max(1, J[0].v);
     let pior = null;
     for (let i = 1; i < J.length; i++) { const a = J[i - 1].v; if (a >= POUCOS) { const q = (a - J[i].v) / a; if (q > 0 && (!pior || q > pior.q)) pior = { i, q }; } }
+    const ult = J.length - 1;
     return `<ol class="jr">${J.map((e, i) => {
       const a = i ? J[i - 1].v : null, perda = i ? a - e.v : 0, g = pior && pior.i === i;
-      return `${i ? `<li class="jr-seta ${g ? 'is-g' : ''}" aria-hidden="true"><span>${perda > 0 ? `−${n(perda)}` : '='}</span></li>` : ''}
-        <li class="jr-c ${g ? 'is-g' : ''}" ${tipAttr(`<b>${e.nome}</b>${e.sub ? `<br>${e.sub}` : ''}<br>${plural(e.v, 'loja', 'lojas')} · ${pct(e.v, base)} das cadastradas${perda > 0 ? `<br>Perda: ${plural(perda, 'loja', 'lojas')} (${pct(perda, a)})` : ''}`)}>
+      // Ícone do canto: troféu no último marco, alerta na maior perda, check se perdeu pouco (até 10%), relógio no resto
+      const st = i === ult ? ['trofeu', 'fim'] : g ? ['alerta', 'perda'] : !i || !a || perda / a <= 0.1 ? ['check', 'ok'] : ['tempo', 'meio'];
+      return `${i ? `<li class="jr-seta ${g ? 'is-g' : ''}" aria-hidden="true"><span>${IC.seta}<small>${perda > 0 ? `−${n(perda)}` : '='}</small></span></li>` : ''}
+        <li class="jr-c ${g ? 'is-g' : ''} ${i === ult && e.v ? 'is-fim' : ''}" ${tipAttr(`<b>${e.nome}</b>${e.sub ? `<br>${e.sub}` : ''}<br>${plural(e.v, 'loja', 'lojas')} · ${pct(e.v, base)} das cadastradas${perda > 0 ? `<br>Perda: ${plural(perda, 'loja', 'lojas')} (${pct(perda, a)})` : ''}`)}>
+          <span class="jr-st ${st[1]}">${IC[st[0]]}</span>
           <b class="jr-v">${n(e.v)}</b>
           <span class="jr-n">${e.nome}</span>
           <span class="jr-bar"><i style="width:${Math.max(3, (e.v / base) * 100)}%"></i></span>
@@ -864,7 +899,7 @@
       <div class="sec-h"><div><h2 id="h-${id}">${titulo}</h2>${desc ? `<p>${desc}</p>` : ''}</div>${extra || ''}</div>
       ${corpo}
     </section>`;
-  const card = (titulo, desc, corpo, cls) => `<div class="card ${cls || ''}">${titulo ? `<div class="card-h"><h3>${titulo}</h3>${desc ? `<p>${desc}</p>` : ''}</div>` : ''}${corpo}</div>`;
+  const card = (titulo, desc, corpo, cls, ic) => `<div class="card ${cls || ''}">${titulo ? `<div class="card-h"><h3>${ic && IC[ic] ? `<span class="card-ic">${IC[ic]}</span>` : ''}${titulo}</h3>${desc ? `<p>${desc}</p>` : ''}</div>` : ''}${corpo}</div>`;
 
   // Seção "Dúvidas do chat" (só com o assistente ligado)
   function secDuvidas(R, DV, periodoTxt, f) {
@@ -872,13 +907,13 @@
           <div class="kpis k3">
             ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
             ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}
-            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} 👍👎`, '', 'Respostas marcadas como úteis pelo parceiro.')}
+            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} do chat`, '', 'Respostas marcadas como úteis pelo parceiro.')}
           </div>
           <div class="cols">
             ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? barras(DV.temas, { valor: (x) => x.n, rotulo: (x) => x.tema, fmt: (x) => n(x.n) }) : '<p class="empty">Nenhuma pergunta no período.</p>')}
-            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : '<p class="empty">Todas as perguntas tiveram resposta. 🎉</p>')}
+            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty bom">${IC.ok}Todas as perguntas tiveram resposta.</p>`)}
           </div>
-          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas com 👎. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${n(o.nao)} de ${n(o.tot)} 👎</b></li>`; }).join('')}</ul>`) : ''}
+          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas como “não ajudou”. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${IC.naojoinha}${n(o.nao)} de ${n(o.tot)}</b></li>`; }).join('')}</ul>`) : ''}
           <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
         `);
   }
@@ -891,11 +926,11 @@
       <div class="avl">
         <div class="avl-num">
           <div><b>${pct(AV.ajudou, AV.n)}</b><small>disseram que o treinamento ajudou</small></div>
-          <div><b>${AV.media.toFixed(1).replace('.', ',')} <span class="avl-st">★</span></b><small>média das estrelas</small></div>
+          <div><b>${AV.media.toFixed(1).replace('.', ',')} ${EST}</b><small>média das estrelas</small></div>
         </div>
-        <div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span>${d.e} ★</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f2b51d"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>
+        <div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span class="avl-e">${d.e} ${EST}</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f2b51d"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>
       </div>
-      ${AV.comentarios.length ? `<h4 class="avl-h">Comentários</h4><ul class="dv">${AV.comentarios.slice(0, 8).map((a) => `<li><span>“${esc(a.comentario)}”<small class="avl-q">${esc(a.loja)} · ${a.estrelas} ★ · ${a.ajudou ? 'ajudou' : 'não ajudou'}</small></span><small>${relativo(a.t)}</small></li>`).join('')}</ul>` : ''}`);
+      ${AV.comentarios.length ? `<h4 class="avl-h">Comentários</h4><ul class="dv">${AV.comentarios.slice(0, 8).map((a) => `<li><span>“${esc(a.comentario)}”<small class="avl-q">${esc(a.loja)} · ${a.estrelas} de 5 estrelas · ${a.ajudou ? 'ajudou' : 'não ajudou'}</small></span><small>${relativo(a.t)}</small></li>`).join('')}</ul>` : ''}`);
   }
 
   /* ------------------------------ Páginas da sidebar ------------------------------ */
@@ -913,6 +948,7 @@
     { id: 'uso', t: 'Uso', ic: 'grafico', d: () => 'Quando e como o treinamento é usado.' },
     { id: 'exportar', t: 'Exportar', ic: 'baixar', d: () => 'Baixe os dados completos em CSV. Eles são a base para o plano de melhorias.' },
   ]);
+  const SB_SEP = ['anotacoes', 'exportar'];   // divisórias do menu: análises · registros · exportar
   const paginaAtual = () => { const h = location.hash.replace('#', ''); return PAGINAS.some((p) => p.id === h) ? h : 'visao'; };
 
   /* ------------------------------ Paginação (25 por página) ------------------------------ */
@@ -971,23 +1007,24 @@
     root.innerHTML = `
       <div class="painel ${st.menu ? 'menu-on' : ''}">
         <aside class="sb" aria-label="Menu do painel">
-          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="34" height="34"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
-          <nav class="sb-nav">${PAGINAS.map((p) => `<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
+          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
+          <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
             <button class="sb-a" data-a="atualizar">${IC.atualizar}<span>Atualizar dados</span></button>
             <button class="sb-a" data-a="sair">${IC.sair}<span>Sair</span></button>
           </div>
+          <svg class="sb-onda" viewBox="0 0 248 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C60 30 120 110 248 40 V120 H0z" fill="#16a34a" opacity=".55"/><path d="M0 95 C80 60 150 120 248 75 V120 H0z" fill="#4ade80" opacity=".5"/></svg>
         </aside>
         <div class="sb-scrim" data-a="menu"></div>
         <div class="painel-main">
           <header class="ph">
             <button class="sb-btn" data-a="menu" aria-label="Abrir menu">${IC.menu}</button>
-            <div class="ph-t"><h1>${atual.t}</h1><p>${atual.d(ctx)}</p></div>
+            <div class="ph-t"><span class="ph-ic">${IC[atual.ic] || ''}</span><div><h1>${atual.t}</h1><p>${atual.d(ctx)}</p></div></div>
             <div class="flt" role="group" aria-label="Filtros">
-              <label><span>Cadastradas</span><select data-f="dias">
+              <label class="flt-c">${IC.calendario}<span class="flt-t"><span>Cadastradas</span><select data-f="dias">
                 ${[[7, 'Últimos 7 dias'], [14, 'Últimos 14 dias'], [28, 'Últimos 28 dias'], [0, 'Todo o período']].map(([v, t]) => `<option value="${v}" ${+f.dias === v ? 'selected' : ''}>${t}</option>`).join('')}
-              </select></label>
-              <label><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+              </select></span><span class="flt-v">${IC.abaixo}</span></label>
+              <label class="flt-c">${IC.cidade}<span class="flt-t"><span>Cidade</span><select data-f="cidade"><option value="">Todas as cidades</option>${cidadesOpc.map((c) => `<option ${f.cidade === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></span><span class="flt-v">${IC.abaixo}</span></label>
             </div>
           </header>
           <main class="pg">${montarPagina(pg, ctx)}</main>
@@ -1022,28 +1059,39 @@
     const sd = saude(K.taxa), deCada10 = K.taxa == null ? null : Math.round(K.taxa * 10);
     const pa = R.paradas[0], pior = R.assuntos.find((t) => t.tot >= POUCOS && t.taxa < 0.7);
     const pend = (sit) => R.lojas.filter((s) => s.contato && s.sit === sit).length;   // ainda sem contato feito
+    // [ícone, cor, página, título, detalhe]
     const acoes = [
-      SI.contato && ['parado', 'lojas', `<b>${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato</b>: ${[pend('parada') && `${n(pend('parada'))} paradas há ${PARADA_DIAS}+ dias`, pend('naocomecou') && `${n(pend('naocomecou'))} não começaram`, pend('semcert') && `${n(pend('semcert'))} concluíram sem certificado`].filter(Boolean).join(', ')}.`, 'Ver lojas'],
-      pior && ['critico', 'assuntos', `<b>Reforçar no atendimento: ${esc(pior.tema)}.</b> Só ${pct(pior.ok, pior.tot)} acertam de primeira.`, 'Ver assunto'],
-      CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['olho', 'duvidas', `<b>${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta.</b>`, 'Ver dúvidas'],
-      pa && ['alerta', 'jornada', `<b>Mais lojas param no Módulo ${pa.m}</b> (${esc(tituloMod(pa.m))}): ${plural(pa.pararam, 'loja', 'lojas')}.`, 'Ver jornada'],
+      SI.contato && ['parado', 'vm', 'lojas', `${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato`, `${[pend('parada') && `${n(pend('parada'))} paradas há ${PARADA_DIAS}+ dias`, pend('naocomecou') && `${n(pend('naocomecou'))} não começaram`, pend('semcert') && `${n(pend('semcert'))} concluíram sem certificado`].filter(Boolean).join(', ')}.`],
+      pior && ['livro', 'vd', 'assuntos', `Reforçar no atendimento: ${esc(pior.tema)}`, `Só ${pct(pior.ok, pior.tot)} acertam de primeira.`],
+      CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['chat', 'am', 'duvidas', `${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta`, 'Veja o que o assistente não soube responder.'],
+      pa && ['rota', 'az', 'jornada', `Mais lojas param no Módulo ${pa.m}`, `${esc(tituloMod(pa.m))}: ${plural(pa.pararam, 'loja', 'lojas')}.`],
     ].filter(Boolean);
+    const ant = KP && KP.taxa != null && K.taxa != null && KP.comecaram >= POUCOS ? `<small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : '';
     return `
       <div class="kpis k4">
-        ${kpi('loja', 'Cadastradas', n(K.cadastradas), '', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.')}
-        ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.')}
-        ${kpi('trofeu', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`)}
-        ${kpi('ok', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas.', 'hl')}
+        ${kpi('loja', 'Cadastradas', n(K.cadastradas), 'Total de cadastros no período', dl('cadastradas'), 'Lojas que preencheram o nome e a cidade no período.', '', '#lojas')}
+        ${kpi('play', 'Começaram', n(K.comecaram), `${pct(K.comecaram, K.cadastradas)} das cadastradas`, dl('comecaram'), 'Lojas que abriram pelo menos um módulo.', '', '#jornada')}
+        ${kpi('ok', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, K.comecaram)} de quem começou`, dl('concluiram'), `Lojas que concluíram os ${NMOD} módulos.`, '', '#jornada')}
+        ${kpi('medalha', 'Certificadas', n(K.certificadas), `${pct(K.certificadas, K.concluiram)} de quem concluiu`, dl('certificadas'), 'Viram todo o conteúdo e acertaram mais de 70% das perguntas.', 'hl', '#lojas')}
       </div>
-      <div class="cols">
-        ${card('Saúde do treinamento', '', `<div class="status">
-          <div class="status-l"><span class="saude ${sd.cls}">${sd.ic}${sd.rot}</span><span>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}${KP && KP.taxa != null && K.taxa != null && KP.comecaram >= POUCOS ? ` <small>No período anterior: ${Math.round(KP.taxa * 10)} de 10.</small>` : ''}</span></div>
-          ${R.avaliacao.n ? `<div class="status-l"><span class="estrela">★</span><span><b>${R.avaliacao.media.toFixed(1).replace('.', ',')}</b> de média · <b>${pct(R.avaliacao.ajudou, R.avaliacao.n)}</b> disseram que ajudou <small>(${plural(R.avaliacao.n, 'avaliação', 'avaliações')})</small></span></div>` : '<div class="status-l"><span class="estrela">★</span><span>Nenhuma avaliação ainda.</span></div>'}
-          <div class="status-l"><span class="ic-st">${IC.tempo}</span><span>Tempo mediano para concluir: <b>${dur(R.uso.tempoAtivo)}</b> <small>de tela, ${dias(R.uso.tempoCal)}</small></span></div>
-        </div>`)}
-        ${card('O que fazer agora', '', acoes.length ? `<ul class="ac">${acoes.map(([i, s, t, l]) => `<li><span class="ac-ic ${i}">${IC[i]}</span><span class="ac-t">${t}</span><a href="#${s}" class="ac-a">${l} →</a></li>`).join('')}</ul>` : '<p class="empty">Nada urgente por aqui. 🎉</p>', 'ac-card')}
+      <div class="cols vg">
+        ${card('Saúde do treinamento', '', `<div class="sd">
+          ${anel(K.taxa)}
+          <ul class="sd-l">
+            <li><span class="sd-ic vd">${IC.check}</span><span>${K.comecaram ? `<b>${n(K.concluiram)}</b> de ${plural(K.comecaram, 'loja que começou', 'lojas que começaram')} já concluíram` : 'Nenhuma loja começou ainda'}</span></li>
+            <li><span class="sd-ic am">${EST}</span><span>${R.avaliacao.n ? `<b>${R.avaliacao.media.toFixed(1).replace('.', ',')}</b> de média <em class="pill">${pct(R.avaliacao.ajudou, R.avaliacao.n)} disseram que ajudou</em><small>${plural(R.avaliacao.n, 'avaliação', 'avaliações')}</small>` : 'Nenhuma avaliação ainda'}</span></li>
+            <li><span class="sd-ic az">${IC.tempo}</span><span>Tempo mediano para concluir<b class="sd-big">${dur(R.uso.tempoAtivo)}</b><small>de tela, ${dias(R.uso.tempoCal)}</small></span></li>
+          </ul>
+          <div class="sd-b ${sd.cls}">
+            <span class="sd-b-ic">${sd.cls === 'bom' ? IC.foguete : sd.ic}</span>
+            <b>${sd.rot}</b>
+            <p>${deCada10 == null ? 'Ainda não há lojas que começaram o treinamento.' : `De cada 10 lojas que começam, <b>${deCada10}</b> ${deCada10 === 1 ? 'termina' : 'terminam'}.`}</p>
+            ${ant}
+          </div>
+        </div>`, '', 'pulso')}
+        ${card('O que fazer agora?', '', acoes.length ? `<ul class="ac">${acoes.map(([i, c, s, t, d]) => `<li><a href="#${s}" class="ac-i"><span class="ac-ic ${c}">${IC[i]}</span><span class="ac-t"><b>${t}</b><small>${d}</small></span><span class="ac-go">${IC.chevron}</span></a></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nada urgente por aqui.</p>`, 'ac-card', 'lampada')}
       </div>
-      ${card('Jornada', 'Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R))}`;
+      ${card('Jornada de aprendizado', 'Até onde as lojas chegam. Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R), '', 'grafico')}`;
   };
 
   /* Jornada */
@@ -1079,7 +1127,7 @@
   PG.perguntas = ({ R }) => {
     const temasQ = [...new Set(R.perguntas.map((q) => q.tema))];
     const lista = R.perguntas.filter((q) => (!st.fTema || q.tema === st.fTema) && (!st.fBaixo || (q.taxa != null && q.taxa < 0.6)));
-    const dist = (ops, tot) => `<ul class="pq-ops">${ops.map((o) => `<li class="${o.ok ? 'ok' : ''}"><span class="pq-t">${o.ok ? '<i aria-label="Correta">✔</i>' : ''}${esc(o.t)}</span><span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span><b>${n(o.n)}<small>${tot ? pct(o.n, tot) : ''}</small></b></li>`).join('')}</ul>`;
+    const dist = (ops, tot) => `<ul class="pq-ops">${ops.map((o) => `<li class="${o.ok ? 'ok' : ''}"><span class="pq-t">${o.ok ? '<i role="img" aria-label="Correta">${IC.check}</i>' : ''}${esc(o.t)}</span><span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span><b>${n(o.n)}<small>${tot ? pct(o.n, tot) : ''}</small></b></li>`).join('')}</ul>`;
     return `
       <div class="tb-top">
         <label class="sel"><span>Assunto</span><select data-loc="fTema"><option value="">Todos</option>${temasQ.map((t) => `<option ${st.fTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
@@ -1130,12 +1178,21 @@
   PG.lojas = ({ R }) => {
     const SI = R.sit;
     const contagem = { contato: SI.contato, contatadas: SI.contatadas, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, reincidente: SI.reincidente, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
-    return card('', '', `
+    const K = R.kpi, tot = R.lojas.length, and = SI.andamento + SI.recente;
+    return `
+      <div class="kpis k4">
+        ${kpi('loja', 'Total de lojas', n(tot), 'Cadastradas no período', '', 'Lojas cadastradas no período e na cidade escolhidos.', '', 'todas')}
+        ${kpi('ok', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, tot)} de conclusão`, kpiBar(tot && K.concluiram / tot), `Lojas que concluíram os ${NMOD} módulos.`, '', '#jornada')}
+        ${kpi('andamento', 'Em andamento', n(and), `${pct(and, tot)} em andamento`, kpiBar(tot && and / tot, 'am'), 'Lojas que começaram e seguem ativas, ou se cadastraram há pouco.', 'am', 'andamento')}
+        ${kpi('critico', 'Precisam de atenção', n(SI.contato), `${pct(SI.contato, tot)} precisam de contato`, kpiBar(tot && SI.contato / tot, 'vm'), `Paradas há ${PARADA_DIAS}+ dias, sem começar há ${SEM_INICIO_DIAS}+ dias ou concluíram sem certificado, e ainda sem contato feito.`, 'vm', 'contato')}
+      </div>
+      ${card('Lista de lojas', 'Veja a situação de cada loja e toque na linha para abrir a ficha.', `
       <div class="lj-top">
         <label class="sel"><span>Situação</span><select data-loc="status">${[['contato', 'Precisam de contato'], ['contatadas', 'Contatadas'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['reincidente', 'Certificadas após refazer'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<option value="${k}" ${st.status === k ? 'selected' : ''}>${t} (${n(contagem[k])})</option>`).join('')}</select></label>
         <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"></div>
       </div>
-      <div id="t-lojas">${TABELAS.lojas()}</div>`);
+      <div id="t-lojas">${TABELAS.lojas()}</div>`, 'lj-card', 'lista')}
+      ${SI.contato && st.status !== 'contato' ? `<div class="dica"><span class="dica-ic">${IC.lampada}</span><p><b>Dica:</b> ${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato. Depois de falar com a loja, registre em <b>Contato feito</b>.</p><button type="button" class="btn" data-status="contato">Ver só essas${IC.seta}</button></div>` : ''}`;
   };
 
   /* Anotações */
@@ -1176,7 +1233,7 @@
     const { itens, ctrl } = paginar('avaliacoes', rows);
     return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Loja</th><th>Estrelas</th><th>Ajudou?</th><th>Comentário</th><th>Data</th></tr></thead>
       <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0"><td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
-        <td><span class="estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span></td>
+        <td>${estrelas(s.aval.estrelas)}</td>
         <td>${s.aval.ajudou ? '<span class="badge ok">Sim</span>' : '<span class="badge bad">Não</span>'}</td>
         <td class="cm">${s.aval.comentario ? esc(s.aval.comentario) : '<span class="mut">—</span>'}</td><td>${dataHoraBR(s.aval.t)}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhuma avaliação com esse filtro.</p>';
   };
@@ -1236,9 +1293,11 @@
   }
 
   const SIT = {
-    parada: ['Parada', 'bad'], naocomecou: ['Não começou', 'off'], semcert: ['Sem certificado', 'warn'],
-    andamento: ['Em andamento', 'info'], recente: ['Recém-cadastrada', 'info'], certificada: ['Certificada', 'ok'],
+    parada: ['Parada', 'bad', 'parado'], naocomecou: ['Não começou', 'off', 'tempo'], semcert: ['Sem certificado', 'warn', 'alerta'],
+    andamento: ['Em andamento', 'info', 'andamento'], recente: ['Recém-cadastrada', 'info', 'andamento'], certificada: ['Certificada', 'ok', 'ok'],
   };
+  // Situação sempre com ícone + rótulo (nunca só cor)
+  const sitBadge = (sit) => `<span class="badge bi ${SIT[sit][1]}">${IC[SIT[sit][2]]}${SIT[sit][0]}</span>`;
   function linhasLojas() {
     const b = st.busca.trim().toLowerCase();
     const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'contatadas' ? s.contatada : st.status === 'notas' ? s.notas.length > 0 : st.status === 'reincidente' ? s.reincidente : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
@@ -1251,17 +1310,17 @@
   TABELAS.lojas = () => {
     const { itens, ctrl } = paginar('lojas', linhasLojas());
     const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    const acao = itens.some((s) => s.contato);   // coluna do botão "Contato feito" (só nas lojas que precisam)
-    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}${acao ? '<th aria-label="Contato"></th>' : ''}</tr></thead>
+    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}<th class="ac-col">Ações</th></tr></thead>
       <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
         <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
         <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
-        <td class="sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span>${s.reincidente ? ' <span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}${s.contatada ? ` <span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}<small>${esc(s.motivo)}</small></td>
+        <td class="sit">${sitBadge(s.sit)}${s.reincidente ? ' <span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}${s.contatada ? ` <span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}<small>${esc(s.motivo)}</small></td>
         <td class="num">${s.erros.length ? `<b class="ct">${n(s.erros.length)}</b>` : '<span class="mut">0</span>'}</td>
         <td class="num">${s.notas.length ? `<span class="nt">${n(s.notas.length)}</span>` : '<span class="mut">—</span>'}</td>
-        <td class="num">${s.tempoTotal ? dur(s.tempoTotal) : '<span class="mut">—</span>'}</td>
+        <td class="num">${s.tempoTotal ? `<span class="tp">${dur(s.tempoTotal)}${IC.tempo}</span>` : '<span class="mut">—</span>'}</td>
         <td>${s.concluiuEm ? dataBR(s.concluiuEm) : '<span class="mut">—</span>'}</td>
-        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>${acao ? `<td>${s.contato ? `<button type="button" class="btn ct-btn" data-contato="${esc(s.p.id)}">${IC.ok}<span>Contato feito</span></button>` : ''}</td>` : ''}</tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora. 🎉' : st.status === 'contatadas' ? 'Nenhum contato registrado.' : 'Nenhuma loja com esse filtro.'}</p>`;
+        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>
+        <td class="ac-col"><span class="lj-acts">${s.contato ? `<button type="button" class="btn ct-btn" data-contato="${esc(s.p.id)}">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="go" data-ficha="${esc(s.p.id)}" aria-label="Abrir a ficha de ${esc(s.p.loja)}">${IC.seta}</button></span></td></tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora.' : st.status === 'contatadas' ? 'Nenhum contato registrado.' : 'Nenhuma loja com esse filtro.'}</p>`;
   };
   const desenharLojas = () => redesenhar('lojas');
   const contatoTxt = (a) => `Contato feito em ${dataHoraBR(+new Date(a.criado_em))}${a.autor ? ` por ${a.autor}` : ''}`;
@@ -1315,10 +1374,10 @@
       <aside class="fx" role="dialog" aria-modal="true" aria-labelledby="fx-t">
         <header class="fx-h">
           <div><h2 id="fx-t">${esc(s.p.loja)}</h2><small>${esc(s.p.cidade)} · cadastrada ${relativo(+new Date(s.p.criado_em))} · último acesso ${relativo(s.ultimo)}</small></div>
-          <button type="button" class="fx-x" data-fx="fechar" aria-label="Fechar">✕</button>
+          <button type="button" class="fx-x" data-fx="fechar" aria-label="Fechar">${IC.x}</button>
         </header>
         <div class="fx-b">
-          <div class="fx-sit"><span class="badge ${SIT[s.sit][1]}">${SIT[s.sit][0]}</span>${s.reincidente ? '<span class="badge warn">Reincidente</span>' : ''}<span>${esc(s.motivo)}</span></div>
+          <div class="fx-sit">${sitBadge(s.sit)}${s.reincidente ? '<span class="badge warn">Reincidente</span>' : ''}<span>${esc(s.motivo)}</span></div>
           ${contato}
 
           <section class="fx-s">
@@ -1341,7 +1400,7 @@
 
           <section class="fx-s">
             <h3>Avaliação do treinamento</h3>
-            ${s.aval ? `<div class="fx-av"><span class="estrelas" aria-label="${esc(s.aval.estrelas)} de 5 estrelas">${'★'.repeat(s.aval.estrelas || 0)}<i>${'★'.repeat(5 - (s.aval.estrelas || 0))}</i></span><span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
+            ${s.aval ? `<div class="fx-av">${estrelas(s.aval.estrelas)}<span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
           </section>
 
           <section class="fx-s">
@@ -1509,6 +1568,8 @@
       else if (ACOES[x]) ACOES[x]();
       return;
     }
+    const ds = e.target.closest('[data-status]');
+    if (ds) { st.status = ds.dataset.status; st.pag = {}; render(); const t = document.getElementById('t-lojas'); if (t) t.scrollIntoView({ block: 'start' }); return; }
     const pb = e.target.closest('[data-pgn] [data-ir]');
     if (pb) {
       const ch = pb.closest('[data-pgn]').dataset.pgn;
