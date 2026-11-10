@@ -243,7 +243,8 @@
           <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
           <span></span>
         </header>
-        <main class="cad">
+        <main class="cad cad-novo">
+          <div class="cad-art" aria-hidden="true"><img src="assets/home/mascote.webp" alt="" width="560" height="462" decoding="async"></div>
           <form class="cad-card" id="cad-form" novalidate>
             <span class="cad-kicker">${L('Antes de começar', 'Antes de comenzar')}</span>
             <h1>${L('Conte qual é a sua loja', 'Cuéntanos cuál es tu tienda')}</h1>

@@ -1117,3 +1117,69 @@ body:has(.bt-fab:not([hidden])) .tv { padding-bottom: 88px; }
 .bt-send:not(:disabled):hover { filter: brightness(1.06); }
 .bt-send svg { transform: translate(-1px, 1px); }
 .bt-priv { background: transparent; padding-top: 0; }
+
+/* ==================== Moldura nova para as demais telas (cadastro, revisão, avaliação, certificado) ==================== */
+.tv-cad, .tv-review, .tv-req, .tv-cert {
+  --nh-g: #0fa257; --nh-g2: #07843f; --nh-ink: #0f1a2b; --nh-ink2: #3f4a5a;
+  --nh-sh: 0 1px 2px rgba(16, 40, 24, .05), 0 10px 26px -14px rgba(16, 40, 24, .2);
+  min-height: 100vh; min-height: 100dvh;
+  background: radial-gradient(120% 60% at 100% 0, #eaf7ef 0, rgba(234,247,239,0) 55%), radial-gradient(60% 40% at 0 0, #f1faf4 0, rgba(241,250,244,0) 70%), #fbfcfd !important;
+}
+.tv-cad .t-top, .tv-review .t-top, .tv-req .t-top, .tv-cert .t-top {
+  position: relative; max-width: 1200px; margin: 0 auto; padding: 18px 16px 0; border-bottom: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.tv-cad .t-link, .tv-review .t-link, .tv-req .t-link, .tv-cert .t-link {
+  padding: 8px 14px 8px 10px; border-radius: 99px; background: #fff; border: 1px solid #edf1ef; box-shadow: var(--nh-sh); color: var(--nh-ink); font-weight: 600; font-size: 13.5px;
+}
+.tv-cad .t-link:hover, .tv-review .t-link:hover, .tv-req .t-link:hover, .tv-cert .t-link:hover { background: #fff; border-color: #cfe9da; color: var(--nh-g2); }
+.tv-cad .t-logo img, .tv-review .t-logo img, .tv-req .t-logo img, .tv-cert .t-logo img { width: 38px; height: 38px; border-radius: 11px; box-shadow: 0 6px 14px -6px rgba(15, 162, 87, .55); }
+.tv-cad .t-logo span, .tv-review .t-logo span, .tv-req .t-logo span, .tv-cert .t-logo span { font-size: 15px; font-weight: 600; }
+
+/* Botões principais no estilo do botão da tela inicial */
+.t-btn.primary { background: linear-gradient(100deg, #089c4f 0%, #14b062 60%, #0b9a50 100%); box-shadow: 0 12px 24px -12px rgba(8, 140, 70, .65), inset 0 1px 0 rgba(255,255,255,.22); border-radius: 14px; }
+.t-btn.primary:hover { background: linear-gradient(100deg, #078f48, #12a35a 60%, #098c49); filter: brightness(1.03); }
+.t-btn.primary:disabled { box-shadow: none; filter: saturate(.6); }
+.t-btn.ghost { border-radius: 14px; border-color: #e3ebe6; box-shadow: 0 4px 12px -8px rgba(16,40,24,.25); }
+.t-btn.lg { border-radius: 16px; padding: 15px 24px; }
+
+/* Cartões */
+.cad-card { background: #fff; border: 1px solid #eef2f0; border-radius: 24px; box-shadow: var(--nh-sh); padding: 24px; }
+.cad-f input { border-radius: 14px; border: 1px solid #dfe6e2; }
+.cad-f input:focus { border-color: var(--nh-g); box-shadow: 0 0 0 4px rgba(15, 162, 87, .14); }
+.av-q { border-radius: 22px; border: 1px solid #eef2f0; box-shadow: var(--nh-sh); }
+.av-op { border-radius: 14px; border: 1px solid #dfe6e2; }
+.t-review-list li { background: #fff; border: 1px solid #eef2f0; border-radius: 18px; box-shadow: var(--nh-sh); padding: 14px 18px; }
+.t-review-badge { background: linear-gradient(135deg, #14b062, #07843f); box-shadow: 0 0 0 8px rgba(15, 162, 87, .12), 0 14px 26px -10px rgba(8, 140, 70, .6); }
+.cr-list li { border-radius: 20px; box-shadow: var(--nh-sh); }
+.cr-badge { border-radius: 22px; }
+
+/* Cadastro: mascote junto do formulário */
+.cad-art { display: flex; justify-content: center; margin: 4px auto -6px; }
+.cad-art img { width: min(240px, 60vw); height: auto; border-radius: 28px; box-shadow: 0 20px 40px -24px rgba(16, 80, 40, .4); animation: nhIn .6s ease-out both; }
+@media (min-width: 900px) {
+  .tv-cad .t-top, .tv-review .t-top, .tv-req .t-top, .tv-cert .t-top { padding: 26px 40px 0; }
+  .cad.cad-novo { max-width: 1040px; display: grid; grid-template-columns: 1fr 480px; gap: 48px; align-items: center; padding: 40px 40px 72px; }
+  .cad-novo .cad-art { margin: 0; }
+  .cad-novo .cad-art img { width: 100%; max-width: 520px; border-radius: 36px; border: 1px solid #e6f1ea; box-shadow: 0 30px 60px -30px rgba(16, 80, 40, .35); }
+  .cad-novo .cad-card { padding: 32px; }
+  .cad-novo .cad-card h1 { font-size: 32px; }
+  .t-review { padding-top: 40px; }
+  .t-review-list { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tv-review .t-review { max-width: 960px; }
+}
+
+/* Tela inicial no computador: a coluna da esquerda fica centralizada na altura do mascote */
+@media (min-width: 1024px) {
+  .nh-shell { grid-template-rows: 1fr auto auto auto 1fr; grid-template-areas: ". arte" "texto arte" "cta arte" "dica arte" ". arte" "tiles tiles" "aviso aviso" "duo duo" "loja loja" "idioma idioma"; }
+  .nh-hero-t { padding-top: 0; align-self: end; }
+}
+
+/* Barra dos módulos (player): mesmo acabamento das telas novas */
+.pb { background: rgba(255,255,255,.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid #edf1ef; box-shadow: 0 6px 20px -16px rgba(16,40,24,.35); }
+.pb-back, .pb-exit { border-radius: 99px; border: 1px solid #edf1ef; background: #fff; padding: 7px 14px 7px 10px; font-weight: 600; color: #0f1a2b; box-shadow: 0 1px 2px rgba(16,40,24,.05); }
+.pb-back:hover, .pb-exit:hover { background: #fff; border-color: #cfe9da; color: #07843f; }
+.pb .t-voz.bar { border-radius: 99px; font-weight: 600; }
+.pb-dot { width: 28px; height: 28px; }
+.pb-dot.s-done { background: linear-gradient(135deg, #14b062, #07843f); border-color: transparent; }
+.pb-dot.cur { box-shadow: 0 0 0 4px rgba(15, 162, 87, .16); }
+.pb-line i { background: linear-gradient(90deg, #6fd99a, #0fa257); }

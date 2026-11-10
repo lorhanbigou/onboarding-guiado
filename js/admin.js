@@ -1061,6 +1061,7 @@
     });
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const atual = PAGINAS.find((p) => p.id === pg);
+    document.title = `${atual ? atual.t + ' · ' : ''}Painel de Treinamento Financeiro · Bigou`;
 
     root.innerHTML = `
       <div class="painel ${st.menu ? 'menu-on' : ''} ${sbMini ? 'sb-mini' : ''}">
@@ -1361,7 +1362,7 @@
         <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
         <div class="mel">
           <div><h4 class="sub">Sem resposta ou fora do treinamento</h4>${DV.semResposta.length ? `<ul class="mel-l">${DV.semResposta.slice(0, 10).map((x) => `<li><span class="mel-ic ${x.fora ? 'off' : ''}">${x.fora ? IC.x : IC.alerta}</span><div><b>“${esc(x.texto)}”</b><small>${plural(x.n, 'vez', 'vezes')} · ${plural(x.lojas.size, 'loja', 'lojas')} · ${relativo(x.ultimo)}</small></div>${x.fora ? '<em class="dv-fora">fora do treinamento</em>' : ''}</li>`).join('')}</ul>${DV.semResposta.length > 10 ? `<p class="note">E mais ${n(DV.semResposta.length - 10)}. Exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty bom">${IC.ok}Todas as perguntas tiveram resposta.</p>`}</div>
-          <div><h4 class="sub">Respostas que não ajudaram</h4>${DV.naoAjudou.length ? `<ul class="mel-l">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><span class="mel-ic bad">${IC.naojoinha}</span><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')} · ${n(o.nao)} de ${n(o.tot)} não ajudou</small>${o.exemplos.length ? `<span class="mel-ex">Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div></li>`; }).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma resposta marcada como não útil.</p>`}</div>
+          <div><h4 class="sub">Respostas que não ajudaram</h4>${DV.naoAjudou.length ? `<ul class="mel-l">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><span class="mel-ic bad">${IC.naojoinha}</span><div><b>${esc(x ? x.exemplo : `Resposta antiga do assistente (${String(o.id).replace(/_/g, ' ')})`)}</b><small>${x ? `${esc(x.tema)} · ` : ''}${n(o.nao)} de ${n(o.tot)} não ajudou</small>${o.exemplos.length ? `<span class="mel-ex">Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div></li>`; }).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma resposta marcada como não útil.</p>`}</div>
         </div>`, '', 'lampada')}
       ${card('Conversas recentes', 'As últimas perguntas feitas no chat. Toque no nome da loja para abrir a ficha.', recentes.length ? `<ul class="dvr">${recentes.map((e) => { const d = e.detalhe || {}, p = nomeDe.get(e.participante_id), r = RES[d.resultado] || RES.sem_resposta; return `<li>
           <span class="dvr-ic">${IC.chat}</span>
@@ -1618,6 +1619,34 @@
 
   // Resumo das dúvidas da loja, já no formato de mensagem para o parceiro (WhatsApp aceita *negrito*)
   const semTags = (t) => String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  // HTML das respostas do assistente → texto corrido (listas viram "1) … 2) …")
+  const htmlTexto = (h) => {
+    let i = 0;
+    return String(h || '').replace(/<small[\s\S]*?<\/small>/g, '').replace(/<ol[^>]*>/g, () => { i = 0; return ' '; })
+      .replace(/<li[^>]*>/g, () => `${++i}) `).replace(/<\/li>/g, '; ').replace(/<br\s*\/?>/g, ' ').replace(/<\/?[^>]+>/g, '')
+      .replace(/;\s*(?=[A-ZÁÉÍÓÚ])/g, '. ').replace(/\s+/g, ' ').replace(/\s([.,;:])/g, '$1').trim();
+  };
+  const frase = (t) => { t = String(t || '').trim(); return t && !/[.!?]$/.test(t) ? t + '.' : t; };
+  const minusc = (t) => (t && !/^[A-Z]{2}/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
+  // Explicação do assunto: entre as respostas do Assistente Bigou do mesmo assunto, a que mais
+  // compartilha palavras com a pergunta, a resposta certa e a explicação do exercício
+  const palavras = (t) => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').match(/[a-z]{4,}/g) || []);
+  function explicacao(q, certa, ok, tema) {
+    const Bot = TREINO.Bot;
+    if (!Bot) return null;
+    const base = palavras(`${q} ${certa} ${ok}`);
+    let melhor = null, nota = -1;
+    Bot.intencoes.filter((c) => c.tema === tema).forEach((c) => {
+      let txt = '';
+      try { txt = htmlTexto(c.r()); } catch (e) { return; }
+      const w = palavras(`${c.exemplo} ${c.exemplo} ${txt}`);
+      let sc = 0;
+      base.forEach((x) => { if (w.has(x)) sc++; });
+      if (sc > nota) { nota = sc; melhor = { id: c.id, texto: txt, rever: c.rever }; }
+    });
+    return melhor;
+  }
+  // Resumo das dúvidas da loja: texto natural, pronto para mandar ao parceiro (WhatsApp aceita *negrito*)
   function resumoDuvidas(s) {
     const porId = new Map();
     MODS.forEach((m) => m.steps.forEach((stp) => { if (stp.mode === 'quiz') porId.set(stp.id, { stp, m }); }));
@@ -1626,18 +1655,41 @@
       if (vistos.has(x.id)) return;
       vistos.add(x.id);
       const ref = porId.get(x.id);
-      const q = ref ? semTags(ref.stp.q) : semTags(x.q);
-      const certa = ref ? (ref.stp.options.find((o) => o.ok) || {}).t : '';
-      const exp = ref ? semTags(ref.stp.ok) : '';
-      const tema = x.tema || 'Outros';
+      const tema = x.tema || 'Outros assuntos';
       if (!temas.has(tema)) temas.set(tema, { itens: [], mods: new Set() });
-      temas.get(tema).itens.push({ q, certa: semTags(certa), exp });
+      temas.get(tema).itens.push({
+        q: ref ? semTags(ref.stp.q) : semTags(x.q),
+        certa: ref ? semTags((ref.stp.options.find((o) => o.ok) || {}).t) : '',
+        ok: ref ? semTags(ref.stp.ok) : '',
+      });
       if (ref) temas.get(tema).mods.add(ref.m.n);
     });
-    const blocos = [...temas.entries()].map(([tema, g]) => `*${tema}*\n` + g.itens.map((i) => `• ${i.q}\n  Resposta certa${/R\$\s?\d/.test(i.certa) ? ' (no exemplo do treinamento)' : ''}: ${i.certa || '—'}${i.exp && i.exp !== i.certa ? `\n  ${i.exp}` : ''}`).join('\n\n'));
-    const mods = [...new Set([...temas.values()].flatMap((g) => [...g.mods]))].sort((a, b) => a - b);
-    const rever = mods.length ? `\n\nSe quiser rever com calma, abra o Treinamento Financeiro ${mods.length === 1 ? `no *Módulo ${mods[0]}* (${MODS.find((m) => m.n === mods[0]).titulo})` : `nos módulos *${mods.slice(0, -1).join(', ')} e ${mods[mods.length - 1]}*`}.` : '';
-    return `Olá, ${s.p.loja}! Tudo bem?\n\nAqui é da equipe do Financeiro Bigou. Vimos no Treinamento Financeiro que ${vistos.size === 1 ? 'uma pergunta gerou dúvida' : `${vistos.size} perguntas geraram dúvida`}, então preparamos um resumo rápido para ajudar:\n\n${blocos.join('\n\n')}${rever}\n\nQualquer dúvida, é só chamar a gente por aqui. Estamos à disposição!`;
+    let temValores = false;
+    const blocos = [...temas.entries()].map(([tema, g], k) => {
+      const usadas = new Set();
+      const linhas = g.itens.map((i) => {
+        if (/R\$\s?\d|\d+%/.test(i.certa + i.ok)) temValores = true;
+        const certa = i.certa ? ` a resposta é *${i.certa}*.` : '';
+        const ok = i.ok && i.ok !== i.certa ? ` ${frase(i.ok)}` : '';
+        return `Na pergunta “${i.q}”,${certa || ' vale rever este ponto.'}${ok}`;
+      });
+      const ex = explicacao(g.itens.map((i) => i.q).join(' '), g.itens.map((i) => i.certa).join(' '), g.itens.map((i) => i.ok).join(' '), tema);
+      // Para rever: o módulo que ensina o assunto (o exercício final fica no 10, que só repete)
+      if (ex && ex.rever) { g.mods = new Set([ex.rever]); }
+      let explica = '';
+      if (ex && !usadas.has(ex.id)) {
+        usadas.add(ex.id);
+        if (/R\$\s?\d|\d+%/.test(ex.texto)) temValores = true;
+        explica = `\n\nExplicando melhor: ${minusc(frase(ex.texto))}`;
+      }
+      const mods = [...g.mods].sort((a, b) => a - b);
+      const rever = mods.length ? `\nSe quiser rever, esse assunto está no *Módulo ${mods.join(' e ')}* do treinamento${mods.length === 1 ? ` (${MODS.find((m) => m.n === mods[0]).titulo})` : ''}.` : '';
+      return `*${k + 1}. ${tema}*\n${linhas.join('\n')}${explica}${rever}`;
+    });
+    const n = vistos.size;
+    const abertura = `Olá, ${s.p.loja}! Tudo bem?\n\nAqui é da equipe do Financeiro Bigou. Acompanhamos o seu Treinamento Financeiro e vimos que ${n === 1 ? 'uma pergunta deixou dúvida' : `${n} perguntas deixaram dúvida`}. Para facilitar, preparamos uma explicação ${temas.size === 1 ? 'do assunto' : 'de cada assunto'}:`;
+    const nota = temValores ? '\n\nOs valores e percentuais citados são os exemplos usados no treinamento. Os da sua loja estão no seu contrato.' : '';
+    return `${abertura}\n\n${blocos.join('\n\n')}${nota}\n\nSe ficar qualquer dúvida, é só responder esta mensagem que a gente explica de novo. Estamos à disposição!`;
   }
   async function copiarTexto(t) {
     try { await navigator.clipboard.writeText(t); return true; } catch (e) {
