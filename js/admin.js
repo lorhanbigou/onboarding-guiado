@@ -1555,7 +1555,7 @@
           <td><span class="lj-pb" title="${s.fim.size} de ${NMOD} módulos"><span><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span><b>${s.fim.size}/${NMOD}</b></span></td>
           <td class="lj-mo" title="${esc(s.motivo)}">${esc(s.motivo)}</td>
           <td class="lj-ua" title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>
-          <td class="lj-ac">${s.contato ? `<button type="button" class="btn ct-btn sm" data-contato="${esc(s.p.id)}" title="Registrar contato feito">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="btn sm" data-ficha="${esc(s.p.id)}" aria-label="Abrir a ficha de ${esc(s.p.loja)}"><span>Abrir</span>${IC.seta}</button></td>
+          <td class="lj-ac"><div class="lj-acw">${s.contato ? `<button type="button" class="btn ct-btn sm" data-contato="${esc(s.p.id)}" title="Registrar contato feito">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="btn sm" data-ficha="${esc(s.p.id)}" aria-label="Abrir a ficha de ${esc(s.p.loja)}"><span>Abrir</span>${IC.seta}</button></div></td>
         </tr>`).join('')}</tbody></table></div>`;
   TABELAS.lojas = () => {
     const { itens, ctrl } = paginar('lojas', linhasLojas());
@@ -1614,7 +1614,37 @@
   fx.className = 'fx-wrap';
   fx.hidden = true;
   document.body.appendChild(fx);
-  let fxId = null, fxEditando = null, fxContato = false;   // fxContato: caixinha "Contato feito" aberta
+  let fxId = null, fxEditando = null, fxContato = false, fxResumo = false;   // fxContato: caixinha "Contato feito" aberta; fxResumo: resumo das dúvidas aberto
+
+  // Resumo das dúvidas da loja, já no formato de mensagem para o parceiro (WhatsApp aceita *negrito*)
+  const semTags = (t) => String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  function resumoDuvidas(s) {
+    const porId = new Map();
+    MODS.forEach((m) => m.steps.forEach((stp) => { if (stp.mode === 'quiz') porId.set(stp.id, { stp, m }); }));
+    const vistos = new Set(), temas = new Map();
+    s.erros.slice().sort((a, b) => a.t - b.t).forEach((x) => {
+      if (vistos.has(x.id)) return;
+      vistos.add(x.id);
+      const ref = porId.get(x.id);
+      const q = ref ? semTags(ref.stp.q) : semTags(x.q);
+      const certa = ref ? (ref.stp.options.find((o) => o.ok) || {}).t : '';
+      const exp = ref ? semTags(ref.stp.ok) : '';
+      const tema = x.tema || 'Outros';
+      if (!temas.has(tema)) temas.set(tema, { itens: [], mods: new Set() });
+      temas.get(tema).itens.push({ q, certa: semTags(certa), exp });
+      if (ref) temas.get(tema).mods.add(ref.m.n);
+    });
+    const blocos = [...temas.entries()].map(([tema, g]) => `*${tema}*\n` + g.itens.map((i) => `• ${i.q}\n  Resposta certa${/R\$\s?\d/.test(i.certa) ? ' (no exemplo do treinamento)' : ''}: ${i.certa || '—'}${i.exp && i.exp !== i.certa ? `\n  ${i.exp}` : ''}`).join('\n\n'));
+    const mods = [...new Set([...temas.values()].flatMap((g) => [...g.mods]))].sort((a, b) => a - b);
+    const rever = mods.length ? `\n\nSe quiser rever com calma, abra o Treinamento Financeiro ${mods.length === 1 ? `no *Módulo ${mods[0]}* (${MODS.find((m) => m.n === mods[0]).titulo})` : `nos módulos *${mods.slice(0, -1).join(', ')} e ${mods[mods.length - 1]}*`}.` : '';
+    return `Olá, ${s.p.loja}! Tudo bem?\n\nAqui é da equipe do Financeiro Bigou. Vimos no Treinamento Financeiro que ${vistos.size === 1 ? 'uma pergunta gerou dúvida' : `${vistos.size} perguntas geraram dúvida`}, então preparamos um resumo rápido para ajudar:\n\n${blocos.join('\n\n')}${rever}\n\nQualquer dúvida, é só chamar a gente por aqui. Estamos à disposição!`;
+  }
+  async function copiarTexto(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) {
+      const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (x) { /* */ } ta.remove(); return ok;
+    }
+  }
 
   function abrirFicha(id) {
     const s = st.R.lojas.find((x) => x.p.id === id);
@@ -1674,7 +1704,12 @@
           </section>
 
           <section class="fx-s">
-            <h3><span class="fx-ic">${IC.pergunta}</span>Dúvidas nas perguntas <small>${plural(s.erros.length, 'erro', 'erros')} na 1ª tentativa</small></h3>
+            <div class="fx-hh"><h3><span class="fx-ic">${IC.pergunta}</span>Dúvidas nas perguntas <small>${plural(s.erros.length, 'erro', 'erros')} na 1ª tentativa</small></h3>${s.erros.length ? `<button type="button" class="btn sm fx-rs-b" data-fx="resumo" aria-expanded="${fxResumo}">${IC.chat}<span>${fxResumo ? 'Fechar resumo' : 'Fazer resumo'}</span></button>` : ''}</div>
+            ${fxResumo && s.erros.length ? (() => { const r = resumoDuvidas(s); return `<div class="fx-rs" role="region" aria-label="Resumo para enviar ao parceiro">
+              <p class="fx-rs-h">${IC.ok}<span>Resumo pronto para enviar ao parceiro. Revise e edite se quiser.</span></p>
+              <textarea class="fx-rs-t" rows="${Math.min(18, r.split('\n').length + 1)}" aria-label="Texto do resumo">${esc(r)}</textarea>
+              <div class="fx-rs-a"><button type="button" class="btn primary" data-fx="resumo-copiar">${IC.baixar}<span>Copiar texto</span></button><button type="button" class="btn" data-fx="resumo-whats">${IC.chat}<span>Abrir no WhatsApp</span></button><button type="button" class="btn" data-fx="resumo-nota" title="Salva o resumo como anotação desta loja">${IC.nota}<span>Salvar como anotação</span></button></div>
+            </div>`; })() : ''}
             ${s.erros.length ? `<ul class="fx-erros">${s.erros.sort((a, b) => b.t - a.t).map((x) => `
               <li><span class="tag">${esc(x.tema)}</span>
                 <b>${esc(x.q)}</b>${x.resposta ? `<span>Respondeu: “${esc(semValor(x.resposta))}”</span>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Nenhum erro registrado.</p>'}
@@ -1704,7 +1739,7 @@
   }
 
   function fecharFicha() {
-    fxId = null; fxEditando = null; fxContato = false;
+    fxId = null; fxEditando = null; fxContato = false; fxResumo = false;
     fx.classList.remove('in');
     document.body.classList.remove('fx-on');
     setTimeout(() => { if (!fxId) { fx.hidden = true; fx.innerHTML = ''; } }, 200);
@@ -1727,6 +1762,15 @@
     else if (a === 'cancelar') { fxEditando = null; abrirFicha(fxId); }
     else if (a === 'contato') { fxContato = true; abrirFicha(fxId); }
     else if (a === 'contato-cancelar') { fxContato = false; abrirFicha(fxId); }
+    else if (a === 'resumo') { fxResumo = !fxResumo; const y = fx.querySelector('.fx') ? fx.querySelector('.fx').scrollTop : 0; abrirFicha(fxId); const p = fx.querySelector('.fx'); if (p) p.scrollTop = y; const t = fx.querySelector('.fx-rs-t'); if (t) t.focus({ preventScroll: true }); }
+    else if (a === 'resumo-copiar') { const t = fx.querySelector('.fx-rs-t'); const ok = t && await copiarTexto(t.value); const sp = b.querySelector('span'); if (sp) { sp.textContent = ok ? 'Copiado!' : 'Não deu para copiar'; setTimeout(() => { sp.textContent = 'Copiar texto'; }, 1800); } }
+    else if (a === 'resumo-whats') { const t = fx.querySelector('.fx-rs-t'); if (t) window.open('https://wa.me/?text=' + encodeURIComponent(t.value), '_blank', 'noopener'); }
+    else if (a === 'resumo-nota') {
+      // Preenche o formulário de nova anotação; quem salva é a pessoa, depois de revisar
+      const t = fx.querySelector('.fx-rs-t'), form = fx.querySelector('form.fx-form:not(.fx-contato)[data-fx-form="nova"]');
+      const ta = form && form.querySelector('textarea[name]');
+      if (t && ta) { ta.value = 'Resumo enviado ao parceiro:\n' + t.value; ta.scrollIntoView({ behavior: 'smooth', block: 'center' }); ta.focus({ preventScroll: true }); }
+    }
     else if (a === 'certificado') { const s = st.R.lojas.find((x) => x.p.id === fxId); if (s) abrirCertificado(s); }
     else if (a === 'excluir') {
       if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
@@ -1892,7 +1936,7 @@
       return;
     }
     const fi = e.target.closest('[data-ficha]');
-    if (fi) { fxEditando = fi.dataset.editar || null; fxContato = false; abrirFicha(fi.dataset.ficha); return; }
+    if (fi) { fxEditando = fi.dataset.editar || null; fxContato = false; fxResumo = false; abrirFicha(fi.dataset.ficha); return; }
     const ct = e.target.closest('[data-contato]');
     if (ct) { fxEditando = null; fxContato = true; abrirFicha(ct.dataset.contato); return; }
     const ex = e.target.closest('[data-excluir]');
@@ -1902,7 +1946,7 @@
       return;
     }
     const row = e.target.closest('.lj-row');
-    if (row) { fxContato = false; abrirFicha(row.dataset.loja); return; }
+    if (row) { fxContato = false; fxResumo = false; abrirFicha(row.dataset.loja); return; }
     const th = e.target.closest('th.sort');
     if (th) { const k = th.dataset.k; st.ordem = { k, dir: st.ordem.k === k ? -st.ordem.dir : k === 'loja' ? 1 : -1 }; desenharLojas(); }
   });
@@ -1981,6 +2025,138 @@
 
   let rz = 0;
   window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (st.R) desenharLinha(); }, 150); });
+
+  /* ------------------------------ Seletor (lista suspensa própria) ------------------------------
+     Todo <select> do painel ganha um botão e um menu no visual do painel, em vez do seletor do
+     aparelho. O <select> continua no lugar (escondido): guarda o valor, vai no envio do formulário
+     e dispara o mesmo evento "change" de antes, então nenhuma tela precisa saber disso. */
+  const Seletor = (() => {
+    let aberto = null;   // { sel, btn, menu, itens, i }
+    const menu = document.createElement('div');
+    menu.className = 'ss-menu';
+    menu.hidden = true;
+    document.body.appendChild(menu);
+    const textoDe = (sel) => { const o = sel.options[sel.selectedIndex]; return o ? o.textContent : ''; };
+    // Rótulo do campo: o primeiro <span> do <label> que não envolve o próprio select
+    const rotuloDe = (sel) => { const l = sel.closest('label'); const sp = l && [...l.querySelectorAll('span')].find((x) => !x.contains(sel) && !x.closest('.ss')); return sp ? sp.textContent.trim() : ''; };
+
+    function melhorar(sel) {
+      if (sel.dataset.ss || sel.multiple) return;
+      sel.dataset.ss = '1';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ss' + (sel.closest('.flt-c') ? ' ss-plano' : '');
+      btn.setAttribute('aria-haspopup', 'listbox');
+      btn.setAttribute('aria-expanded', 'false');
+      const rot = rotuloDe(sel);
+      if (rot) btn.setAttribute('aria-label', `${rot}: ${textoDe(sel)}`);
+      btn.innerHTML = `<span class="ss-v"></span><i class="ss-chev" aria-hidden="true"></i>`;
+      btn.querySelector('.ss-v').textContent = textoDe(sel);
+      sel.hidden = true;
+      sel.tabIndex = -1;
+      sel.after(btn);
+      btn._sel = sel;
+    }
+    function varrer(el) { (el.querySelectorAll ? el.querySelectorAll('select') : []).forEach(melhorar); if (el.tagName === 'SELECT') melhorar(el); }
+
+    function fechar(devolverFoco) {
+      if (!aberto) return;
+      const { btn } = aberto;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.classList.remove('on');
+      menu.hidden = true;
+      menu.classList.remove('folha');
+      document.body.classList.remove('ss-aberto');
+      aberto = null;
+      if (devolverFoco) btn.focus({ preventScroll: true });
+    }
+    function posicionar() {
+      if (!aberto) return;
+      const folha = matchMedia('(max-width: 639px)').matches;
+      menu.classList.toggle('folha', folha);
+      document.body.classList.toggle('ss-aberto', folha);
+      if (folha) { menu.style.cssText = ''; return; }
+      const caixa = (aberto.btn.closest('.flt-c, .sel, label') || aberto.btn).getBoundingClientRect();
+      const larg = Math.max(caixa.width, 220);
+      menu.style.minWidth = larg + 'px';
+      menu.style.maxWidth = Math.max(larg, 360) + 'px';
+      const h = menu.offsetHeight, abaixo = innerHeight - caixa.bottom - 12;
+      const cima = abaixo < Math.min(h, 260) && caixa.top > abaixo;
+      menu.style.top = (cima ? Math.max(8, caixa.top - h - 6) : caixa.bottom + 6) + 'px';
+      menu.style.left = Math.max(8, Math.min(innerWidth - menu.offsetWidth - 8, caixa.left)) + 'px';
+    }
+    function pintar(filtro) {
+      const { sel } = aberto;
+      const f = (filtro || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const ops = [...sel.options].map((o, i) => ({ o, i })).filter(({ o }) => !f || o.textContent.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(f));
+      const lista = menu.querySelector('.ss-l');
+      lista.innerHTML = ops.length ? ops.map(({ o, i }) => `<li role="option" class="ss-o ${i === sel.selectedIndex ? 'on' : ''}" data-i="${i}" aria-selected="${i === sel.selectedIndex}" tabindex="-1"><span>${esc(o.textContent)}</span><i class="ss-ck">${IC.check}</i></li>`).join('') : '<li class="ss-vazio">Nada encontrado</li>';
+      aberto.itens = [...lista.querySelectorAll('.ss-o')];
+    }
+    function abrir(btn) {
+      if (aberto && aberto.btn === btn) { fechar(true); return; }
+      fechar();
+      const sel = btn._sel, muitos = sel.options.length > 10, rot = rotuloDe(sel);
+      aberto = { sel, btn, itens: [] };
+      btn.setAttribute('aria-expanded', 'true');
+      btn.classList.add('on');
+      menu.innerHTML = `${rot ? `<p class="ss-t">${esc(rot)}</p>` : ''}${muitos ? `<div class="ss-b">${IC.lupa}<input type="search" placeholder="Buscar…" aria-label="Buscar"></div>` : ''}<ul class="ss-l" role="listbox"${rot ? ` aria-label="${esc(rot)}"` : ''}></ul>`;
+      pintar('');
+      menu.hidden = false;
+      posicionar();
+      const atual = aberto.itens.find((x) => x.classList.contains('on')) || aberto.itens[0];
+      const busca = menu.querySelector('.ss-b input');
+      if (busca && !matchMedia('(pointer: coarse)').matches) busca.focus({ preventScroll: true }); else if (atual) atual.focus({ preventScroll: true });
+      if (atual) atual.scrollIntoView({ block: 'nearest' });
+    }
+    function escolher(i) {
+      if (!aberto) return;
+      const { sel, btn } = aberto;
+      const mudou = sel.selectedIndex !== i;
+      sel.selectedIndex = i;
+      btn.querySelector('.ss-v').textContent = textoDe(sel);
+      const rot = rotuloDe(sel);
+      if (rot) btn.setAttribute('aria-label', `${rot}: ${textoDe(sel)}`);
+      fechar(true);
+      if (mudou) sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('.ss');
+      if (b) { e.preventDefault(); abrir(b); return; }
+      // Clicar em qualquer parte do filtro (ícone, rótulo) abre o seletor dele
+      const caixa = !e.target.closest('.ss-menu') && e.target.closest('.flt-c, label.sel');
+      if (caixa && caixa.querySelector('.ss')) { e.preventDefault(); abrir(caixa.querySelector('.ss')); return; }
+      const o = e.target.closest('.ss-o');
+      if (o) { escolher(+o.dataset.i); return; }
+      if (aberto && !e.target.closest('.ss-menu')) fechar();
+    });
+    menu.addEventListener('input', (e) => { if (e.target.matches('.ss-b input')) { pintar(e.target.value); } });
+    document.addEventListener('keydown', (e) => {
+      const b = e.target.closest && e.target.closest('.ss');
+      if (b && !aberto && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) { e.preventDefault(); abrir(b); return; }
+      if (!aberto) return;
+      const itens = aberto.itens, i = itens.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(true); }
+      else if (e.key === 'Tab') fechar();
+      else if (e.key === 'ArrowDown') { e.preventDefault(); (itens[i + 1] || itens[0]).focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (i <= 0 && menu.querySelector('.ss-b input')) menu.querySelector('.ss-b input').focus(); else (itens[i - 1] || itens[itens.length - 1]).focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); if (itens[0]) itens[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); if (itens.length) itens[itens.length - 1].focus(); }
+      else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) { e.preventDefault(); escolher(+itens[i].dataset.i); }
+      else if (e.key === 'Enter' && e.target.matches('.ss-b input') && itens[0]) { e.preventDefault(); escolher(+itens[0].dataset.i); }
+      else if (e.key.length === 1 && !e.target.matches('input')) {
+        // Digitar uma letra pula para a primeira opção que começa com ela
+        const alvo = itens.find((x) => x.textContent.trim().toLowerCase().startsWith(e.key.toLowerCase()));
+        if (alvo) alvo.focus();
+      }
+    }, true);
+    addEventListener('resize', () => fechar());
+    addEventListener('scroll', (e) => { if (aberto && !menu.contains(e.target) && !matchMedia('(max-width: 639px)').matches) fechar(); }, true);
+    new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) varrer(n); }))).observe(document.body, { childList: true, subtree: true });
+    varrer(document.body);
+    return { fechar };
+  })();
 
   // Exposto para testes
   window.ADMIN = { calcular, estado: st, abrirFicha, MODS };

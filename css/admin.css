@@ -1282,3 +1282,85 @@ body, .card, .kpi, .sb, .painel-main { transition: background-color .2s, border-
 :root[data-tema="escuro"] .lc .grid { stroke: #24302a; }
 :root[data-tema="escuro"] .lc-x { stroke: #4b5a52; }
 :root[data-tema="escuro"] .lc circle[stroke="#fff"] { stroke: #151d19; }
+
+/* Botões de ação das lojas (cartão e lista): mesma altura, alinhados ao centro */
+.lj-f, .lj-acw { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.lj-f .btn, .lj-ac .btn { box-sizing: border-box; height: 38px; margin: 0; padding: 0 14px; font-size: 13.5px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; vertical-align: middle; }
+.lj-ac .btn { height: 34px; padding: 0 12px; font-size: 13px; }
+.lj-f .btn svg, .lj-ac .btn svg { width: 16px; height: 16px; flex: none; }
+.lj-ac { vertical-align: middle; }
+
+/* ========== Seletor próprio (substitui a lista suspensa do aparelho) ========== */
+.ss {
+  font: inherit; text-transform: none; letter-spacing: 0; display: inline-flex; align-items: center; gap: 10px; width: 100%; min-width: 0; max-width: 280px;
+  height: 42px; padding: 0 12px 0 14px; border: 1px solid #dfe6e2; border-radius: 12px; background: #fff; color: var(--ink);
+  font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.ss:hover { border-color: #b9dcc8; }
+.ss:focus-visible, .ss.on { outline: none; border-color: var(--g); box-shadow: 0 0 0 3px var(--gsoft2); }
+.ss-v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-chev { flex: none; width: 8px; height: 8px; margin: -3px 2px 0 0; border-right: 2px solid var(--ink3); border-bottom: 2px solid var(--ink3); transform: rotate(45deg); transition: transform .2s; }
+.ss.on .ss-chev { transform: rotate(-135deg); margin-top: 4px; }
+/* Dentro dos filtros do topo o botão é só o texto (o cartão do filtro já tem borda e seta) */
+.ss.ss-plano { height: auto; padding: 0; border: 0; background: none; box-shadow: none; max-width: 200px; }
+.ss.ss-plano .ss-chev { display: none; }
+.flt-c:has(.ss.on) { box-shadow: 0 0 0 3px var(--gsoft2), var(--sh); }
+.flt-c:has(.ss.on) .flt-v svg { transform: rotate(180deg); }
+.flt-v svg { transition: transform .2s; }
+.fx form label .ss, .fx label .ss { max-width: none; font-weight: 500; }
+
+.ss-menu {
+  position: fixed; z-index: 400; background: #fff; border: 1px solid #e3ebe6; border-radius: 16px; padding: 6px;
+  box-shadow: 0 24px 48px -16px rgba(16,40,24,.3), 0 2px 6px rgba(16,40,24,.06); animation: ssIn .14s ease-out;
+}
+@keyframes ssIn { from { transform: translateY(-4px) scale(.98); } }
+.ss-t { margin: 6px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); }
+.ss-b { display: flex; align-items: center; gap: 8px; margin: 2px 2px 6px; padding: 0 10px; height: 38px; border: 1px solid #e3ebe6; border-radius: 10px; background: #f7faf8; }
+.ss-b svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ink3); stroke-width: 2; stroke-linecap: round; }
+.ss-b input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 14px; color: var(--ink); outline: none; }
+.ss-l { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; }
+.ss-o { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 14px; color: var(--ink); cursor: pointer; outline: none; }
+.ss-o span { flex: 1; min-width: 0; }
+.ss-o:hover, .ss-o:focus { background: #f2f7f4; }
+.ss-o.on { background: var(--gsoft); color: var(--g3, var(--g2)); font-weight: 600; }
+.ss-ck { width: 18px; height: 18px; flex: none; display: grid; place-items: center; opacity: 0; }
+.ss-ck svg { width: 16px; height: 16px; fill: none; stroke: var(--g); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.ss-o.on .ss-ck { opacity: 1; }
+.ss-vazio { padding: 12px 10px; font-size: 13.5px; color: var(--ink3); }
+/* Celular: folha que sobe de baixo */
+.ss-menu.folha { left: 0 !important; right: 0; bottom: 0; top: auto !important; max-width: none !important; min-width: 0 !important; border-radius: 22px 22px 0 0; padding: 10px 10px calc(14px + env(safe-area-inset-bottom)); animation: fmUp .22s ease-out; }
+.ss-menu.folha::before { content: ''; display: block; width: 40px; height: 4px; border-radius: 4px; background: #d9e0dc; margin: 2px auto 8px; }
+.ss-menu.folha .ss-l { max-height: 60vh; }
+.ss-menu.folha .ss-o { padding: 13px 10px; font-size: 15px; }
+body.ss-aberto::after { content: ''; position: fixed; inset: 0; z-index: 399; background: rgba(15,23,42,.35); animation: fmFade .2s; }
+:root[data-tema="escuro"] .ss-b input { color: var(--ink); }
+.lj-card .sel .ss { max-width: none; }
+
+/* Ficha: resumo das dúvidas para enviar ao parceiro */
+.fx-hh { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.fx-hh h3 { margin: 0; }
+.fx-rs-b { height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; border-color: #bfe3cf; color: var(--g2); background: var(--gsoft); }
+.fx-rs-b:hover { background: var(--gsoft2); }
+.fx-rs-b svg { width: 16px; height: 16px; stroke: currentColor; }
+.fx-rs { margin: 12px 0 4px; padding: 14px; border: 1px solid #cfe9da; border-radius: 16px; background: linear-gradient(180deg, #f4fbf7, #fff); animation: ssIn .18s ease-out; }
+.fx-rs-h { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13px; color: var(--ink2); }
+.fx-rs-h svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--g); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.fx-rs-t { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 13.5px; line-height: 1.55; color: var(--ink); padding: 12px 14px; border: 1px solid #dfe6e2; border-radius: 12px; background: #fff; }
+.fx-rs-t:focus { outline: none; border-color: var(--g); box-shadow: 0 0 0 3px var(--gsoft2); }
+.fx-rs-a { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fx-rs-a .btn { height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; }
+.fx-rs-a .btn.primary svg { stroke: #fff; }
+/* Lista: a coluna do motivo absorve a sobra (com reticências) para os botões nunca saírem da tela */
+.lj-tb td.lj-mo { max-width: 0; width: 100%; min-width: 120px; }
+.lj-tb td:first-child { min-width: 170px; }
+.lj-tb th, .lj-tb td { padding-left: 12px; padding-right: 12px; }
+@media (min-width: 800px) and (max-width: 1279px) {
+  .lj-card .lj-top { grid-template-columns: 1fr 1fr auto; }
+  .lj-card .lj-top .busca { grid-column: 1 / -1; }
+  .lj-tb th:nth-child(5), .lj-tb td.lj-ua { display: none; }
+  .lj-pb > span { width: 48px; }
+  .lj-ac .ct-btn { width: 34px; padding: 0; }
+  .lj-ac .ct-btn span { display: none; }
+}
+/* Notebook pequeno (menu lateral aberto): 4 números lado a lado ficam espremidos; vão para 2 por linha */
+@media (min-width: 1000px) and (max-width: 1239px) { .painel:not(.sb-mini) .kpis:not(.k3) { grid-template-columns: repeat(2, 1fr); } }

@@ -605,3 +605,36 @@
 :root[data-tema="escuro"] .lj-pb > span {
   background: #29302b;
 }
+:root[data-tema="escuro"] .ss {
+  border: 1px solid #303633;
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .ss:hover {
+  border-color: #385243;
+}
+:root[data-tema="escuro"] .ss-menu {
+  background: #1b2520;
+  border: 1px solid #2b342f;
+}
+:root[data-tema="escuro"] .ss-b {
+  border: 1px solid #2b342f;
+  background: #161c18;
+}
+:root[data-tema="escuro"] .ss-o:hover,
+:root[data-tema="escuro"] .ss-o:focus {
+  background: #121714;
+}
+:root[data-tema="escuro"] .ss-menu.folha::before {
+  background: #2f4038;
+}
+:root[data-tema="escuro"] .fx-rs-b {
+  border-color: #324e3f;
+}
+:root[data-tema="escuro"] .fx-rs {
+  border: 1px solid #2c4336;
+  background: linear-gradient(180deg, #121e17, #1b2520);
+}
+:root[data-tema="escuro"] .fx-rs-t {
+  border: 1px solid #303633;
+  background: #1b2520;
+}
