@@ -329,17 +329,6 @@
     if (!p.loja) iLoja.focus({ preventScroll: true });
   }
 
-  function progressBlock() {
-    const done = doneCount(), total = A.mods.length, p = Math.round((done / total) * 100);
-    return `
-      <div class="t-progress" aria-label="${L('Progresso do treinamento', 'Progreso de la capacitación')}">
-        <div class="t-progress-top"><span>${L('Seu treinamento', 'Tu capacitación')}</span><b>${p}%</b></div>
-        <div class="t-bar"><i style="width:${p}%"></i></div>
-        <small>${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}${done < total ? L(` · faltam ≈ ${minutosRestantes()} min`, ` · faltan ≈ ${minutosRestantes()} min`) : L(' · treinamento completo!', ' · ¡capacitación completa!')}</small>
-      </div>`;
-  }
-
-
   const statusLabel = { novo: L('Não iniciado', 'No iniciado'), prog: L('Em andamento', 'En curso'), done: L('Concluído', 'Completado') };
 
   /* ------------------------------ Tela inicial ------------------------------ */
@@ -382,7 +371,7 @@
       const est = feita ? 'ok' : i === atual ? 'agora' : 'depois';
       const alvo = f.m.find((n) => status(n) !== 'done') || f.m[0];
       const rot = `${f.t}: ${feita ? L('concluída', 'completada') : i === atual ? L('você está aqui', 'estás aquí') : L('próxima', 'siguiente')}`;
-      return `<li class="nh-f ${est}"><a href="#/modulo/${alvo}" aria-label="${rot}" title="${f.t}"${est === 'agora' ? ' aria-current="step"' : ''}><span class="nh-f-b">${feita ? ICON.check : i + 1}</span><span class="nh-f-t">${f.c}</span></a></li>`;
+      return `<li class="nh-f ${est}"><a href="#/modulo/${alvo}" aria-label="${rot}" title="${f.t}"${est === 'agora' ? ' aria-current="step"' : ''}><span class="nh-f-b">${feita ? ICON.check : i + 1}</span><span class="nh-f-t">${f.c}</span><span class="nh-f-s">${f.s}</span></a></li>`;
     }).join('');
     const feitas = FASES.filter((f) => f.m.every((n) => status(n) === 'done')).length;
 
@@ -404,8 +393,10 @@
           </div>
           ${vozToggle('bar')}
         </header>
+        <div class="nh-shell">
         <section class="nh-hero" aria-label="${L('Boas-vindas', 'Bienvenida')}">
           <img class="nh-hero-img" src="assets/home/hero.webp" alt="" width="852" height="462" decoding="async" fetchpriority="high">
+          <img class="nh-hero-dog" src="assets/home/mascote.webp" alt="" width="560" height="462" decoding="async">
           <div class="nh-hero-t">
             <h1 class="nh-ola ${tam}">${L('', '¡')}${titulo}${loja ? `,<span>${esc(loja)}!</span>` : '!'}</h1>
             <p>${tudo ? L('Você pode rever qualquer módulo quando quiser.', 'Puedes repasar cualquier módulo cuando quieras.') : L('Aprenda como funcionam suas vendas, taxas e repasses.', 'Aprende cómo funcionan tus ventas, tasas y transferencias.')}</p>
@@ -418,6 +409,7 @@
             <span class="nh-cta-go">${ICON.arrowR}</span>
             ${started && !tudo ? `<span class="nh-cta-bar" aria-label="${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
           </a>
+          <p class="nh-dica">${ICON.clock}<span>${tudo ? L('Treinamento completo', 'Capacitación completa') : started ? L(`${done} de ${total} módulos concluídos · faltam ≈ ${minutosRestantes()} min`, `${done} de ${total} módulos completados · faltan ≈ ${minutosRestantes()} min`) : L(`${total} módulos curtos · cerca de ${minutosRestantes()} min no total`, `${total} módulos cortos · cerca de ${minutosRestantes()} min en total`)}</span></p>
 
           <nav class="nh-grid" aria-label="${L('Atalhos', 'Accesos directos')}">
             ${tile('#/modulos', ICON.grid, L('Módulos', 'Módulos'), started ? L(`${done} de ${total} concluídos`, `${done} de ${total} completados`) : L(`${total} módulos curtos`, `${total} módulos cortos`))}
@@ -446,6 +438,7 @@
           ${loja ? `<p class="hm-loja">${L('Não é a sua loja?', '¿No es tu tienda?')} <a href="#/cadastro">${L('Trocar loja', 'Cambiar tienda')}</a></p>` : ''}
           <p class="hm-idioma" aria-label="${L('Idioma', 'Idioma')}">${TREINO.IDIOMAS.map((id) => `<button type="button" data-idioma="${id}" lang="${id}" aria-pressed="${id === TREINO.idioma}">${id.toUpperCase()}</button>`).join('<span aria-hidden="true">·</span>')}</p>
         </main>
+        </div>
         <svg class="nh-ondas" viewBox="0 0 390 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C 70 30, 130 40, 190 70 S 320 110, 390 60 V120 H0z" fill="#d6f3e1"/><path d="M0 95 C 90 70, 170 80, 250 100 S 360 110, 390 92 V120 H0z" fill="#a9e6c1"/></svg>
       </div>`;
   }
@@ -538,57 +531,76 @@
 
   /* ------------------------------ Módulos ------------------------------ */
   function viewModules() {
-    const allDone = doneCount() === A.mods.length;
+    const done = doneCount(), total = A.mods.length, allDone = done === total;
+    const pc = Math.round((done / total) * 100);
+    const proximo = A.mods.find((m) => status(m.n) === 'prog') || A.mods.find((m) => status(m.n) !== 'done');
+    const cert = certStatus();
+    const card = (m) => {
+      const st = status(m.n), aqui = proximo && m.n === proximo.n;
+      const acao = st === 'done' ? L('Repetir', 'Repetir') : st === 'prog' ? L('Continuar', 'Continuar') : L('Começar', 'Comenzar');
+      return `
+        <li class="nmd-m s-${st} ${aqui ? 'aqui' : ''}">
+          <a href="#/modulo/${m.n}" aria-label="Módulo ${m.n}: ${esc(m.titulo)}. ${statusLabel[st]}. ${acao}">
+            <span class="nmd-m-top">
+              <span class="nmd-m-ic">${ICON[m.icone] || m.n}${st === 'done' ? `<i class="nmd-m-ok">${ICON.check}</i>` : ''}</span>
+              <span class="nmd-m-meta"><small>Módulo ${m.n}</small><small>${ICON.clock}${tempoMod(m)}</small></span>
+              <em class="nmd-st">${aqui && st !== 'done' ? L('Continue aqui', 'Sigue aquí') : statusLabel[st]}</em>
+            </span>
+            <b>${m.titulo}</b>
+            <span class="nmd-m-d">${m.desc}</span>
+            <span class="nmd-m-go">${st === 'done' ? ICON.redo : ICON.play}<span>${acao}</span>${ICON.arrowR}</span>
+          </a>
+        </li>`;
+    };
+    const fases = FASES.map((f, i) => {
+      const mods = f.m.map((n) => A.mods.find((m) => m.n === n)).filter(Boolean);
+      const ok = mods.filter((m) => status(m.n) === 'done').length;
+      return `
+        <section class="nmd-fase ${ok === mods.length ? 'feita' : ''}" style="--n:${mods.length}" aria-labelledby="nmd-f${i}">
+          <header class="nmd-fh">
+            <span class="nmd-fn">${ok === mods.length ? ICON.check : i + 1}</span>
+            <div><h2 id="nmd-f${i}">${f.t}</h2><small>${f.s}</small></div>
+            <span class="nmd-fc">${ok}/${mods.length}</span>
+          </header>
+          <ol class="nmd-lista">${mods.map(card).join('')}</ol>
+        </section>`;
+    }).join('');
+    const extra = (href, ic, t, sub, cls) => `<a class="nh-tile nmd-x ${cls || ''}" href="${href}"><span class="nh-tile-ic">${ic}</span><span class="nh-tile-go" aria-hidden="true">${ICON.arrowR}</span><b>${t}</b><small>${sub}</small></a>`;
+
     app.innerHTML = `
-      <div class="tv tv-mods">
-        <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
-          <span></span>
+      <div class="tv tv-mods nh nrp nmd">
+        <header class="nh-top">
+          <a class="nh-voltar" href="#/">${ICON.arrowL}<span>${L('Início', 'Inicio')}</span></a>
+          <div class="nh-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="40" height="40"><span>${L('Treinamento<br>Financeiro', 'Capacitación<br>Financiera')}</span></div>
         </header>
-        <main class="t-mods">
-          <div class="t-mods-head">
-            <div>
-              <h1>${L('Módulos', 'Módulos')}</h1>
-              <p class="t-lead sm">${L('Escolha qualquer módulo. Você pode repetir quando quiser.', 'Elige cualquier módulo. Puedes repetirlo cuando quieras.')}</p>
-            </div>
-            ${progressBlock()}
+        <section class="nmd-hero">
+          <div class="nmd-hero-t">
+            <h1>${L('Módulos', 'Módulos')}</h1>
+            <p>${L(`São ${total} módulos curtos, em ${FASES.length} fases. Escolha qualquer um e repita quando quiser.`, `Son ${total} módulos cortos, en ${FASES.length} fases. Elige cualquiera y repítelo cuando quieras.`)}</p>
           </div>
-          <ol class="t-list">
-            ${A.mods
-              .map((m) => {
-                const st = status(m.n);
-                const btn = st === 'done' ? `${ICON.redo}${L('Repetir', 'Repetir')}` : st === 'prog' ? `${ICON.play}${L('Continuar', 'Continuar')}` : `${ICON.play}${L('Começar', 'Comenzar')}`;
-                return `
-                <li class="t-mod s-${st}">
-                  <a href="#/modulo/${m.n}" class="t-mod-a">
-                    <span class="t-mod-n">${st === 'done' ? ICON.check : ICON[m.icone] || m.n}</span>
-                    <span class="t-mod-txt"><small>Módulo ${m.n} · ${tempoMod(m)}</small><b>${m.titulo}</b><span>${m.desc}</span></span>
-                    <span class="t-mod-st"><i></i>${statusLabel[st]}</span>
-                    <span class="t-btn ${st === 'done' ? 'ghost' : 'primary'} sm">${btn}</span>
-                  </a>
-                </li>`;
-              })
-              .join('')}
-          </ol>
-          <div class="t-extra">
-            <a class="t-extra-card" href="#/explorar">
-              <span class="t-extra-ic">${ICON.cursor}</span>
-              <span><b>${L('Explorar a tela livremente', 'Explorar la pantalla libremente')}</b><small>${L('Clique onde quiser na tela, sem explicações.', 'Haz clic donde quieras en la pantalla, sin explicaciones.')}</small></span>
-              ${ICON.arrowR}
-            </a>
-            ${allDone && certStatus().ok ? `<a class="t-extra-card destaque" href="#/certificado">
-              <span class="t-extra-ic">${ICON.certificado}</span>
-              <span><b>${L('Seu certificado', 'Tu certificado')}</b><small>${L('Baixe ou imprima o certificado de conclusão.', 'Descarga o imprime el certificado de finalización.')}</small></span>
-              ${ICON.arrowR}
-            </a>` : ''}
-            <a class="t-extra-card ${allDone ? '' : 'muted'}" href="#/revisao">
-              <span class="t-extra-ic">${ICON.check}</span>
-              <span><b>${L('O que você aprendeu', 'Lo que aprendiste')}</b><small>${allDone ? L('Revise tudo em uma tela.', 'Repasa todo en una pantalla.') : L('Disponível ao concluir todos os módulos.', 'Disponible al completar todos los módulos.')}</small></span>
-              ${ICON.arrowR}
-            </a>
+          <div class="nmd-prog" aria-label="${L('Progresso do treinamento', 'Progreso de la capacitación')}">
+            <span class="nmd-anel" style="--p:${pc}"><b>${pc}%</b></span>
+            <div class="nmd-prog-t">
+              <b>${allDone ? L('Treinamento completo!', '¡Capacitación completa!') : L(`${done} de ${total} concluídos`, `${done} de ${total} completados`)}</b>
+              <small>${allDone ? L('Você pode rever qualquer módulo.', 'Puedes repasar cualquier módulo.') : L(`Faltam ≈ ${minutosRestantes()} min`, `Faltan ≈ ${minutosRestantes()} min`)}</small>
+              ${proximo ? `<a class="nmd-prog-a" href="#/modulo/${proximo.n}">${ICON.play}${status(proximo.n) === 'prog' ? L('Continuar', 'Continuar') : L('Começar', 'Comenzar')} ${L('o módulo', 'el módulo')} ${proximo.n}</a>` : ''}
+            </div>
+          </div>
+        </section>
+        <main class="nh-main nmd-main">
+          <div class="nmd-grade">
+          ${fases}
+          <section class="nmd-extra">
+          <h2 class="nmd-xt">${L('Para ir além', 'Para ir más allá')}</h2>
+          <nav class="nmd-xs" aria-label="${L('Mais opções', 'Más opciones')}">
+            ${extra('#/explorar', ICON.cursor, L('Explorar a tela', 'Explorar la pantalla'), L('Clique onde quiser, sem explicações.', 'Haz clic donde quieras, sin explicaciones.'))}
+            ${extra('#/revisao', allDone ? ICON.check : ICON.cadeado, L('O que você aprendeu', 'Lo que aprendiste'), allDone ? L('Revise tudo em uma tela.', 'Repasa todo en una pantalla.') : L('Libera ao concluir os módulos.', 'Se desbloquea al completar los módulos.'), allDone ? '' : 'lock')}
+            ${extra('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, L('Certificado', 'Certificado'), cert.ok ? L('Pronto para baixar', 'Listo para descargar') : L('Veja o que falta', 'Mira lo que falta'), cert.ok ? 'ok' : 'lock')}
+          </nav>
+          </section>
           </div>
         </main>
+        <svg class="nh-ondas" viewBox="0 0 390 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C 70 30, 130 40, 190 70 S 320 110, 390 60 V120 H0z" fill="#d6f3e1"/><path d="M0 95 C 90 70, 170 80, 250 100 S 360 110, 390 92 V120 H0z" fill="#a9e6c1"/></svg>
       </div>`;
   }
 

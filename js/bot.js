@@ -416,7 +416,7 @@
     const fab = document.createElement('button');
     fab.type = 'button';
     fab.className = 'bt-fab';
-    fab.innerHTML = `<span class="bt-fab-ic">${IC.chat}</span><span class="bt-fab-lock">${IC.lock}</span><i class="bt-dot" aria-hidden="true"></i>`;
+    fab.innerHTML = `<span class="bt-fab-ic">${IC.chat}</span><span class="bt-fab-l">${L('Tire suas dúvidas', 'Resuelve tus dudas')}</span><span class="bt-fab-lock">${IC.lock}</span><i class="bt-dot" aria-hidden="true"></i>`;
     const pop = document.createElement('div');
     pop.className = 'bt-pop';
     pop.setAttribute('role', 'status');
@@ -481,7 +481,7 @@
     if (st.liberado && st.visivel && !ler(chaveAnuncio(), false)) {
       gravar(chaveAnuncio(), true);
       el.fab.classList.add('novo');
-      setTimeout(() => mostrarPop(L('<b>Tem dúvidas? 💬</b><span>Pergunte aqui sobre vendas, taxas e repasses, a qualquer momento.</span>', '<b>¿Tienes dudas? 💬</b><span>Pregunta aquí sobre ventas, tasas y transferencias, en cualquier momento.</span>')), antes ? 0 : 600);
+      setTimeout(() => mostrarPop(L('<b>Tem dúvidas?</b><span>Pergunte aqui sobre vendas, taxas e repasses, a qualquer momento.</span>', '<b>¿Tienes dudas?</b><span>Pregunta aquí sobre ventas, tasas y transferencias, en cualquier momento.</span>')), antes ? 0 : 600);
     }
   };
 
@@ -516,15 +516,15 @@
     gravar(chaveHist(), st.hist);
   }
 
-  const feedbackOk = (util) => (util ? L('Que bom! 👍', '¡Qué bien! 👍') : L('Obrigado! Vamos melhorar essa resposta.', '¡Gracias! Vamos a mejorar esta respuesta.'));
+  const feedbackOk = (util) => (util ? L('Que bom!', '¡Qué bien!') : L('Obrigado! Vamos melhorar essa resposta.', '¡Gracias! Vamos a mejorar esta respuesta.'));
   const chips = (ids, origem) => (ids.length ? `<div class="bt-chips">${ids.map((id) => POR_ID.get(id)).filter(Boolean).map((x) => `<button type="button" class="bt-chip" data-bt="q" data-id="${x.id}" data-or="${origem}">${esc(x.exemplo)}</button>`).join('')}</div>` : '');
 
   function htmlBot(m) {
     const loja = st.loja ? `, <b>${esc(st.loja)}</b>` : '';
-    if (m.k === 'oi') return `<div class="bt-b">${L(`Olá${loja}! 👋 Sou o assistente do treinamento.<br>Pergunte com suas palavras ou toque em uma dúvida comum:`, `¡Hola${loja}! 👋 Soy el asistente de la capacitación.<br>Pregunta con tus palabras o toca una duda común:`)}</div>${chips(POPULARES, 'inicio')}`;
-    if (m.k === 'obrigado') return `<div class="bt-b">${L('Por nada! Se surgir outra dúvida, é só perguntar. 😊', '¡De nada! Si te surge otra duda, solo pregunta. 😊')}</div>`;
-    if (m.k === 'sem') return `<div class="bt-b">${L('Ainda não sei responder essa. 😕 Tente com outras palavras ou escolha um assunto:', 'Todavía no sé responder eso. 😕 Intenta con otras palabras o elige un tema:')}</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b">${L('Se preferir, fale com o <b>Financeiro Bigou</b>:', 'Si prefieres, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
-    if (m.k === 'contato') return `<div class="bt-b">${L('Sentimos muito. 😕 Para resolver com uma pessoa, fale com o <b>Financeiro Bigou</b>:', 'Lo sentimos. 😕 Para resolverlo con una persona, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
+    if (m.k === 'oi') return `<div class="bt-b">${L(`Olá${loja}! Sou o assistente do treinamento.<br>Pergunte com suas palavras ou toque em uma dúvida comum:`, `¡Hola${loja}! Soy el asistente de la capacitación.<br>Pregunta con tus palabras o toca una duda común:`)}</div>${chips(POPULARES, 'inicio')}`;
+    if (m.k === 'obrigado') return `<div class="bt-b">${L('Por nada! Se surgir outra dúvida, é só perguntar.', '¡De nada! Si te surge otra duda, solo pregunta.')}</div>`;
+    if (m.k === 'sem') return `<div class="bt-b">${L('Ainda não sei responder essa. Tente com outras palavras ou escolha um assunto:', 'Todavía no sé responder eso. Intenta con otras palabras o elige un tema:')}</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b">${L('Se preferir, fale com o <b>Financeiro Bigou</b>:', 'Si prefieres, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
+    if (m.k === 'contato') return `<div class="bt-b">${L('Sentimos muito. Para resolver com uma pessoa, fale com o <b>Financeiro Bigou</b>:', 'Lo sentimos. Para resolverlo con una persona, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
     if (m.k === 'sug') return `<div class="bt-b">${L('Você quis dizer:', '¿Quisiste decir…?')}</div>${chips(m.ids, 'sugestao')}`;
     const x = POR_ID.get(m.id);
     if (!x) return '';
