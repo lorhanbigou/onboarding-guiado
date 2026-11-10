@@ -1183,3 +1183,27 @@ body:has(.bt-fab:not([hidden])) .tv { padding-bottom: 88px; }
 .pb-dot.s-done { background: linear-gradient(135deg, #14b062, #07843f); border-color: transparent; }
 .pb-dot.cur { box-shadow: 0 0 0 4px rgba(15, 162, 87, .16); }
 .pb-line i { background: linear-gradient(90deg, #6fd99a, #0fa257); }
+
+/* Cadastro: onde mais usa o Bigou App (caixas de marcar em cartão) */
+.cad-uso { border: 0; margin: 0; padding: 0; min-width: 0; }
+.cad-uso legend { padding: 0; font-size: 14px; font-weight: 600; color: var(--t-ink); }
+.cad-dica { display: block; margin-top: 2px; font-size: 12.5px; color: var(--t-ink3); }
+.cad-uso-ops { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.cad-chk { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 12px; border: 1px solid #dfe6e2; border-radius: 14px; background: #fff; cursor: pointer; transition: border-color .15s, background .15s, box-shadow .15s; user-select: none; }
+.cad-chk:hover { border-color: #b9dcc8; }
+.cad-chk input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.cad-chk-ic { flex: none; width: 38px; height: 38px; border-radius: 12px; background: #f1f5f3; display: grid; place-items: center; transition: background .15s; }
+.cad-chk-ic svg { width: 21px; height: 21px; fill: none; stroke: var(--t-ink2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.cad-chk-t { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--t-ink); }
+.cad-chk-box { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid #c9d3ce; background: #fff; display: grid; place-items: center; transition: all .15s; }
+.cad-chk-box svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(.6); transition: all .15s; }
+.cad-chk:has(input:checked) { border-color: #0fa257; background: #f1faf5; box-shadow: 0 0 0 3px rgba(15, 162, 87, .12); }
+.cad-chk:has(input:checked) .cad-chk-ic { background: #dff3e7; }
+.cad-chk:has(input:checked) .cad-chk-ic svg { stroke: #07843f; }
+.cad-chk:has(input:checked) .cad-chk-box { background: #0fa257; border-color: #0fa257; }
+.cad-chk:has(input:checked) .cad-chk-box svg { opacity: 1; transform: none; }
+.cad-chk:has(input:focus-visible) { outline: 3px solid #7fd3a4; outline-offset: 2px; }
+@media (max-width: 520px) {
+  .cad-chk { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+  .cad-chk-box { position: absolute; top: 12px; right: 12px; }
+}

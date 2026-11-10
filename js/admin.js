@@ -385,7 +385,8 @@
       else if (e.tipo === 'modulo_saida') s.saidas.push(e);
       else if (e.tipo === 'voz' && e.detalhe && e.detalhe.ligada) s.voz = true;
       else if (e.tipo === 'certificado') { s.cert = true; if (!s.certEm) s.certEm = e.t; }
-      else if ((e.tipo === 'cadastro' || e.tipo === 'sessao_retomada') && e.detalhe && typeof e.detalhe.idioma === 'string') s.idioma = e.detalhe.idioma;
+      else if ((e.tipo === 'cadastro' || e.tipo === 'sessao_retomada') && e.detalhe && typeof e.detalhe.idioma === 'string') { s.idioma = e.detalhe.idioma; if (e.tipo === 'cadastro' && Array.isArray(e.detalhe.uso)) s.uso = e.detalhe.uso; }
+      else if (e.tipo === 'uso_app' && e.detalhe && Array.isArray(e.detalhe.uso)) s.uso = e.detalhe.uso;
       else if (e.tipo === 'avaliacao' && e.detalhe) s.aval = lerAvaliacao(e);
     }
     const L = [...S.values()];
@@ -700,6 +701,7 @@
         dispositivo: grupo((s) => NOME_DISP[s.p.dispositivo] || s.p.dispositivo || 'Desconhecido'),
         navegador: grupo((s) => s.p.navegador || 'Outro'),
         idioma: grupo((s) => (s.idioma === 'es' ? 'Español' : 'Português')),
+        usoApp: grupo((s) => { const t = usoTxt(s.uso); return t === 'Celular e computador' ? 'Os dois' : t; }).filter((g) => g.k !== 'Não informado'),
       },
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
@@ -1459,6 +1461,11 @@
     return `<div class="fx-bars">${lista.map((x) => `<div class="fxb" ${tipAttr(`<b>${x.t}</b><br>${plural(x.n, 'loja', 'lojas')} · ${pct(x.n, tot)}`)}><b>${pct(x.n, tot)}</b><span class="fxb-b"><i style="height:${Math.max(3, (x.n / mx) * 100)}%;background:${cor}"></i></span><small>${x.t}</small></div>`).join('')}</div>`;
   }
   // Grupo (aparelho, navegador, idioma): participação e conclusão
+  // Onde a loja mais usa o Bigou App (marcado no cadastro do treinamento)
+  function usoTxt(u) {
+    const c = Array.isArray(u) && u.includes('celular'), pc = Array.isArray(u) && u.includes('computador');
+    return c && pc ? 'Celular e computador' : c ? 'Celular' : pc ? 'Computador' : 'Não informado';
+  }
   function grupoBloco(titulo, ic, lista, total) {
     if (!lista.length) return `<div class="gp"><h4>${IC[ic]}${titulo}</h4><p class="empty">Sem dados.</p></div>`;
     return `<div class="gp"><h4>${IC[ic]}${titulo}</h4>${lista.slice(0, 6).map((g) => `<div class="gp-r" ${tipAttr(`<b>${esc(g.k)}</b><br>${plural(g.n, 'loja', 'lojas')}${g.com ? `<br>${pct(g.ok, g.com)} de quem começou concluiu` : ''}`)}>
@@ -1496,7 +1503,7 @@
         </li>`).join('')}</ul>`, '', 'raio')}
       <div class="cols">
         ${card('Quando acessam', cel ? `Acessos por dia da semana e hora. Mais movimento: <b>${SEMANA[cel.d]}, ${cel.h}h</b>.` : 'Acessos por dia da semana e hora.', graficoCalor(R), '', 'calendario')}
-        ${card('Por onde acessam', 'Participação de cada aparelho, navegador e idioma, e quanto concluem.', `<div class="gps">${grupoBloco('Aparelho', 'aparelho', U.grupos.dispositivo, cad)}${grupoBloco('Navegador', 'olho', U.grupos.navegador, cad)}${grupoBloco('Idioma', 'chat', U.grupos.idioma, cad)}</div>`, '', 'aparelho')}
+        ${card('Por onde acessam', 'Participação de cada aparelho, navegador e idioma, onde usam o Bigou App, e quanto concluem.', `<div class="gps">${grupoBloco('Aparelho', 'aparelho', U.grupos.dispositivo, cad)}${grupoBloco('Navegador', 'olho', U.grupos.navegador, cad)}${grupoBloco('Idioma', 'chat', U.grupos.idioma, cad)}${grupoBloco('Usa o Bigou App no', 'aparelho', U.grupos.usoApp, U.grupos.usoApp.reduce((t, g) => t + g.n, 0))}</div>${U.grupos.usoApp.length ? '' : '<p class="note">“Usa o Bigou App no” começa a ser preenchido com os próximos cadastros.</p>'}`, '', 'aparelho')}
       </div>
       ${f.cidade ? '' : ''}`;
   };
@@ -1737,7 +1744,7 @@
       <div class="fx-scrim" data-fx="fechar"></div>
       <aside class="fx" role="dialog" aria-modal="true" aria-labelledby="fx-t">
         <header class="fx-h">
-          <div><h2 id="fx-t">${esc(s.p.loja)}</h2><small>${esc(s.p.cidade)} · cadastrada ${relativo(+new Date(s.p.criado_em))} · último acesso ${relativo(s.ultimo)}</small></div>
+          <div><h2 id="fx-t">${esc(s.p.loja)}</h2><small>${esc(s.p.cidade)} · cadastrada ${relativo(+new Date(s.p.criado_em))} · último acesso ${relativo(s.ultimo)}${s.uso && s.uso.length ? ` · usa o app no ${usoTxt(s.uso).toLowerCase()}` : ''}</small></div>
           <button type="button" class="fx-x" data-fx="fechar" aria-label="Fechar">${IC.x}</button>
         </header>
         <div class="fx-b">
@@ -1883,8 +1890,8 @@
   }
 
   function exportarCSV() {
-    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Reincidente', 'Acerto na 1ª vez', 'Perguntas refeitas', 'Motivo', 'Acerto (das respondidas)', 'Dúvidas (erros)', 'Assunto com mais erro', 'Anotações', 'Ajudou', 'Estrelas', 'Comentário', 'Último acesso', 'Cadastro', 'Aparelho'];
-    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.reincidente ? 'Sim' : 'Não', s.respondidas ? `${Math.round(s.notaPrimeira * 100)}%` : '', s.refeitas.size, s.motivo, s.respondidas ? `${Math.round((s.certas / s.respondidas) * 100)}% (${s.certas} de ${s.respondidas})` : '', s.erros.length, s.erroTema || '', s.notas.length, s.aval ? (s.aval.ajudou ? 'Sim' : 'Não') : '', s.aval ? s.aval.estrelas : '', s.aval ? s.aval.comentario || '' : '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo]);
+    const cab = ['Loja', 'Cidade', 'Módulos concluídos', 'Situação', 'Reincidente', 'Acerto na 1ª vez', 'Perguntas refeitas', 'Motivo', 'Acerto (das respondidas)', 'Dúvidas (erros)', 'Assunto com mais erro', 'Anotações', 'Ajudou', 'Estrelas', 'Comentário', 'Último acesso', 'Cadastro', 'Aparelho', 'Usa o Bigou App no'];
+    const linhas = linhasLojas().map((s) => [s.p.loja, s.p.cidade, `${s.fim.size}/${NMOD}`, SIT[s.sit][0], s.reincidente ? 'Sim' : 'Não', s.respondidas ? `${Math.round(s.notaPrimeira * 100)}%` : '', s.refeitas.size, s.motivo, s.respondidas ? `${Math.round((s.certas / s.respondidas) * 100)}% (${s.certas} de ${s.respondidas})` : '', s.erros.length, s.erroTema || '', s.notas.length, s.aval ? (s.aval.ajudou ? 'Sim' : 'Não') : '', s.aval ? s.aval.estrelas : '', s.aval ? s.aval.comentario || '' : '', dataHoraBR(s.ultimo), dataHoraBR(s.p.criado_em), s.p.dispositivo, s.uso && s.uso.length ? usoTxt(s.uso) : '']);
     baixarCSV('treinamento-lojas', [cab].concat(linhas));
   }
 

@@ -110,6 +110,7 @@
     grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
     percent: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18.5 5.5l-13 13"/></svg>',
     calendario: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9.5 15l2 2 3.5-3.5"/></svg>',
+    computador: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/></svg>',
     lampada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
     barras: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="13" width="4" height="7.5" rx="1.2"/><rect x="10" y="8.5" width="4" height="12" rx="1.2"/><rect x="16.5" y="3.5" width="4" height="17" rx="1.2"/></svg>',
     cadeado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
@@ -187,12 +188,15 @@
   }
   const modulosFeitos = (sessao) => Object.values(progressoDoServidor(sessao.eventos).p).filter((x) => x === 'done').length;
 
+  // Onde a loja mais usa o Bigou App (celular/computador), marcado no cadastro
+  let usoApp = null;
   function retomarSessao(sessao, lojaDigitada) {
     const r = progressoDoServidor(sessao.eventos);
     Object.assign(A.saved, { p: r.p, passo: r.passo, visto: r.visto, quiz: r.quiz });
     if (r.avaliacao) A.saved.avaliacao = r.avaliacao; else delete A.saved.avaliacao;
     save();
     const p = An.retomar(sessao, lojaDigitada);
+    if (usoApp && usoApp.length && An.definirUso) An.definirUso(usoApp);
     try {
       if (r.certificadoEm) localStorage.setItem('bigou-treino-concluido-em', r.certificadoEm); else localStorage.removeItem('bigou-treino-concluido-em');
       if (doneCount() === A.mods.length) localStorage.setItem('bigou-treino-concluido-' + p.id, '1');
@@ -230,7 +234,7 @@
         </main>
       </div>`;
     app.querySelector('[data-sessao="sim"]').addEventListener('click', () => retomarSessao(sessao, loja));
-    app.querySelector('[data-sessao="nao"]').addEventListener('click', () => { if (An) An.cadastrar(loja, cidade); seguirAposCadastro(); });
+    app.querySelector('[data-sessao="nao"]').addEventListener('click', () => { if (An) An.cadastrar(loja, cidade, usoApp); seguirAposCadastro(); });
     app.querySelector('[data-sessao="sim"]').focus();
   }
 
@@ -260,6 +264,20 @@
               <ul id="cad-lista" role="listbox" class="cad-lista" hidden></ul>
               <small class="cad-err" id="cad-cidade-err"></small>
             </div>
+            <fieldset class="cad-f cad-uso" aria-describedby="cad-uso-err">
+              <legend>${L('Onde você mais usa o Bigou App?', '¿Dónde usas más la Bigou App?')}</legend>
+              <small class="cad-dica">${L('Pode marcar os dois.', 'Puedes marcar los dos.')}</small>
+              <div class="cad-uso-ops">
+                ${[['celular', ICON.celular, L('Celular', 'Celular')], ['computador', ICON.computador, L('Computador', 'Computadora')]].map(([v, ic, t]) => `
+                <label class="cad-chk">
+                  <input type="checkbox" name="uso" value="${v}" ${(p.uso || []).includes(v) ? 'checked' : ''}>
+                  <span class="cad-chk-ic">${ic}</span>
+                  <span class="cad-chk-t">${t}</span>
+                  <span class="cad-chk-box" aria-hidden="true">${ICON.check}</span>
+                </label>`).join('')}
+              </div>
+              <small class="cad-err" id="cad-uso-err"></small>
+            </fieldset>
             <button type="submit" class="t-btn primary lg cad-ok">${ICON.play}${L('Continuar', 'Continuar')}</button>
           </form>
         </main>
@@ -309,11 +327,15 @@
       const loja = iLoja.value.trim().replace(/\s+/g, ' ');
       // Aceita a cidade digitada sem acento/maiúscula, desde que seja da lista
       const cidade = TREINO.cidades.find((c) => semAcento(c) === semAcento(iCid.value.trim())) || '';
-      const eL = document.getElementById('cad-loja-err'), eC = document.getElementById('cad-cidade-err');
+      const eL = document.getElementById('cad-loja-err'), eC = document.getElementById('cad-cidade-err'), eU = document.getElementById('cad-uso-err');
+      const uso = [...form.querySelectorAll('input[name="uso"]:checked')].map((x) => x.value);
       eL.textContent = loja.length < 2 ? L('Digite o nome da sua loja.', 'Escribe el nombre de tu tienda.') : '';
       eC.textContent = cidade ? '' : L('Escolha uma cidade da lista.', 'Elige una ciudad de la lista.');
+      eU.textContent = uso.length ? '' : L('Marque onde você mais usa o Bigou App.', 'Marca dónde usas más la Bigou App.');
       if (loja.length < 2) { iLoja.focus(); return; }
       if (!cidade) { iCid.focus(); return; }
+      if (!uso.length) { form.querySelector('input[name="uso"]').focus(); return; }
+      usoApp = uso;
       // Outro aparelho (ou outra loja neste): procura o progresso da loja no banco antes de começar do zero
       const atual = An && An.participante();
       const mesmaLoja = atual && semAcento(atual.loja) === semAcento(loja) && atual.cidade === cidade;
@@ -324,7 +346,7 @@
         const s = await An.buscarSessao(loja, cidade);
         if (s) { if (s.semelhanca >= 1) retomarSessao(s, loja); else viewConfirmarSessao(s, loja, cidade); return; }
       }
-      if (An) An.cadastrar(loja, cidade);
+      if (An) An.cadastrar(loja, cidade, uso);
       seguirAposCadastro();
     });
     if (!p.loja) iLoja.focus({ preventScroll: true });

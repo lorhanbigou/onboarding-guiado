@@ -60,18 +60,34 @@
   }
 
   /** Cadastro da loja. Se já havia outra loja neste aparelho, começa um participante novo. */
-  An.cadastrar = function (loja, cidade) {
+  // uso: onde a loja mais usa o Bigou App (['celular'], ['computador'] ou os dois). Vai no evento
+  // "cadastro" (detalhe), então não precisa de coluna nova no banco.
+  const USOS = ['celular', 'computador'];
+  const limparUso = (u) => (Array.isArray(u) ? USOS.filter((x) => u.includes(x)) : []);
+  An.cadastrar = function (loja, cidade, uso) {
     const atual = ler(K_PART);
     if (atual && (atual.loja !== loja || atual.cidade !== cidade)) { id = uuid(); gravar(K_ID, id); }
+    const u = limparUso(uso);
     const p = { id, loja, cidade, criado_em: new Date().toISOString() };
+    if (u.length) p.uso = u;
     gravar(K_PART, p);
     enfileirar({
       t: 'treino_participantes',
       row: { id, loja, cidade, dispositivo: dispositivo(), navegador: navegador(), criado_em: p.criado_em },
     });
-    An.registrar('cadastro', { detalhe: { loja, cidade, idioma: TREINO.idioma } });
+    An.registrar('cadastro', { detalhe: u.length ? { loja, cidade, idioma: TREINO.idioma, uso: u } : { loja, cidade, idioma: TREINO.idioma } });
     An.enviar();
     return p;
+  };
+
+  /** Loja que retomou o treinamento: guarda e registra onde ela mais usa o Bigou App */
+  An.definirUso = function (uso) {
+    const u = limparUso(uso);
+    if (!u.length) return;
+    const p = ler(K_PART);
+    if (p) { p.uso = u; gravar(K_PART, p); }
+    An.registrar('uso_app', { detalhe: { uso: u } });
+    An.enviar();
   };
 
   /** Procura a loja no banco (mesma cidade, nome igual ou ≥ 90% parecido). Sem resposta em 6 s, segue sem. */
