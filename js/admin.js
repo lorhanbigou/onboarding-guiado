@@ -889,11 +889,6 @@
         <aside class="lg-marca" aria-hidden="true">
           <div class="lg-marca-t"><img src="../assets/bigou-logo.png" alt="" width="52" height="52"><b>Treinamento <span>Financeiro</span></b></div>
           <p>Acompanhe o treinamento das lojas parceiras: quem começou, onde param e o que ainda gera dúvida.</p>
-          <ul class="lg-pontos">
-            <li><span>${IC.critico}</span><div><b>Quem precisa de contato</b><small>Lojas paradas, sem começar ou sem certificado.</small></div></li>
-            <li><span>${IC.rota}</span><div><b>Onde as lojas param</b><small>O passo a passo de cada módulo.</small></div></li>
-            <li><span>${IC.chat}</span><div><b>O que ainda gera dúvida</b><small>Perguntas, chat e avaliações num lugar só.</small></div></li>
-          </ul>
           <svg class="lg-ondas" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 70 C80 30 160 110 260 60 S 360 40 400 60 V120 H0z" fill="rgba(255,255,255,.08)"/><path d="M0 95 C90 70 170 120 260 95 S 360 80 400 92 V120 H0z" fill="rgba(255,255,255,.1)"/></svg>
         </aside>
         <section class="lg-lado">${conteudo}</section>
