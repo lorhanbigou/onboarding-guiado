@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node serve.js",
     "dev": "node --env-file=.env.stage serve.js",
-    "dev:main": "node --env-file=.env.main serve.js"
+    "dev:main": "node --env-file=.env.main serve.js",
+    "tema:escuro": "node scripts/gerar-tema-escuro.js"
   },
   "private": true,
   "engines": {

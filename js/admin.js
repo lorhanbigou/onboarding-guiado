@@ -138,6 +138,8 @@
     feedback: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/><path d="M12 7.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/>'),
     lapis: sv('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
     cartoes: sv('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
+    lua: sv('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+    sol: sv('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>'),
     funil: sv('<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>'),
     alvo: sv('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>'),
   };
@@ -1022,6 +1024,7 @@
   const K_VISTO = 'bigou-admin-visto';
   // Menu lateral recolhido (só no computador); a escolha fica salva no navegador
   const K_SBMINI = 'bigou-admin-sb-mini';
+  const temaEscuro = () => document.documentElement.getAttribute('data-tema') === 'escuro';
   let sbMini = (() => { try { return localStorage.getItem(K_SBMINI) === '1'; } catch (e) { return false; } })();
   function alternarSb() {
     sbMini = !sbMini;
@@ -1066,6 +1069,7 @@
           <button type="button" class="sb-tg" data-a="sbmini" aria-expanded="${!sbMini}" aria-label="${sbMini ? 'Expandir menu' : 'Recolher menu'}" title="${sbMini ? 'Expandir menu' : 'Recolher menu'}">${IC.chevron}</button>
           <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''} data-sbtip="${p.t}${cont[p.id] ? ` · ${n(cont[p.id])}` : ''}">${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
+            <button class="sb-a sb-tema" data-a="tema" data-sbtip="${temaEscuro() ? 'Modo claro' : 'Modo escuro'}" aria-pressed="${temaEscuro()}">${temaEscuro() ? IC.sol : IC.lua}<span>${temaEscuro() ? 'Modo claro' : 'Modo escuro'}</span></button>
             <button class="sb-a" data-a="atualizar" data-sbtip="Atualizar dados">${IC.atualizar}<span>Atualizar dados</span></button>
             <button class="sb-a" data-a="sair" data-sbtip="Sair">${IC.sair}<span>Sair</span></button>
           </div>
@@ -1848,6 +1852,7 @@
       if (x === 'atualizar') iniciar();
       else if (x === 'sair') { sessao.sair(); telaLogin(); }
       else if (x === 'sbmini') alternarSb();
+      else if (x === 'tema') { if (window.TemaAdmin) TemaAdmin.alternar(); const b = document.querySelector('.sb-tema'); if (b) { const esc2 = temaEscuro(), t = esc2 ? 'Modo claro' : 'Modo escuro'; b.innerHTML = `${esc2 ? IC.sol : IC.lua}<span>${t}</span>`; b.dataset.sbtip = t; b.setAttribute('aria-pressed', String(esc2)); } }
       else if (x === 'menu') { st.menu = !st.menu; document.querySelector('.painel').classList.toggle('menu-on', st.menu); }
       else if (ACOES[x]) ACOES[x]();
       return;

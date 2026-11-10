@@ -1263,3 +1263,22 @@ h4.sub { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--ink3)
   .sb > .sb-tg { position: absolute; top: 28px; right: 10px; }
   .painel.sb-mini .sb > .sb-tg { position: relative; top: auto; right: auto; }
 }
+
+/* ========== MODO ESCURO: cores-base (o resto vem de admin-escuro.css, gerado) ========== */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+  --ink: #e7efea; --ink2: #b4c2ba; --ink3: #8b9a92; --line: #25322b; --soft: #16201b; --bg: #0c1310;
+  --g: #22b35e; --g2: #1f9a54; --g3: #74d9a0; --gsoft: #13281c; --gsoft2: #1a3826;
+  --am: #f5a524; --amsoft: #2f2512; --vm: #f05252; --vmsoft: #331a1a; --az: #5b8def; --azsoft: #172340;
+  --ok: #2fbf4f; --warn: #f5b532; --crit: #f05252;
+  --sh: 0 1px 2px rgba(0,0,0,.35), 0 10px 28px -12px rgba(0,0,0,.65);
+}
+:root[data-tema="escuro"] .painel-main::before { background: radial-gradient(60% 70% at 70% 0%, rgba(34,179,94,.12), transparent 70%), radial-gradient(40% 50% at 100% 30%, rgba(74,222,128,.06), transparent 70%); }
+:root[data-tema="escuro"] .sb { background: linear-gradient(180deg, #082a18 0%, #0a3520 55%, #0c4226 100%); }
+:root[data-tema="escuro"] #adm-tip { background: #e7efea; color: #0c1310; }
+:root[data-tema="escuro"] img[src*="bigou-logo"] { filter: none; }
+:root[data-tema="escuro"] ::selection { background: rgba(34,179,94,.35); }
+body, .card, .kpi, .sb, .painel-main { transition: background-color .2s, border-color .2s, color .2s; }
+:root[data-tema="escuro"] .lc .grid { stroke: #24302a; }
+:root[data-tema="escuro"] .lc-x { stroke: #4b5a52; }
+:root[data-tema="escuro"] .lc circle[stroke="#fff"] { stroke: #151d19; }

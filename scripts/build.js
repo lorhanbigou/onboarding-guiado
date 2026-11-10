@@ -19,6 +19,8 @@ if (falta.length && NETLIFY === 'true') {
 
 fs.rmSync(dist, { recursive: true, force: true });
 for (const item of PUBLICOS) fs.cpSync(path.join(raiz, item), path.join(dist, item), { recursive: true });
+// Modo escuro do painel: regerado a partir do admin.css, para nunca ficar defasado
+require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'gerar-tema-escuro.js'), path.join(dist, 'css', 'admin-escuro.css')], { stdio: 'inherit' });
 
 if (falta.length) {
   console.log('Variáveis do Supabase não definidas; dist/ usa o config vazio (sem Supabase).');
