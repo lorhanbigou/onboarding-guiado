@@ -93,7 +93,7 @@ function blocos(css) {
   }
   return out;
 }
-const PULA = (sel) => /data-tema/.test(sel) || /(^|[\s>+~,])\.sb(\b|-)|\.sb-|#adm-tip|\.lg-bg/.test(sel) || /^(@|from|to|\d)/.test(sel);
+const PULA = (sel) => /data-tema/.test(sel) || /(^|[\s>+~,])\.sb(\b|-)|\.sb-|#adm-tip|\.lg(\b|-)|\.ld\b|\.adm-aviso/.test(sel) || /^(@|from|to|\d)/.test(sel);
 function prefixar(sel) {
   return sel.split(',').map((x) => x.trim()).filter(Boolean).map((x) => {
     if (x.startsWith(':root')) return PREFIXO + x.slice(5);

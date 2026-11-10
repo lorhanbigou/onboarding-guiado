@@ -7,11 +7,12 @@
 window.TREINO = {};
 
 /* ------------------------------ Idioma ------------------------------ */
-// Português (padrão) ou espanhol. Escolha discreta no rodapé da tela inicial
-// (fica salva no aparelho) ou ?lang=es / ?lang=pt na URL.
-// Cada texto traz as duas versões lado a lado: L('Olá', 'Hola').
+// Português (padrão), espanhol ou inglês. Escolha no rodapé da tela inicial
+// (fica salva no aparelho) ou ?lang=es / ?lang=en / ?lang=pt na URL.
+// Cada texto traz as três versões lado a lado: L('Olá', 'Hola', 'Hello').
+// Sem a versão do idioma escolhido, vale o português.
 const K_IDIOMA = 'bigou-treino-idioma';
-TREINO.IDIOMAS = ['pt', 'es'];
+TREINO.IDIOMAS = ['pt', 'es', 'en'];
 TREINO.idioma = (function () {
   if (typeof location === 'undefined') return 'pt';
   // O painel admin usa os títulos dos módulos e os temas do assistente: sempre em português
@@ -22,7 +23,9 @@ TREINO.idioma = (function () {
   return 'pt';
 })();
 TREINO.es = TREINO.idioma === 'es';
-const L = (pt, es) => (TREINO.es && es != null ? es : pt);
+TREINO.en = TREINO.idioma === 'en';
+TREINO.pt = TREINO.idioma === 'pt';
+const L = (pt, es, en) => (TREINO.es && es != null ? es : TREINO.en && en != null ? en : pt);
 TREINO.L = L;
 TREINO.trocarIdioma = function (id) {
   if (!TREINO.IDIOMAS.includes(id) || id === TREINO.idioma) return;
@@ -32,12 +35,13 @@ TREINO.trocarIdioma = function (id) {
   u.searchParams.delete('lang');
   location.replace(u.toString());
 };
-if (typeof document !== 'undefined') document.documentElement.lang = L('pt-BR', 'es');
+if (typeof document !== 'undefined') document.documentElement.lang = L('pt-BR', 'es', 'en');
 
 /* ------------------------------ Datas ------------------------------ */
 const MESES = L(
   ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
   ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
 );
 const pad2 = (n) => String(n).padStart(2, '0');
 const fmtData = (d) => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
@@ -56,14 +60,14 @@ TREINO.hoje = (function () {
    Fixos valem todo ano (MM-DD); os móveis são informados por ano (AAAA-MM-DD). */
 TREINO.feriados = {
   fixos: {
-    '01-01': L('Confraternização Universal', 'Año Nuevo'), '04-21': 'Tiradentes', '05-01': L('Dia Mundial do Trabalho', 'Día del Trabajador'),
-    '09-07': L('Independência do Brasil', 'Independencia de Brasil'), '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida'), '11-02': L('Finados', 'Día de los Difuntos'),
-    '11-15': L('Proclamação da República', 'Proclamación de la República'), '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra'), '12-25': L('Natal', 'Navidad'),
+    '01-01': L('Confraternização Universal', 'Año Nuevo', 'New Year\'s Day'), '04-21': 'Tiradentes', '05-01': L('Dia Mundial do Trabalho', 'Día del Trabajador', 'Labor Day'),
+    '09-07': L('Independência do Brasil', 'Independencia de Brasil', 'Brazilian Independence Day'), '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida', 'Our Lady of Aparecida'), '11-02': L('Finados', 'Día de los Difuntos', 'All Souls\' Day'),
+    '11-15': L('Proclamação da República', 'Proclamación de la República', 'Proclamation of the Republic'), '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra', 'Zumbi and Black Awareness Day'), '12-25': L('Natal', 'Navidad', 'Christmas'),
     // Rio Pomba - MG
-    '04-09': L('Dia da Lola', 'Día de Lola'), '06-17': L('Dia de São Manoel', 'Día de San Manuel'), '08-25': L('Emancipação Política de Rio Pomba', 'Emancipación Política de Rio Pomba'),
+    '04-09': L('Dia da Lola', 'Día de Lola', 'Lola Day'), '06-17': L('Dia de São Manoel', 'Día de San Manuel', 'Saint Manuel\'s Day'), '08-25': L('Emancipação Política de Rio Pomba', 'Emancipación Política de Rio Pomba', 'Rio Pomba Political Emancipation Day'),
   },
   moveis: {
-    '2026-04-03': L('Paixão de Cristo', 'Viernes Santo'),
+    '2026-04-03': L('Paixão de Cristo', 'Viernes Santo', 'Good Friday'),
     '2026-06-04': 'Corpus Christi',
   },
 };
@@ -91,15 +95,15 @@ TREINO.periodo = (function (hoje) {
 })(TREINO.hoje);
 
 TREINO.config = {
-  loja: { nome: L('Loja de Treinamento', 'Tienda de Capacitación'), cidade: 'Rio Pomba - MG' },
+  loja: { nome: L('Loja de Treinamento', 'Tienda de Capacitación', 'Training Store'), cidade: 'Rio Pomba - MG' },
   // Recursos que podem ser ligados e desligados. Padrão desligado; cada ambiente liga os seus pelas
   // variáveis RECURSO_* do deploy (viram window.TREINO_RECURSOS em js/registro-config.js). Use TREINO.recurso().
   recursos: {
-    assistente: false,   // assistente de dúvidas (chat): hoje ligado só no stage
+    assistente: true,    // assistente de dúvidas (chat): ligado; RECURSO_ASSISTENTE=false no deploy desliga
     debug: false,        // botão Debug (preencher respostas e cadastro para testar): só no stage
   },
   mes: `${TREINO.periodo.nomeMes.toUpperCase()} ${TREINO.periodo.ano}`,
-  mesExtenso: `${TREINO.periodo.nomeMes} de ${TREINO.periodo.ano}`,
+  mesExtenso: `${TREINO.periodo.nomeMes}${L(' de ', ' de ', ' ')}${TREINO.periodo.ano}`,
 
   /* Regras (estrutura da conta extraída da tela de referência):
      - Comissão: 12% sobre (total bruto − taxas de serviço)

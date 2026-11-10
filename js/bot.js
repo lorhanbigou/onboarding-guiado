@@ -15,287 +15,324 @@
   const CFG = TREINO.config;
   // Para onde o assistente encaminha quando não consegue ajudar
   const CONTATO_FINANCEIRO = { numero: '(32) 99819-6024', whatsapp: 'https://wa.me/5532998196024' };
-  const contatoFinanceiro = () => `<a class="bt-contato" href="${CONTATO_FINANCEIRO.whatsapp}" target="_blank" rel="noopener noreferrer">${L('WhatsApp do Financeiro', 'WhatsApp de Finanzas')}: ${CONTATO_FINANCEIRO.numero}</a>`;
+  const contatoFinanceiro = () => `<a class="bt-contato" href="${CONTATO_FINANCEIRO.whatsapp}" target="_blank" rel="noopener noreferrer">${L('WhatsApp do Financeiro', 'WhatsApp de Finanzas', 'Finance WhatsApp')}: ${CONTATO_FINANCEIRO.numero}</a>`;
   const PCT = (p) => String(Math.round(p * 10000) / 100).replace('.', ',') + '%';
   const R$ = (v) => F(Math.round(v * 100));
   const T = CFG.taxas, MS = CFG.mensalidade, TS = CFG.taxaServico;
-  const OBS = `<small class="bt-obs">${L('Valores do treinamento. Os da sua loja estão no seu contrato.', 'Valores de la capacitación. Los de tu tienda están en tu contrato.')}</small>`;
+  const OBS = `<small class="bt-obs">${L('Valores do treinamento. Os da sua loja estão no seu contrato.', 'Valores de la capacitación. Los de tu tienda están en tu contrato.', 'Training values. Your store\'s values are in your contract.')}</small>`;
 
   /* ------------------------------ Base de conhecimento ------------------------------ */
   // k3: expressões bem específicas (peso 3) · k2: (peso 2) · k1: palavras gerais (peso 1)
   // Uma expressão conta quando todas as palavras dela aparecem na pergunta.
-  // Em espanhol, cada lista usa as suas próprias palavras: L([português], [espanhol]).
+  // Em espanhol e inglês, cada lista usa as suas próprias palavras: L([português], [espanhol], [inglês]).
   // id e tema ficam sempre em português (o painel agrupa as dúvidas por eles).
   const INTENCOES = [
     {
-      id: 'comissao', tema: 'Comissão', rever: 6, exemplo: L('Como funciona a comissão?', '¿Cómo funciona la comisión?'),
-      k3: L(['comissao', 'comicao', 'comisao'], ['comision', 'comisiones', 'comicion']), k2: L(['parte da plataforma', 'porcentagem', 'percentual'], ['parte de la plataforma', 'porcentaje']), k1: L(['cobrada', 'cobram', 'quanto'], ['cobrada', 'cobran', 'cuanto']),
+      id: 'comissao', tema: 'Comissão', rever: 6, exemplo: L('Como funciona a comissão?', '¿Cómo funciona la comisión?', 'How does the commission work?'),
+      k3: L(['comissao', 'comicao', 'comisao'], ['comision', 'comisiones', 'comicion'], ['commission', 'comission', 'commision']), k2: L(['parte da plataforma', 'porcentagem', 'percentual'], ['parte de la plataforma', 'porcentaje'], ['platform share', 'platform cut', 'percentage', 'percent']), k1: L(['cobrada', 'cobram', 'quanto'], ['cobrada', 'cobran', 'cuanto'], ['charged', 'charge', 'much']),
       r: () => L(
         `A <b>comissão</b> é a parte da plataforma pelas vendas feitas pelo aplicativo. Ela vale para <b>todas</b> as vendas: online, dinheiro e maquininha.<br>É calculada sobre o valor dos produtos, sem a taxa de serviço. No treinamento usamos <b>${PCT(T.comissao)}</b>.${OBS}`,
-        `La <b>comisión</b> es la parte de la plataforma por las ventas hechas por la aplicación. Vale para <b>todas</b> las ventas: online, efectivo y POS.<br>Se calcula sobre el valor de los productos, sin la tasa de servicio. En la capacitación usamos <b>${PCT(T.comissao)}</b>.${OBS}`),
+        `La <b>comisión</b> es la parte de la plataforma por las ventas hechas por la aplicación. Vale para <b>todas</b> las ventas: online, efectivo y POS.<br>Se calcula sobre el valor de los productos, sin la tasa de servicio. En la capacitación usamos <b>${PCT(T.comissao)}</b>.${OBS}`,
+        `The <b>commission</b> is the platform's share of the sales made through the app. It applies to <b>all</b> sales: online, cash and card machine.<br>It is calculated on the value of the products, without the service fee. In the training we use <b>${PCT(T.comissao)}</b>.${OBS}`),
       seguintes: ['comissao_conta', 'cancelado', 'repasse_menor'],
     },
     {
-      id: 'comissao_conta', tema: 'Comissão', rever: 6, exemplo: L('Onde vejo a conta da comissão?', '¿Dónde veo la cuenta de la comisión?'),
-      k3: L(['conta comissao', 'calculo comissao', 'calcula comissao', 'base calculo', 'calculada comissao'], ['cuenta comision', 'calculo comision', 'calcula comision', 'base calculo', 'calculada comision']), k2: L(['calculo', 'calculada', 'calcula'], ['calculo', 'calculada', 'calcula']), k1: L(['comissao', 'onde'], ['comision', 'donde']),
+      id: 'comissao_conta', tema: 'Comissão', rever: 6, exemplo: L('Onde vejo a conta da comissão?', '¿Dónde veo la cuenta de la comisión?', 'Where do I see how the commission is calculated?'),
+      k3: L(['conta comissao', 'calculo comissao', 'calcula comissao', 'base calculo', 'calculada comissao'], ['cuenta comision', 'calculo comision', 'calcula comision', 'base calculo', 'calculada comision'], ['commission calculation', 'calculate commission', 'commission math', 'commission breakdown', 'calculation base', 'work out commission']), k2: L(['calculo', 'calculada', 'calcula'], ['calculo', 'calculada', 'calcula'], ['calculation', 'calculated', 'calculate', 'breakdown']), k1: L(['comissao', 'onde'], ['comision', 'donde'], ['commission', 'where']),
       r: () => L(
         'Abra <b>Financeiro</b>, toque na fatura e depois no <b>ⓘ</b> ao lado de <b>Comissão</b>.<br>Lá aparecem as vendas confirmadas, as canceladas por tempo, a taxa de serviço que sai da conta e a base de cálculo.',
-        'Abre <b>Finanzas</b>, toca la factura y luego el <b>ⓘ</b> al lado de <b>Comisión</b>.<br>Ahí aparecen las ventas confirmadas, las canceladas por tiempo, la tasa de servicio que sale de la cuenta y la base de cálculo.'),
+        'Abre <b>Finanzas</b>, toca la factura y luego el <b>ⓘ</b> al lado de <b>Comisión</b>.<br>Ahí aparecen las ventas confirmadas, las canceladas por tiempo, la tasa de servicio que sale de la cuenta y la base de cálculo.',
+        'Open <b>Finance</b>, tap the invoice and then the <b>ⓘ</b> next to <b>Commission</b>.<br>There you see the confirmed sales, the orders canceled for time, the service fee that is left out of the math and the calculation base.'),
       seguintes: ['cancelado', 'taxa_servico'],
     },
     {
-      id: 'cancelado', tema: 'Pedidos cancelados por tempo', rever: 6, exemplo: L('Por que paguei comissão de pedido cancelado?', '¿Por qué pagué comisión por un pedido cancelado?'),
+      id: 'cancelado', tema: 'Pedidos cancelados por tempo', rever: 6, exemplo: L('Por que paguei comissão de pedido cancelado?', '¿Por qué pagué comisión por un pedido cancelado?', 'Why did I pay commission on a canceled order?'),
       k3: L(['cancelado tempo', 'cancelada tempo', 'tempo expirado', '15 minuto', 'quinze minuto', 'expirou', 'cancelou sozinho', 'cancelado automaticamente', 'cancelado sozinho', 'nao aceitei', 'nao aceitar', 'nao aceito', 'esqueci aceitar', 'comissao cancelado', 'comissao cancelada', 'comissao pedido nao entreguei'],
-        ['cancelado tiempo', 'cancelada tiempo', 'tiempo expirado', '15 minuto', 'quince minuto', 'expiro', 'cancelo solo', 'cancelado automaticamente', 'cancelado solo', 'no acepte', 'no aceptar', 'no aceptado', 'olvide aceptar', 'no acepte tiempo', 'comision cancelado', 'comision cancelada', 'comision pedido no entregue']),
-      k2: L(['cancelado', 'cancelada', 'cancelamento', 'expirado', 'cancelou'], ['cancelado', 'cancelada', 'cancelacion', 'expirado', 'cancelo']), k1: L(['pedido', 'tempo', 'comissao'], ['pedido', 'tiempo', 'comision']),
+        ['cancelado tiempo', 'cancelada tiempo', 'tiempo expirado', '15 minuto', 'quince minuto', 'expiro', 'cancelo solo', 'cancelado automaticamente', 'cancelado solo', 'no acepte', 'no aceptar', 'no aceptado', 'olvide aceptar', 'no acepte tiempo', 'comision cancelado', 'comision cancelada', 'comision pedido no entregue'],
+        ['canceled time', 'cancelled time', 'timed out', 'time out', '15 minute', 'fifteen minute', 'expired order', 'canceled itself', 'cancelled itself', 'canceled automatically', 'cancelled automatically', 'auto canceled', 'auto cancelled', 'not accept', 'not accepted', 'forgot accept', 'missed order', 'commission canceled', 'commission cancelled', 'commission order not delivered', 'commission order never delivered']),
+      k2: L(['cancelado', 'cancelada', 'cancelamento', 'expirado', 'cancelou'], ['cancelado', 'cancelada', 'cancelacion', 'expirado', 'cancelo'], ['canceled', 'cancelled', 'cancellation', 'expired', 'cancel']), k1: L(['pedido', 'tempo', 'comissao'], ['pedido', 'tiempo', 'comision'], ['order', 'time', 'commission']),
       r: () => L(
         'Quando um pedido <b>não é aceito nem recusado em até 15 minutos</b>, ele é cancelado automaticamente.<br>Você não recebe o valor, mas ele <b>entra no cálculo da comissão</b>.<br>Acompanhe a tela <b>Pedidos</b>. Se não puder atender, <b>recuse dentro do prazo</b>: assim ele não entra na comissão.',
-        'Cuando un pedido <b>no se acepta ni se rechaza en hasta 15 minutos</b>, se cancela automáticamente.<br>No recibes el valor, pero <b>entra en el cálculo de la comisión</b>.<br>Sigue la pantalla <b>Pedidos</b>. Si no puedes atender, <b>recházalo dentro del plazo</b>: así no entra en la comisión.'),
+        'Cuando un pedido <b>no se acepta ni se rechaza en hasta 15 minutos</b>, se cancela automáticamente.<br>No recibes el valor, pero <b>entra en el cálculo de la comisión</b>.<br>Sigue la pantalla <b>Pedidos</b>. Si no puedes atender, <b>recházalo dentro del plazo</b>: así no entra en la comisión.',
+        'When an order is <b>not accepted or rejected within 15 minutes</b>, it is canceled automatically.<br>You don\'t get the money, but it <b>still counts in the commission</b>.<br>Keep an eye on the <b>Orders</b> screen. If you can\'t take it, <b>reject it in time</b>: that way it doesn\'t count in the commission.'),
       seguintes: ['aceitar', 'comissao'],
     },
     {
-      id: 'aceitar', tema: 'Pedidos cancelados por tempo', rever: 6, exemplo: L('Onde aceito os pedidos?', '¿Dónde acepto los pedidos?'),
-      k3: L(['aceitar pedido', 'aceito pedido', 'recusar pedido', 'aguardando confirmacao', 'tela pedido', 'pedido novo', 'novo pedido'], ['aceptar pedido', 'acepto pedido', 'rechazar pedido', 'esperando confirmacion', 'pantalla pedido', 'pedido nuevo', 'nuevo pedido']), k2: L(['aceitar', 'recusar', 'recuso', 'aceito'], ['aceptar', 'rechazar', 'rechazo', 'acepto']), k1: ['pedido'],
+      id: 'aceitar', tema: 'Pedidos cancelados por tempo', rever: 6, exemplo: L('Onde aceito os pedidos?', '¿Dónde acepto los pedidos?', 'Where do I accept orders?'),
+      k3: L(['aceitar pedido', 'aceito pedido', 'recusar pedido', 'aguardando confirmacao', 'tela pedido', 'pedido novo', 'novo pedido'], ['aceptar pedido', 'acepto pedido', 'rechazar pedido', 'esperando confirmacion', 'pantalla pedido', 'pedido nuevo', 'nuevo pedido'], ['accept order', 'reject order', 'decline order', 'refuse order', 'awaiting confirmation', 'order screen', 'new order', 'incoming order']), k2: L(['aceitar', 'recusar', 'recuso', 'aceito'], ['aceptar', 'rechazar', 'rechazo', 'acepto'], ['accept', 'reject', 'decline', 'refuse']), k1: L(['pedido'], ['pedido'], ['order']),
       r: () => L(
         'Os pedidos novos chegam na tela <b>Pedidos</b>, com a etiqueta <b>AGUARDANDO CONFIRMAÇÃO</b>.<br>Abra o pedido para aceitar ou recusar. Você tem até <b>15 minutos</b>.',
-        'Los pedidos nuevos llegan a la pantalla <b>Pedidos</b>, con la etiqueta <b>ESPERANDO CONFIRMACIÓN</b>.<br>Abre el pedido para aceptarlo o rechazarlo. Tienes hasta <b>15 minutos</b>.'),
+        'Los pedidos nuevos llegan a la pantalla <b>Pedidos</b>, con la etiqueta <b>ESPERANDO CONFIRMACIÓN</b>.<br>Abre el pedido para aceptarlo o rechazarlo. Tienes hasta <b>15 minutos</b>.',
+        'New orders show up on the <b>Orders</b> screen, with the <b>AWAITING CONFIRMATION</b> tag.<br>Open the order to accept or reject it. You have up to <b>15 minutes</b>.'),
       seguintes: ['cancelado', 'pagamento_online'],
     },
     {
-      id: 'taxa_servico', tema: 'Taxa de serviço', rever: 8, exemplo: L('O que é a taxa de serviço?', '¿Qué es la tasa de servicio?'),
-      k3: L(['taxa servico', '0 99', '1 99 pedido'], ['tasa servicio', 'tarifa servicio', '0 99', '1 99 pedido']), k2: L(['servico'], ['servicio']), k1: L(['taxa', 'cliente paga', 'deducao'], ['tasa', 'cliente paga', 'deduccion']),
+      id: 'taxa_servico', tema: 'Taxa de serviço', rever: 8, exemplo: L('O que é a taxa de serviço?', '¿Qué es la tasa de servicio?', 'What is the service fee?'),
+      k3: L(['taxa servico', '0 99', '1 99 pedido'], ['tasa servicio', 'tarifa servicio', '0 99', '1 99 pedido'], ['service fee', 'service charge', 'service tax', '0 99', '1 99 order']), k2: L(['servico'], ['servicio'], ['service']), k1: L(['taxa', 'cliente paga', 'deducao'], ['tasa', 'cliente paga', 'deduccion'], ['fee', 'customer pays', 'deduction']),
       r: () => L(
         `A <b>taxa de serviço</b> é paga pelo <b>cliente</b> em cada pedido, além dos produtos: ${R$(TS.normal)}, ou ${R$(TS.maior)} em pedidos acima de ${R$(TS.acimaDe)}. Ela é da plataforma, <b>não é um custo seu</b>.<br>• No pagamento online, ela entra e sai da fatura: para você, fica zero.<br>• No dinheiro e na maquininha, o cliente te pagou a taxa junto com o pedido. Por isso ela é deduzida na fatura: você só repassa o que o cliente pagou.${OBS}`,
-        `La <b>tasa de servicio</b> la paga el <b>cliente</b> en cada pedido, además de los productos: ${R$(TS.normal)}, o ${R$(TS.maior)} en pedidos de más de ${R$(TS.acimaDe)}. Es de la plataforma, <b>no es un costo tuyo</b>.<br>• En el pago online, entra y sale de la factura: para ti, queda en cero.<br>• En efectivo y en el POS, el cliente te pagó la tasa junto con el pedido. Por eso se deduce en la factura: solo entregas lo que el cliente pagó.${OBS}`),
+        `La <b>tasa de servicio</b> la paga el <b>cliente</b> en cada pedido, además de los productos: ${R$(TS.normal)}, o ${R$(TS.maior)} en pedidos de más de ${R$(TS.acimaDe)}. Es de la plataforma, <b>no es un costo tuyo</b>.<br>• En el pago online, entra y sale de la factura: para ti, queda en cero.<br>• En efectivo y en el POS, el cliente te pagó la tasa junto con el pedido. Por eso se deduce en la factura: solo entregas lo que el cliente pagó.${OBS}`,
+        `The <b>service fee</b> is paid by the <b>customer</b> on every order, on top of the products: ${R$(TS.normal)}, or ${R$(TS.maior)} on orders over ${R$(TS.acimaDe)}. It belongs to the platform, <b>it is not a cost to you</b>.<br>• With online payment, it goes in and out of the invoice: for you, it adds up to zero.<br>• With cash and card machine, the customer paid you the fee along with the order. That's why it is deducted on the invoice: you only pass on what the customer paid.${OBS}`),
       seguintes: ['devolucao', 'comissao'],
     },
     {
-      id: 'devolucao', tema: 'Taxa de serviço', rever: 8, exemplo: L('O que é o valor devolvido da maquininha?', '¿Qué es el valor devuelto del POS?'),
-      k3: L(['devolvido', 'devolucao', 'taxa maquininha', 'valor devolvido'], ['devuelto', 'devolucion', 'tasa pos', 'valor devuelto']), k2: L(['devolve', 'devolvem'], ['devuelve', 'devuelven']), k1: L(['maquininha', 'servico'], ['pos', 'maquinita', 'datafono', 'servicio']),
+      id: 'devolucao', tema: 'Taxa de serviço', rever: 8, exemplo: L('O que é o valor devolvido da maquininha?', '¿Qué es el valor devuelto del POS?', 'What is the amount returned for the card machine?'),
+      k3: L(['devolvido', 'devolucao', 'taxa maquininha', 'valor devolvido'], ['devuelto', 'devolucion', 'tasa pos', 'valor devuelto'], ['returned', 'amount returned', 'card machine fee', 'machine fee', 'card fee', 'card machine refund', 'pos fee']), k2: L(['devolve', 'devolvem'], ['devuelve', 'devuelven'], ['return', 'give back', 'pay back']), k1: L(['maquininha', 'servico'], ['pos', 'maquinita', 'datafono', 'servicio'], ['card machine', 'machine', 'service']),
       r: () => L(
         `A maquininha cobra uma taxa sobre tudo o que passa nela, inclusive sobre a taxa de serviço.<br>Para você não pagar por isso, a plataforma <b>devolve ${PCT(T.devolucaoMaquininha)}</b> das taxas de serviço pagas na maquininha. Esse valor aparece na conta da Taxa de serviço.${OBS}`,
-        `El POS cobra una tasa sobre todo lo que pasa por él, incluso sobre la tasa de servicio.<br>Para que no pagues por eso, la plataforma <b>devuelve ${PCT(T.devolucaoMaquininha)}</b> de las tasas de servicio pagadas en el POS. Ese valor aparece en la cuenta de la Tasa de servicio.${OBS}`),
+        `El POS cobra una tasa sobre todo lo que pasa por él, incluso sobre la tasa de servicio.<br>Para que no pagues por eso, la plataforma <b>devuelve ${PCT(T.devolucaoMaquininha)}</b> de las tasas de servicio pagadas en el POS. Ese valor aparece en la cuenta de la Tasa de servicio.${OBS}`,
+        `The card machine charges a fee on everything that goes through it, including the service fee.<br>So you don't pay for that, the platform <b>returns ${PCT(T.devolucaoMaquininha)}</b> of the service fees paid on the card machine. This amount shows up in the Service fee breakdown.${OBS}`),
       seguintes: ['taxa_servico', 'dinheiro_maquininha'],
     },
     {
-      id: 'taxas', tema: 'Taxas', rever: 6, exemplo: L('Quais taxas são descontadas?', '¿Qué tasas se descuentan?'),
-      k3: L(['quais taxa', 'todas taxa', 'deducoes fatura', 'descontos fatura'], ['cuales tasa', 'todas tasa', 'deducciones factura', 'descuentos factura', 'tasas descuentan']), k2: L(['taxa', 'deducao'], ['tasa', 'deduccion']),
+      id: 'taxas', tema: 'Taxas', rever: 6, exemplo: L('Quais taxas são descontadas?', '¿Qué tasas se descuentan?', 'Which fees are deducted?'),
+      k3: L(['quais taxa', 'todas taxa', 'deducoes fatura', 'descontos fatura'], ['cuales tasa', 'todas tasa', 'deducciones factura', 'descuentos factura', 'tasas descuentan'], ['all fee', 'fee deducted', 'fee charge', 'much fee', 'invoice deduction', 'deducted invoice', 'fee taken out', 'list fee']), k2: L(['taxa', 'deducao'], ['tasa', 'deduccion'], ['fee', 'deduction', 'deducted']),
       r: () => L(
         'Na fatura, saem do valor do pagamento online:<br>• Débitos remanescentes (se houver)<br>• <b>Comissão</b>, de todas as vendas<br>• <b>Taxa do pagamento online</b>, só das vendas online<br>• <b>Taxa de transferência</b>, despesas bancárias<br>• <b>Taxa de antecipação</b>, só se você antecipar<br>• <b>Taxa de serviço</b>, paga pelo cliente<br>• <b>Mensalidade</b>, quando atinge o faturamento mínimo<br>Pergunte sobre qualquer uma delas.',
-        'En la factura, salen del valor del pago online:<br>• Débitos pendientes (si los hay)<br>• <b>Comisión</b>, de todas las ventas<br>• <b>Tasa de Pago Online</b>, solo de las ventas online<br>• <b>Tasa bancaria</b>, gastos bancarios<br>• <b>Tasa de anticipo</b>, solo si anticipas<br>• <b>Tasa de servicio</b>, pagada por el cliente<br>• <b>Mensualidad</b>, cuando se alcanza la facturación mínima<br>Pregunta sobre cualquiera de ellas.'),
+        'En la factura, salen del valor del pago online:<br>• Débitos pendientes (si los hay)<br>• <b>Comisión</b>, de todas las ventas<br>• <b>Tasa de Pago Online</b>, solo de las ventas online<br>• <b>Tasa bancaria</b>, gastos bancarios<br>• <b>Tasa de anticipo</b>, solo si anticipas<br>• <b>Tasa de servicio</b>, pagada por el cliente<br>• <b>Mensualidad</b>, cuando se alcanza la facturación mínima<br>Pregunta sobre cualquiera de ellas.',
+        'On the invoice, these come out of the online payment amount:<br>• Remaining debits (if any)<br>• <b>Commission</b>, on all sales<br>• <b>Online payment fee</b>, only on online sales<br>• <b>Transfer fee</b>, bank charges<br>• <b>Early payout fee</b>, only if you take early payout<br>• <b>Service fee</b>, paid by the customer<br>• <b>Monthly fee</b>, when you reach the minimum revenue<br>Ask about any of them.'),
       seguintes: ['comissao', 'taxa_servico', 'taxa_online'],
     },
     {
-      id: 'taxa_online', tema: 'Taxas', rever: 7, exemplo: L('O que é a taxa do pagamento online?', '¿Qué es la Tasa de Pago Online?'),
-      k3: L(['taxa pagamento online', 'taxa online', 'taxa app', 'taxa aplicativo'], ['tasa pago online', 'tasa online', 'tasa app', 'tasa aplicacion']), k2: L(['pagamento online'], ['pago online']), k1: L(['taxa', 'online'], ['tasa', 'online']),
+      id: 'taxa_online', tema: 'Taxas', rever: 7, exemplo: L('O que é a taxa do pagamento online?', '¿Qué es la Tasa de Pago Online?', 'What is the online payment fee?'),
+      k3: L(['taxa pagamento online', 'taxa online', 'taxa app', 'taxa aplicativo'], ['tasa pago online', 'tasa online', 'tasa app', 'tasa aplicacion'], ['online payment fee', 'online fee', 'app fee', 'online payment charge']), k2: L(['pagamento online'], ['pago online'], ['online payment']), k1: L(['taxa', 'online'], ['tasa', 'online'], ['fee', 'online']),
       r: () => L(
         `A <b>taxa do pagamento online</b> vale <b>só</b> para as vendas pagas pelo aplicativo. No treinamento, ${PCT(T.pagamentoOnline)} sobre o valor dessas vendas, sem a taxa de serviço.<br>Para ver a conta: Financeiro → fatura → ⓘ ao lado de Taxa do pagamento online.${OBS}`,
-        `La <b>Tasa de Pago Online</b> vale <b>solo</b> para las ventas pagadas por la aplicación. En la capacitación, ${PCT(T.pagamentoOnline)} sobre el valor de esas ventas, sin la tasa de servicio.<br>Para ver la cuenta: Finanzas → factura → ⓘ al lado de Tasa de Pago Online.${OBS}`),
+        `La <b>Tasa de Pago Online</b> vale <b>solo</b> para las ventas pagadas por la aplicación. En la capacitación, ${PCT(T.pagamentoOnline)} sobre el valor de esas ventas, sin la tasa de servicio.<br>Para ver la cuenta: Finanzas → factura → ⓘ al lado de Tasa de Pago Online.${OBS}`,
+        `The <b>online payment fee</b> applies <b>only</b> to sales paid through the app. In the training, ${PCT(T.pagamentoOnline)} of the value of those sales, without the service fee.<br>To see the math: Finance → invoice → ⓘ next to Online payment fee.${OBS}`),
       seguintes: ['transferencia', 'taxa_antecipacao'],
     },
     {
-      id: 'transferencia', tema: 'Taxas', rever: 7, exemplo: L('O que é a taxa de transferência?', '¿Qué es la tasa bancaria?'),
-      k3: L(['taxa transferencia', '2 50', 'despesa bancaria', 'tarifa bancaria'], ['tasa bancaria', 'tasa transferencia', '2 50', 'gasto bancario', 'tarifa bancaria', 'comision bancaria']), k2: L(['transferencia', 'tarifa'], ['bancaria', 'bancario', 'tarifa']), k1: L(['taxa', 'banco'], ['tasa', 'banco']),
+      id: 'transferencia', tema: 'Taxas', rever: 7, exemplo: L('O que é a taxa de transferência?', '¿Qué es la tasa bancaria?', 'What is the transfer fee?'),
+      k3: L(['taxa transferencia', '2 50', 'despesa bancaria', 'tarifa bancaria'], ['tasa bancaria', 'tasa transferencia', '2 50', 'gasto bancario', 'tarifa bancaria', 'comision bancaria'], ['transfer fee', 'transfer charge', '2 50', 'bank fee', 'bank charge', 'bank expense', 'banking fee', 'wire fee']), k2: L(['transferencia', 'tarifa'], ['bancaria', 'bancario', 'tarifa'], ['transfer', 'banking']), k1: L(['taxa', 'banco'], ['tasa', 'banco'], ['fee', 'bank']),
       r: () => L(
         `A <b>taxa de transferência</b> (${R$(T.transferencia)} no treinamento) é referente a despesas bancárias.<br>É cobrada uma única vez no repasse mensal, ou toda vez que você antecipar.${OBS}`,
-        `La <b>tasa bancaria</b> (${R$(T.transferencia)} en la capacitación) corresponde a gastos bancarios.<br>Se cobra una sola vez en la transferencia mensual, o cada vez que anticipas.${OBS}`),
+        `La <b>tasa bancaria</b> (${R$(T.transferencia)} en la capacitación) corresponde a gastos bancarios.<br>Se cobra una sola vez en la transferencia mensual, o cada vez que anticipas.${OBS}`,
+        `The <b>transfer fee</b> (${R$(T.transferencia)} in the training) covers bank charges.<br>It is charged only once on the monthly payout, or every time you take an early payout.${OBS}`),
       seguintes: ['taxa_antecipacao', 'antecipar'],
     },
     {
-      id: 'taxa_antecipacao', tema: 'Taxas', rever: 7, exemplo: L('Quanto custa antecipar?', '¿Cuánto cuesta anticipar?'),
-      k3: L(['taxa antecipacao', 'custa antecipar', 'custo antecipacao', 'custa antecipacao', 'cobra antecipar', 'taxa antecipar'], ['tasa anticipo', 'cuesta anticipar', 'costo anticipo', 'costo anticipar', 'cuesta anticipo', 'cobran anticipar', 'tasa anticipar']), k1: L(['antecipacao', 'antecipar', 'taxa'], ['anticipo', 'anticipar', 'tasa']),
+      id: 'taxa_antecipacao', tema: 'Taxas', rever: 7, exemplo: L('Quanto custa antecipar?', '¿Cuánto cuesta anticipar?', 'How much does early payout cost?'),
+      k3: L(['taxa antecipacao', 'custa antecipar', 'custo antecipacao', 'custa antecipacao', 'cobra antecipar', 'taxa antecipar'], ['tasa anticipo', 'cuesta anticipar', 'costo anticipo', 'costo anticipar', 'cuesta anticipo', 'cobran anticipar', 'tasa anticipar'], ['early payout fee', 'early fee', 'early cost', 'much cost', 'advance fee', 'advance cost', 'early payment fee', 'charge early', 'fee get paid early']), k2: L(null, null, ['cost', 'costs']), k1: L(['antecipacao', 'antecipar', 'taxa'], ['anticipo', 'anticipar', 'tasa'], ['early', 'advance', 'fee']),
       r: () => L(
         `A <b>taxa de antecipação</b> é ${PCT(T.antecipacao)} do total das vendas online, mais a taxa de transferência.<br>Ela já aparece deduzida na fatura, mas <b>só é aplicada se você pedir a antecipação</b>.${OBS}`,
-        `La <b>tasa de anticipo</b> es ${PCT(T.antecipacao)} del total de las ventas online, más la tasa bancaria.<br>Ya aparece deducida en la factura, pero <b>solo se aplica si pides el anticipo</b>.${OBS}`),
+        `La <b>tasa de anticipo</b> es ${PCT(T.antecipacao)} del total de las ventas online, más la tasa bancaria.<br>Ya aparece deducida en la factura, pero <b>solo se aplica si pides el anticipo</b>.${OBS}`,
+        `The <b>early payout fee</b> is ${PCT(T.antecipacao)} of total online sales, plus the transfer fee.<br>It already shows as deducted on the invoice, but <b>it only applies if you request early payout</b>.${OBS}`),
       seguintes: ['antecipar', 'quando_cai'],
     },
     {
-      id: 'antecipar', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Como peço a antecipação?', '¿Cómo pido el anticipo?'),
-      k3: L(['como antecipar', 'solicitar antecipacao', 'pedir antecipacao', 'adiantar', 'receber antes', 'adiantamento', 'antecipar valor'], ['como anticipar', 'solicitar anticipo', 'pedir anticipo', 'adelantar', 'recibir antes', 'adelanto', 'anticipar valor', 'quiero anticipar']), k2: L(['antecipar', 'antecipacao', 'antecipo'], ['anticipar', 'anticipo', 'anticipacion']), k1: L(['como', 'pedir', 'solicitar'], ['como', 'pedir', 'solicitar']),
+      id: 'antecipar', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Como peço a antecipação?', '¿Cómo pido el anticipo?', 'How do I request early payout?'),
+      k3: L(['como antecipar', 'solicitar antecipacao', 'pedir antecipacao', 'adiantar', 'receber antes', 'adiantamento', 'antecipar valor'], ['como anticipar', 'solicitar anticipo', 'pedir anticipo', 'adelantar', 'recibir antes', 'adelanto', 'anticipar valor', 'quiero anticipar'], ['request early payout', 'early payout', 'paid early', 'paid earlier', 'paid sooner', 'receive early', 'receive earlier', 'receive sooner', 'money early', 'advance payout', 'payout advance', 'cash out early', 'withdraw early']), k2: L(['antecipar', 'antecipacao', 'antecipo'], ['anticipar', 'anticipo', 'anticipacion'], ['early', 'earlier', 'sooner', 'advance']), k1: L(['como', 'pedir', 'solicitar'], ['como', 'pedir', 'solicitar'], ['how', 'request', 'ask']),
       r: () => L(
         'Para receber antes:<ol class="bt-ol"><li>Abra <b>Financeiro</b></li><li>Toque na fatura do mês</li><li>Confira os valores</li><li>Toque em <b>Solicitar antecipação</b> e depois em <b>CONFIRMAR</b></li></ol>O valor cai no <b>próximo dia útil</b>, na sua chave PIX. Depois de confirmar, os pedidos daquele período não podem mais ser cancelados.',
-        'Para recibir antes:<ol class="bt-ol"><li>Abre <b>Finanzas</b></li><li>Toca la factura del mes</li><li>Revisa los valores</li><li>Toca <b>Solicitar anticipo</b> y luego <b>CONFIRMAR</b></li></ol>El valor llega el <b>próximo día hábil</b>, a tu llave PIX. Después de confirmar, los pedidos de ese período ya no se pueden cancelar.'),
+        'Para recibir antes:<ol class="bt-ol"><li>Abre <b>Finanzas</b></li><li>Toca la factura del mes</li><li>Revisa los valores</li><li>Toca <b>Solicitar anticipo</b> y luego <b>CONFIRMAR</b></li></ol>El valor llega el <b>próximo día hábil</b>, a tu llave PIX. Después de confirmar, los pedidos de ese período ya no se pueden cancelar.',
+        'To get paid sooner:<ol class="bt-ol"><li>Open <b>Finance</b></li><li>Tap the invoice for the month</li><li>Check the amounts</li><li>Tap <b>Request early payout</b> and then <b>CONFIRM</b></li></ol>The money arrives on the <b>next business day</b>, to your PIX key. After you confirm, the orders from that period can no longer be canceled.'),
       seguintes: ['taxa_antecipacao', 'quando_cai', 'antecipar_tudo'],
     },
     {
-      id: 'antecipar_tudo', tema: 'Mensalidade e débitos', rever: 9, exemplo: L('Posso antecipar tudo?', '¿Puedo anticipar todo?'),
-      k3: L(['antecipar tudo', 'antecipei tudo', 'antecipo tudo', 'todo dia antecipar', 'sempre antecipar'], ['anticipar todo', 'anticipe todo', 'anticipo todo', 'todo dia anticipar', 'siempre anticipar']), k1: L(['tudo', 'sempre'], ['todo', 'siempre']),
+      id: 'antecipar_tudo', tema: 'Mensalidade e débitos', rever: 9, exemplo: L('Posso antecipar tudo?', '¿Puedo anticipar todo?', 'Can I take early payout on everything?'),
+      k3: L(['antecipar tudo', 'antecipei tudo', 'antecipo tudo', 'todo dia antecipar', 'sempre antecipar'], ['anticipar todo', 'anticipe todo', 'anticipo todo', 'todo dia anticipar', 'siempre anticipar'], ['early everything', 'advance everything', 'all early', 'every day early', 'always early', 'daily early', 'everything early payout']), k1: L(['tudo', 'sempre'], ['todo', 'siempre'], ['everything', 'always', 'all']),
       r: () => L(
         'Pode, sempre que tiver saldo positivo. Só lembre: a <b>mensalidade</b> é deduzida na virada do último dia do mês. Se você antecipou tudo, normalmente não sobra saldo online, e ela vai para a próxima fatura como <b>Débitos remanescentes</b>.',
-        'Puedes, siempre que tengas saldo positivo. Solo recuerda: la <b>mensualidad</b> se deduce al cierre del último día del mes. Si anticipaste todo, normalmente no queda saldo online, y pasa a la próxima factura como <b>Débitos pendientes</b>.'),
+        'Puedes, siempre que tengas saldo positivo. Solo recuerda: la <b>mensualidad</b> se deduce al cierre del último día del mes. Si anticipaste todo, normalmente no queda saldo online, y pasa a la próxima factura como <b>Débitos pendientes</b>.',
+        'Yes, whenever you have a positive balance. Just remember: the <b>monthly fee</b> is deducted at the turn of the last day of the month. If you took everything early, there is usually no online balance left, and it moves to the next invoice as <b>Remaining debits</b>.'),
       seguintes: ['debitos', 'mensalidade'],
     },
     {
-      id: 'quando_cai', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Quando cai o meu repasse?', '¿Cuándo llega mi transferencia?'),
+      id: 'quando_cai', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Quando cai o meu repasse?', '¿Cuándo llega mi transferencia?', 'When does my payout arrive?'),
       k3: L(['quando cai', 'quando recebo', 'quando vou receber', 'quando caiu', 'nao caiu', 'dia repasse', 'data repasse', 'dia cai', 'dia pagamento', 'repasse mensal', 'segundo dia util', '2 dia util', 'dia util', 'quanto tempo demora', 'prazo repasse'],
-        ['cuando llega', 'cuando recibo', 'cuando voy recibir', 'cuando cae', 'cuando pagan', 'no llego', 'no cayo', 'dia transferencia', 'fecha transferencia', 'dia llega', 'dia pago', 'fecha pago', 'transferencia mensual', 'segundo dia habil', '2 dia habil', 'dia habil', 'cuanto tarda', 'plazo transferencia']),
-      k2: L(['cai', 'caiu', 'demora', 'receber', 'recebo', 'prazo'], ['llega', 'llego', 'cae', 'cayo', 'tarda', 'recibir', 'recibo', 'plazo']), k1: L(['repasse', 'quando', 'dinheiro'], ['transferencia', 'cuando', 'dinero']),
+        ['cuando llega', 'cuando recibo', 'cuando voy recibir', 'cuando cae', 'cuando pagan', 'no llego', 'no cayo', 'dia transferencia', 'fecha transferencia', 'dia llega', 'dia pago', 'fecha pago', 'transferencia mensual', 'segundo dia habil', '2 dia habil', 'dia habil', 'cuanto tarda', 'plazo transferencia'],
+        ['when paid', 'when payout', 'when receive', 'when arrive', 'when money', 'when deposit', 'when transfer', 'not arrived', 'not received', 'not paid', 'payout day', 'payout date', 'payment day', 'payment date', 'day paid', 'monthly payout', 'second business day', '2nd business day', '2 business day', 'business day', 'how long take', 'how long', 'payout deadline']),
+      k2: L(['cai', 'caiu', 'demora', 'receber', 'recebo', 'prazo'], ['llega', 'llego', 'cae', 'cayo', 'tarda', 'recibir', 'recibo', 'plazo'], ['arrive', 'arrived', 'deposited', 'receive', 'paid', 'deadline', 'take long']), k1: L(['repasse', 'quando', 'dinheiro'], ['transferencia', 'cuando', 'dinero'], ['payout', 'when', 'money']),
       r: () => L(
         '• <b>Sem antecipar:</b> o repasse mensal é transferido no <b>2º dia útil do mês seguinte</b> às vendas.<br>• <b>Com antecipação:</b> cai no <b>próximo dia útil</b> depois do pedido.<br>Não há repasses em fins de semana nem em feriados nacionais ou municipais de Rio Pomba - MG. Quando cair, a fatura mostra <b>Repasse realizado</b>.',
-        '• <b>Sin anticipar:</b> la transferencia mensual se hace el <b>2º día hábil del mes siguiente</b> a las ventas.<br>• <b>Con anticipo:</b> llega el <b>próximo día hábil</b> después del pedido.<br>No hay transferencias los fines de semana ni en feriados nacionales o municipales de Rio Pomba - MG. Cuando llegue, la factura muestra <b>Transferencia realizada</b>.'),
+        '• <b>Sin anticipar:</b> la transferencia mensual se hace el <b>2º día hábil del mes siguiente</b> a las ventas.<br>• <b>Con anticipo:</b> llega el <b>próximo día hábil</b> después del pedido.<br>No hay transferencias los fines de semana ni en feriados nacionales o municipales de Rio Pomba - MG. Cuando llegue, la factura muestra <b>Transferencia realizada</b>.',
+        '• <b>Without early payout:</b> the monthly payout is transferred on the <b>2nd business day of the month after</b> the sales.<br>• <b>With early payout:</b> it arrives on the <b>next business day</b> after the order.<br>There are no payouts on weekends or on national or municipal holidays in Rio Pomba - MG. When it arrives, the invoice shows <b>Payout completed</b>.'),
       seguintes: ['comprovante', 'antecipar', 'pix'],
     },
     {
-      id: 'repasse_menor', tema: 'Pagamento online', rever: 9, exemplo: L('Por que o repasse veio menor?', '¿Por qué la transferencia llegó menor?'),
+      id: 'repasse_menor', tema: 'Pagamento online', rever: 9, exemplo: L('Por que o repasse veio menor?', '¿Por qué la transferencia llegó menor?', 'Why was my payout smaller?'),
       k3: L(['repasse menor', 'repasse pequeno', 'veio pouco', 'veio menos', 'veio menor', 'recebi pouco', 'recebi menos', 'valor baixo', 'nao bate', 'menor que vendi', 'menos que vendi', 'sumiu dinheiro', 'ficou com dinheiro'],
-        ['transferencia menor', 'transferencia pequena', 'llego poco', 'llego menos', 'llego menor', 'vino poco', 'vino menos', 'recibi poco', 'recibi menos', 'valor bajo', 'no cuadra', 'no coincide', 'menor que vendi', 'menos que vendi', 'falta dinero', 'quedo con dinero']),
-      k2: L(['menor', 'menos', 'pouco', 'pequeno', 'baixo', 'errado', 'errada', 'erro'], ['menor', 'menos', 'poco', 'pequena', 'bajo', 'equivocado', 'equivocada', 'error', 'incorrecto']), k1: L(['repasse', 'vendi', 'valor'], ['transferencia', 'vendi', 'valor']),
+        ['transferencia menor', 'transferencia pequena', 'llego poco', 'llego menos', 'llego menor', 'vino poco', 'vino menos', 'recibi poco', 'recibi menos', 'valor bajo', 'no cuadra', 'no coincide', 'menor que vendi', 'menos que vendi', 'falta dinero', 'quedo con dinero'],
+        ['payout smaller', 'payout lower', 'payout less', 'small payout', 'payout low', 'received less', 'got less', 'less than sold', 'less money', 'low amount', 'not match', 'not add up', 'missing money', 'kept money', 'where money', 'took money']),
+      k2: L(['menor', 'menos', 'pouco', 'pequeno', 'baixo', 'errado', 'errada', 'erro'], ['menor', 'menos', 'poco', 'pequena', 'bajo', 'equivocado', 'equivocada', 'error', 'incorrecto'], ['smaller', 'less', 'lower', 'low', 'small', 'wrong', 'error', 'mistake', 'missing']), k1: L(['repasse', 'vendi', 'valor'], ['transferencia', 'vendi', 'valor'], ['payout', 'sold', 'amount']),
       r: () => L(
         'Porque as deduções de <b>todas</b> as vendas (comissão e taxas) saem <b>só</b> do valor que passou pela plataforma, o pagamento online.<br>O valor das vendas em dinheiro e maquininha <b>já estava com você</b>. Somando esse valor com o repasse, você chega ao <b>Resultado</b> do mês.',
-        'Porque las deducciones de <b>todas</b> las ventas (comisión y tasas) salen <b>solo</b> del valor que pasó por la plataforma, el pago online.<br>El valor de las ventas en efectivo y POS <b>ya estaba contigo</b>. Sumando ese valor con la transferencia, llegas al <b>Resultado</b> del mes.'),
+        'Porque las deducciones de <b>todas</b> las ventas (comisión y tasas) salen <b>solo</b> del valor que pasó por la plataforma, el pago online.<br>El valor de las ventas en efectivo y POS <b>ya estaba contigo</b>. Sumando ese valor con la transferencia, llegas al <b>Resultado</b> del mes.',
+        'Because the deductions for <b>all</b> sales (commission and fees) come out <b>only</b> of the money that went through the platform: the online payments.<br>The money from cash and card machine sales <b>was already with you</b>. Add that amount to the payout and you get the month\'s <b>Result</b>.'),
       seguintes: ['resultado', 'comissao', 'cardapio'],
     },
     {
-      id: 'repasse', tema: 'Pagamento online', rever: 2, exemplo: L('O que é o repasse?', '¿Qué es la transferencia?'),
-      k3: L(['significa repasse'], ['significa transferencia']), k2: L(['repasse'], ['transferencia']),
+      id: 'repasse', tema: 'Pagamento online', rever: 2, exemplo: L('O que é o repasse?', '¿Qué es la transferencia?', 'What is the payout?'),
+      k3: L(['significa repasse'], ['significa transferencia'], ['payout mean', 'payout meaning', 'define payout']), k2: L(['repasse'], ['transferencia'], ['payout']),
       r: () => L(
         'O <b>repasse</b> é o valor das vendas com pagamento online que fica depois das deduções (comissão e taxas). A plataforma envia esse valor para você.',
-        'La <b>transferencia</b> es el valor de las ventas con pago online que queda después de las deducciones (comisión y tasas). La plataforma te envía ese valor.'),
+        'La <b>transferencia</b> es el valor de las ventas con pago online que queda después de las deducciones (comisión y tasas). La plataforma te envía ese valor.',
+        'The <b>payout</b> is the money from online payment sales that is left after the deductions (commission and fees). The platform sends this amount to you.'),
       seguintes: ['quando_cai', 'repasse_menor'],
     },
     {
-      id: 'comprovante', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Onde pego o comprovante?', '¿Dónde consigo el comprobante?'),
-      k3: L(['comprovante', 'recibo', 'comprovacao', 'prova pagamento', 'comprovante pix', 'baixar comprovante', 'comprovante transferencia'], ['comprobante', 'recibo', 'constancia', 'prueba pago', 'comprobante pix', 'descargar comprobante', 'comprobante transferencia']), k1: L(['repasse', 'transferencia'], ['transferencia']),
+      id: 'comprovante', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Onde pego o comprovante?', '¿Dónde consigo el comprobante?', 'Where do I get the receipt?'),
+      k3: L(['comprovante', 'recibo', 'comprovacao', 'prova pagamento', 'comprovante pix', 'baixar comprovante', 'comprovante transferencia'], ['comprobante', 'recibo', 'constancia', 'prueba pago', 'comprobante pix', 'descargar comprobante', 'comprobante transferencia'], ['receipt', 'proof', 'proof payment', 'download receipt', 'transfer receipt', 'payment confirmation', 'transfer confirmation']), k1: L(['repasse', 'transferencia'], ['transferencia'], ['payout', 'transfer']),
       r: () => L(
         'Quando a transferência cai, abra <b>Financeiro</b> e toque na fatura. No mesmo lugar onde fica "Solicitar antecipação", aparece <b>Repasse realizado</b>. Toque em <b>Ver comprovante</b>.',
-        'Cuando llega la transferencia, abre <b>Finanzas</b> y toca la factura. En el mismo lugar donde está "Solicitar anticipo", aparece <b>Transferencia realizada</b>. Toca <b>Ver comprobante</b>.'),
+        'Cuando llega la transferencia, abre <b>Finanzas</b> y toca la factura. En el mismo lugar donde está "Solicitar anticipo", aparece <b>Transferencia realizada</b>. Toca <b>Ver comprobante</b>.',
+        'When the transfer arrives, open <b>Finance</b> and tap the invoice. In the same spot where "Request early payout" was, you\'ll see <b>Payout completed</b>. Tap <b>View receipt</b>.'),
       seguintes: ['quando_cai', 'pix'],
     },
     {
-      id: 'status_fatura', tema: 'Tela Financeiro', rever: 5, exemplo: L('O que é fatura VIGENTE?', '¿Qué es factura VIGENTE?'),
-      k3: L(['vigente', 'antecipada', 'status fatura', 'fatura aberta'], ['vigente', 'anticipada', 'estado factura', 'status factura', 'factura abierta']), k1: L(['fatura', 'status'], ['factura', 'estado', 'status']),
+      id: 'status_fatura', tema: 'Tela Financeiro', rever: 5, exemplo: L('O que é fatura VIGENTE?', '¿Qué es factura VIGENTE?', 'What does an OPEN invoice mean?'),
+      k3: L(['vigente', 'antecipada', 'status fatura', 'fatura aberta'], ['vigente', 'anticipada', 'estado factura', 'status factura', 'factura abierta'], ['open invoice', 'paid early mean', 'paid early invoice', 'paid early status', 'open mean', 'invoice status', 'invoice open', 'invoice label', 'vigente']), k1: L(['fatura', 'status'], ['factura', 'estado', 'status'], ['invoice', 'status', 'label']),
       r: () => L(
         '<b>VIGENTE</b>: a fatura está aberta e o valor ainda não foi transferido.<br><b>ANTECIPADA</b>: você pediu a antecipação e o repasse foi solicitado.',
-        '<b>VIGENTE</b>: la factura está abierta y el valor todavía no fue transferido.<br><b>ANTICIPADA</b>: pediste el anticipo y la transferencia fue solicitada.'),
+        '<b>VIGENTE</b>: la factura está abierta y el valor todavía no fue transferido.<br><b>ANTICIPADA</b>: pediste el anticipo y la transferencia fue solicitada.',
+        '<b>OPEN</b>: the invoice is open and the money hasn\'t been transferred yet.<br><b>PAID EARLY</b>: you requested early payout and the payout has been requested.'),
       seguintes: ['antecipar', 'fatura'],
     },
     {
-      id: 'fatura', tema: 'Tela Financeiro', rever: 5, exemplo: L('Onde vejo a fatura?', '¿Dónde veo la factura?'),
-      k3: L(['onde fatura', 'ver fatura', 'abrir fatura', 'achar fatura'], ['donde factura', 'ver factura', 'abrir factura', 'encontrar factura']), k2: L(['fatura'], ['factura']), k1: L(['onde', 'ver'], ['donde', 'ver']),
+      id: 'fatura', tema: 'Tela Financeiro', rever: 5, exemplo: L('Onde vejo a fatura?', '¿Dónde veo la factura?', 'Where do I see the invoice?'),
+      k3: L(['onde fatura', 'ver fatura', 'abrir fatura', 'achar fatura'], ['donde factura', 'ver factura', 'abrir factura', 'encontrar factura'], ['where invoice', 'see invoice', 'view invoice', 'find invoice', 'check invoice', 'statement']), k2: L(['fatura'], ['factura'], ['invoice']), k1: L(['onde', 'ver'], ['donde', 'ver'], ['where', 'see', 'find']),
       r: () => L(
         'Abra <b>Financeiro</b> no menu. Em <b>Faturas do Período</b>, toque na fatura para ver a conta completa, linha por linha: o que entrou de pagamento online e todas as deduções.',
-        'Abre <b>Finanzas</b> en el menú. En <b>Facturas del Período</b>, toca la factura para ver la cuenta completa, línea por línea: lo que entró de pago online y todas las deducciones.'),
+        'Abre <b>Finanzas</b> en el menú. En <b>Facturas del Período</b>, toca la factura para ver la cuenta completa, línea por línea: lo que entró de pago online y todas las deducciones.',
+        'Open <b>Finance</b> in the menu. Under <b>Invoices for the Period</b>, tap the invoice to see the full breakdown, line by line: what came in from online payments and all the deductions.'),
       seguintes: ['status_fatura', 'comissao'],
     },
     {
-      id: 'debitos', tema: 'Mensalidade e débitos', rever: 6, exemplo: L('O que são débitos remanescentes?', '¿Qué son los débitos pendientes?'),
-      k3: L(['debito remanescente', 'remanescente', 'debitos remanescentes'], ['debito pendiente', 'debitos pendientes', 'pendiente']), k2: L(['debito', 'divida', 'devendo', 'saldo negativo', 'negativo'], ['debito', 'deuda', 'debo', 'saldo negativo', 'negativo']),
+      id: 'debitos', tema: 'Mensalidade e débitos', rever: 6, exemplo: L('O que são débitos remanescentes?', '¿Qué son los débitos pendientes?', 'What are remaining debits?'),
+      k3: L(['debito remanescente', 'remanescente', 'debitos remanescentes'], ['debito pendiente', 'debitos pendientes', 'pendiente'], ['remaining debit', 'remaining', 'leftover debit', 'outstanding']), k2: L(['debito', 'divida', 'devendo', 'saldo negativo', 'negativo'], ['debito', 'deuda', 'debo', 'saldo negativo', 'negativo'], ['debit', 'debt', 'owe', 'negative balance', 'negative']),
       r: () => L(
         'São deduções que o saldo online não cobriu em uma fatura anterior. Esse valor <b>não gera boleto na hora</b>: ele aparece na próxima fatura como a primeira dedução.',
-        'Son deducciones que el saldo online no cubrió en una factura anterior. Ese valor <b>no genera boleto en el momento</b>: aparece en la próxima factura como la primera deducción.'),
+        'Son deducciones que el saldo online no cubrió en una factura anterior. Ese valor <b>no genera boleto en el momento</b>: aparece en la próxima factura como la primera deducción.',
+        'They are deductions that the online balance didn\'t cover on a previous invoice. This amount <b>does not create a bank slip right away</b>: it shows up on the next invoice as the first deduction.'),
       seguintes: ['boleto', 'antecipar_tudo'],
     },
     {
-      id: 'boleto', tema: 'Mensalidade e débitos', rever: 4, exemplo: L('Vou ter que pagar boleto?', '¿Voy a tener que pagar un boleto?'),
-      k3: ['boleto', 'boletos', 'pagar boleto'], k1: ['pagar'],
+      id: 'boleto', tema: 'Mensalidade e débitos', rever: 4, exemplo: L('Vou ter que pagar boleto?', '¿Voy a tener que pagar un boleto?', 'Will I have to pay a bank slip?'),
+      k3: L(['boleto', 'boletos', 'pagar boleto'], ['boleto', 'boletos', 'pagar boleto'], ['bank slip', 'slip', 'boleto', 'pay bill']), k2: L(null, null, ['bill']), k1: L(['pagar'], ['pagar'], ['pay']),
       r: () => L(
         'Pode aparecer um boleto quando o saldo online não cobre a comissão e as taxas. O valor também passa para o mês seguinte como <b>Débitos remanescentes</b>.<br>O boleto deve ser pago caso a loja fique sem saldo online suficiente no pagamento online. Para pagar, acesse Financeiro → <b>Boletos</b>.',
-        'Puede aparecer un boleto cuando el saldo online no cubre la comisión y las tasas. El valor también pasa al mes siguiente como <b>Débitos pendientes</b>.<br>El boleto se debe pagar si la tienda se queda sin saldo online suficiente en el pago online. Para pagar, entra en Finanzas → <b>Boletos</b>.'),
+        'Puede aparecer un boleto cuando el saldo online no cubre la comisión y las tasas. El valor también pasa al mes siguiente como <b>Débitos pendientes</b>.<br>El boleto se debe pagar si la tienda se queda sin saldo online suficiente en el pago online. Para pagar, entra en Finanzas → <b>Boletos</b>.',
+        'A bank slip may show up when the online balance doesn\'t cover the commission and fees. The amount also moves to the next month as <b>Remaining debits</b>.<br>The bank slip must be paid if the store doesn\'t have enough online balance. To pay it, go to Finance → <b>Bank slips</b>.'),
       seguintes: ['debitos', 'pagamento_online'],
     },
     {
-      id: 'mensalidade', tema: 'Mensalidade e débitos', rever: 8, exemplo: L('Quando tem mensalidade?', '¿Cuándo se cobra la mensualidad?'),
-      k3: L(['mensalidade', '59 90', 'faturamento minimo', 'plano mensal'], ['mensualidad', '59 90', 'facturacion minima', 'plan mensual']), k2: L(['mensal', 'plano'], ['mensual', 'plan', 'cuota']),
+      id: 'mensalidade', tema: 'Mensalidade e débitos', rever: 8, exemplo: L('Quando tem mensalidade?', '¿Cuándo se cobra la mensualidad?', 'When is there a monthly fee?'),
+      k3: L(['mensalidade', '59 90', 'faturamento minimo', 'plano mensal'], ['mensualidad', '59 90', 'facturacion minima', 'plan mensual'], ['monthly fee', 'monthly charge', '59 90', 'minimum revenue', 'minimum sale', 'minimum billing', 'monthly plan', 'subscription']), k2: L(['mensal', 'plano'], ['mensual', 'plan', 'cuota'], ['monthly', 'plan', 'minimum']),
       r: () => L(
         `A <b>mensalidade</b> (${R$(MS.valor)} no treinamento) só é cobrada quando a loja atinge o <b>faturamento mínimo</b> de ${R$(MS.acimaDeBruto)} em Total Bruto no mês. É um valor fixo, separado da comissão, deduzido na virada do último dia do mês.${OBS}`,
-        `La <b>mensualidad</b> (${R$(MS.valor)} en la capacitación) solo se cobra cuando la tienda alcanza la <b>facturación mínima</b> de ${R$(MS.acimaDeBruto)} en Total Bruto en el mes. Es un valor fijo, separado de la comisión, deducido al cierre del último día del mes.${OBS}`),
+        `La <b>mensualidad</b> (${R$(MS.valor)} en la capacitación) solo se cobra cuando la tienda alcanza la <b>facturación mínima</b> de ${R$(MS.acimaDeBruto)} en Total Bruto en el mes. Es un valor fijo, separado de la comisión, deducido al cierre del último día del mes.${OBS}`,
+        `The <b>monthly fee</b> (${R$(MS.valor)} in the training) is only charged when the store reaches the <b>minimum revenue</b> of ${R$(MS.acimaDeBruto)} in Gross Total for the month. It is a fixed amount, separate from the commission, deducted at the turn of the last day of the month.${OBS}`),
       seguintes: ['debitos', 'antecipar_tudo'],
     },
     {
-      id: 'total_bruto', tema: 'Total Bruto e formas de pagamento', rever: 1, exemplo: L('O que é o Total Bruto?', '¿Qué es el Total Bruto?'),
-      k3: L(['total bruto', 'quanto vendi', 'total vendido', 'vendas mes', 'total vendas'], ['total bruto', 'cuanto vendi', 'total vendido', 'ventas mes', 'total ventas']), k2: L(['bruto', 'vendi'], ['bruto', 'vendi']), k1: L(['total', 'relatorio'], ['total', 'informe']),
+      id: 'total_bruto', tema: 'Total Bruto e formas de pagamento', rever: 1, exemplo: L('O que é o Total Bruto?', '¿Qué es el Total Bruto?', 'What is the Gross Total?'),
+      k3: L(['total bruto', 'quanto vendi', 'total vendido', 'vendas mes', 'total vendas'], ['total bruto', 'cuanto vendi', 'total vendido', 'ventas mes', 'total ventas'], ['gross total', 'gross', 'much sold', 'much sell', 'total sold', 'total sale', 'month sale', 'gross sale', 'gross revenue']), k2: L(['bruto', 'vendi'], ['bruto', 'vendi'], ['sold', 'revenue']), k1: L(['total', 'relatorio'], ['total', 'informe'], ['total', 'report']),
       r: () => L(
         'O <b>Total Bruto</b> é a soma de tudo o que você vendeu no mês: online, dinheiro e maquininha, com as taxas de serviço. Ele fica na tela <b>Relatório</b>. Toque no ⓘ para ver como é formado.',
-        'El <b>Total Bruto</b> es la suma de todo lo que vendiste en el mes: online, efectivo y POS, con las tasas de servicio. Está en la pantalla <b>Informe</b>. Toca el ⓘ para ver cómo se forma.'),
+        'El <b>Total Bruto</b> es la suma de todo lo que vendiste en el mes: online, efectivo y POS, con las tasas de servicio. Está en la pantalla <b>Informe</b>. Toca el ⓘ para ver cómo se forma.',
+        'The <b>Gross Total</b> is the sum of everything you sold in the month: online, cash and card machine, including the service fees. It is on the <b>Report</b> screen. Tap the ⓘ to see how it adds up.'),
       seguintes: ['resultado', 'dinheiro_maquininha'],
     },
     {
-      id: 'resultado', tema: 'Tela Financeiro', rever: 4, exemplo: L('O que é o Resultado?', '¿Qué es el Resultado?'),
-      k3: L(['resultado', 'quanto ficou', 'quanto sobrou', 'lucro', 'ficou comigo'], ['resultado', 'cuanto quedo', 'cuanto sobro', 'ganancia', 'lucro', 'quedo conmigo']), k1: L(['financeiro'], ['finanzas']),
+      id: 'resultado', tema: 'Tela Financeiro', rever: 4, exemplo: L('O que é o Resultado?', '¿Qué es el Resultado?', 'What is the Result?'),
+      k3: L(['resultado', 'quanto ficou', 'quanto sobrou', 'lucro', 'ficou comigo'], ['resultado', 'cuanto quedo', 'cuanto sobro', 'ganancia', 'lucro', 'quedo conmigo'], ['result', 'much left', 'much kept', 'much keep', 'profit', 'earning', 'take home', 'end up with']), k1: L(['financeiro'], ['finanzas'], ['finance']),
       r: () => L(
         'O <b>Resultado</b> é tudo o que ficou com você no mês. É a soma de:<br>• <b>Recebido pela Loja</b> (dinheiro e maquininha, já no seu caixa)<br>• <b>Repasses recebidos</b> (o que já foi transferido)<br>• <b>Repasse disponível</b> (o que ainda vai ser transferido)',
-        'El <b>Resultado</b> es todo lo que quedó contigo en el mes. Es la suma de:<br>• <b>Recibido por la Tienda</b> (efectivo y POS, ya en tu caja)<br>• <b>Transferencias recibidas</b> (lo que ya fue transferido)<br>• <b>Transferencia disponible</b> (lo que todavía se va a transferir)'),
+        'El <b>Resultado</b> es todo lo que quedó contigo en el mes. Es la suma de:<br>• <b>Recibido por la Tienda</b> (efectivo y POS, ya en tu caja)<br>• <b>Transferencias recibidas</b> (lo que ya fue transferido)<br>• <b>Transferencia disponible</b> (lo que todavía se va a transferir)',
+        'The <b>Result</b> is everything you kept in the month. It is the sum of:<br>• <b>Received by the store</b> (cash and card machine, already in your register)<br>• <b>Payouts received</b> (what has already been transferred)<br>• <b>Available payout</b> (what is still going to be transferred)'),
       seguintes: ['disponivel', 'repasse_menor'],
     },
     {
-      id: 'recebido', tema: 'Tela Financeiro', rever: 4, exemplo: L('O que é Recebido pela Loja?', '¿Qué es Recibido por la Tienda?'),
-      k3: L(['recebido loja', 'recebido pela loja'], ['recibido tienda']), k2: L(['recebido'], ['recibido']),
+      id: 'recebido', tema: 'Tela Financeiro', rever: 4, exemplo: L('O que é Recebido pela Loja?', '¿Qué es Recibido por la Tienda?', 'What is Received by the store?'),
+      k3: L(['recebido loja', 'recebido pela loja'], ['recibido tienda'], ['received store', 'received restaurant', 'store received']), k2: L(['recebido'], ['recibido'], ['received']),
       r: () => L(
         '<b>Recebido pela Loja</b> é o valor das vendas em dinheiro e maquininha. O cliente pagou direto para você, então esse dinheiro <b>já entrou no seu caixa</b>.',
-        '<b>Recibido por la Tienda</b> es el valor de las ventas en efectivo y POS. El cliente te pagó directo a ti, así que ese dinero <b>ya entró en tu caja</b>.'),
+        '<b>Recibido por la Tienda</b> es el valor de las ventas en efectivo y POS. El cliente te pagó directo a ti, así que ese dinero <b>ya entró en tu caja</b>.',
+        '<b>Received by the store</b> is the value of cash and card machine sales. The customer paid you directly, so this money <b>is already in your register</b>.'),
       seguintes: ['resultado', 'dinheiro_maquininha'],
     },
     {
-      id: 'disponivel', tema: 'Tela Financeiro', rever: 4, exemplo: L('Por que o Repasse disponível mudou?', '¿Por qué cambió la Transferencia disponible?'),
-      k3: L(['repasse disponivel', 'repasses recebidos', 'repasse recebido', 'disponivel', 'saldo diminuiu', 'saldo caiu', 'saldo mudou', 'volatil'], ['transferencia disponible', 'transferencias recibidas', 'transferencia recibida', 'disponible', 'saldo disminuyo', 'saldo bajo', 'saldo cambio', 'volatil']), k2: L(['saldo', 'diminuiu', 'mudou'], ['saldo', 'disminuyo', 'cambio']), k1: L(['repasse'], ['transferencia']),
+      id: 'disponivel', tema: 'Tela Financeiro', rever: 4, exemplo: L('Por que o Repasse disponível mudou?', '¿Por qué cambió la Transferencia disponible?', 'Why did the Available payout change?'),
+      k3: L(['repasse disponivel', 'repasses recebidos', 'repasse recebido', 'disponivel', 'saldo diminuiu', 'saldo caiu', 'saldo mudou', 'volatil'], ['transferencia disponible', 'transferencias recibidas', 'transferencia recibida', 'disponible', 'saldo disminuyo', 'saldo bajo', 'saldo cambio', 'volatil'], ['available payout', 'payouts received', 'available', 'balance dropped', 'balance went down', 'balance decreased', 'balance changed', 'balance change', 'balance lower']), k2: L(['saldo', 'diminuiu', 'mudou'], ['saldo', 'disminuyo', 'cambio'], ['balance', 'decreased', 'dropped', 'changed', 'change', 'went down']), k1: L(['repasse'], ['transferencia'], ['payout']),
       r: () => L(
         '<b>Repasse disponível</b> é o que ainda vai ser transferido. Ele muda todos os dias: se em um dia você tiver só vendas em dinheiro ou maquininha, as deduções dessas vendas saem do saldo online, e ele diminui.<br>Quando o dinheiro cai, o valor sai de Repasse disponível e vai para <b>Repasses recebidos</b>. O Resultado não muda.',
-        'La <b>Transferencia disponible</b> es lo que todavía se va a transferir. Cambia todos los días: si en un día solo tienes ventas en efectivo o POS, las deducciones de esas ventas salen del saldo online, y disminuye.<br>Cuando llega el dinero, el valor sale de Transferencia disponible y pasa a <b>Transferencias recibidas</b>. El Resultado no cambia.'),
+        'La <b>Transferencia disponible</b> es lo que todavía se va a transferir. Cambia todos los días: si en un día solo tienes ventas en efectivo o POS, las deducciones de esas ventas salen del saldo online, y disminuye.<br>Cuando llega el dinero, el valor sale de Transferencia disponible y pasa a <b>Transferencias recibidas</b>. El Resultado no cambia.',
+        '<b>Available payout</b> is what is still going to be transferred. It changes every day: if on a given day you only have cash or card machine sales, the deductions for those sales come out of the online balance, and it goes down.<br>When the money arrives, the amount moves from Available payout to <b>Payouts received</b>. The Result doesn\'t change.'),
       seguintes: ['quando_cai', 'resultado'],
     },
     {
-      id: 'cupons', tema: 'Cupons', rever: 5, exemplo: L('Quem paga o cupom de desconto?', '¿Quién paga el cupón de descuento?'),
-      k3: L(['cupom', 'cupons', 'cupon', 'reembolso', 'incentivo', 'incentivos', 'desconto'], ['cupon', 'cupones', 'reembolso', 'incentivo', 'incentivos', 'descuento']), k1: L(['cliente', 'paga'], ['cliente', 'paga']),
+      id: 'cupons', tema: 'Cupons', rever: 5, exemplo: L('Quem paga o cupom de desconto?', '¿Quién paga el cupón de descuento?', 'Who pays for the discount coupon?'),
+      k3: L(['cupom', 'cupons', 'cupon', 'reembolso', 'incentivo', 'incentivos', 'desconto'], ['cupon', 'cupones', 'reembolso', 'incentivo', 'incentivos', 'descuento'], ['coupon', 'cupon', 'voucher', 'promo code', 'promo', 'incentive', 'discount', 'reimbursement', 'refund incentive']), k1: L(['cliente', 'paga'], ['cliente', 'paga'], ['customer', 'pay', 'who']),
       r: () => L(
         'Quando o Bigou oferece o cupom para o cliente, quem paga o desconto é a <b>plataforma</b>, não você. Você só paga se você criar o cupom. Aceite o pedido normalmente: o valor volta na sua fatura como <b>Reembolso dos incentivos</b>.',
-        'Cuando Bigou le ofrece el cupón al cliente, quien paga el descuento es la <b>plataforma</b>, no tú. Solo pagas si tú creas el cupón. Acepta el pedido normalmente: el valor vuelve en tu factura como <b>Reembolso de los incentivos</b>.'),
+        'Cuando Bigou le ofrece el cupón al cliente, quien paga el descuento es la <b>plataforma</b>, no tú. Solo pagas si tú creas el cupón. Acepta el pedido normalmente: el valor vuelve en tu factura como <b>Reembolso de los incentivos</b>.',
+        'When Bigou offers the coupon to the customer, the <b>platform</b> pays for the discount, not you. You only pay if you create the coupon yourself. Accept the order as usual: the amount comes back on your invoice as <b>Refund of incentives</b>.'),
       seguintes: ['pagamento_online', 'fatura'],
     },
     {
-      id: 'pagamento_online', tema: 'Pagamento online', rever: 2, exemplo: L('Preciso cobrar o cliente no pagamento online?', '¿Tengo que cobrarle al cliente en el pago online?'),
-      k3: L(['pagamento online', 'pago pelo app', 'pago app', 'pagou aplicativo', 'pago aplicativo', 'cobrar cliente', 'cliente ja pagou', 'pagou online'], ['pago online', 'pagado app', 'pago app', 'pago aplicacion', 'pagado aplicacion', 'cobrar cliente', 'cobrarle cliente', 'cliente ya pago', 'pago en linea']), k2: L(['online', 'aplicativo', 'app'], ['online', 'aplicacion', 'app']), k1: L(['cliente', 'cobrar'], ['cliente', 'cobrar']),
+      id: 'pagamento_online', tema: 'Pagamento online', rever: 2, exemplo: L('Preciso cobrar o cliente no pagamento online?', '¿Tengo que cobrarle al cliente en el pago online?', 'Do I need to charge the customer for online payments?'),
+      k3: L(['pagamento online', 'pago pelo app', 'pago app', 'pagou aplicativo', 'pago aplicativo', 'cobrar cliente', 'cliente ja pagou', 'pagou online'], ['pago online', 'pagado app', 'pago app', 'pago aplicacion', 'pagado aplicacion', 'cobrar cliente', 'cobrarle cliente', 'cliente ya pago', 'pago en linea'], ['online payment', 'paid app', 'pay app', 'paid online', 'pay online', 'charge customer', 'customer already paid', 'prepaid']), k2: L(['online', 'aplicativo', 'app'], ['online', 'aplicacion', 'app'], ['online', 'app']), k1: L(['cliente', 'cobrar'], ['cliente', 'cobrar'], ['customer', 'charge']),
       r: () => L(
         'Nos pedidos com <b>pagamento online</b>, o cliente já pagou pelo aplicativo. Você só precisa aceitar e entregar, <b>sem cobrar o cliente</b>.<br>Esse valor passa primeiro pela plataforma: é dele que saem as deduções, e o que sobra vira o seu repasse.',
-        'En los pedidos con <b>pago online</b>, el cliente ya pagó por la aplicación. Solo tienes que aceptar y entregar, <b>sin cobrarle al cliente</b>.<br>Ese valor pasa primero por la plataforma: de él salen las deducciones, y lo que queda se convierte en tu transferencia.'),
+        'En los pedidos con <b>pago online</b>, el cliente ya pagó por la aplicación. Solo tienes que aceptar y entregar, <b>sin cobrarle al cliente</b>.<br>Ese valor pasa primero por la plataforma: de él salen las deducciones, y lo que queda se convierte en tu transferencia.',
+        'On orders with <b>online payment</b>, the customer has already paid through the app. You just need to accept and deliver, <b>without charging the customer</b>.<br>This money goes through the platform first: the deductions come out of it, and what is left becomes your payout.'),
       seguintes: ['repasse', 'taxa_online'],
     },
     {
-      id: 'dinheiro_maquininha', tema: 'Total Bruto e formas de pagamento', rever: 3, exemplo: L('E as vendas em dinheiro e maquininha?', '¿Y las ventas en efectivo y POS?'),
-      k3: L(['maquininha', 'cartao', 'maquina', 'especie', 'venda dinheiro', 'pago dinheiro', 'pagou dinheiro'], ['pos', 'tarjeta', 'maquinita', 'datafono', 'posnet', 'venta efectivo', 'pago efectivo', 'pagado efectivo']), k2: L(['dinheiro'], ['efectivo']), k1: L(['venda', 'pagou'], ['venta', 'pago']),
+      id: 'dinheiro_maquininha', tema: 'Total Bruto e formas de pagamento', rever: 3, exemplo: L('E as vendas em dinheiro e maquininha?', '¿Y las ventas en efectivo y POS?', 'What about cash and card machine sales?'),
+      k3: L(['maquininha', 'cartao', 'maquina', 'especie', 'venda dinheiro', 'pago dinheiro', 'pagou dinheiro'], ['pos', 'tarjeta', 'maquinita', 'datafono', 'posnet', 'venta efectivo', 'pago efectivo', 'pagado efectivo'], ['card machine', 'card reader', 'pos', 'cash', 'cash sale', 'paid cash', 'credit card', 'debit card']), k2: L(['dinheiro'], ['efectivo'], ['in person']), k1: L(['venda', 'pagou'], ['venta', 'pago'], ['sale', 'paid', 'card', 'machine']),
       r: () => L(
         'Nas vendas em <b>dinheiro</b> e na <b>maquininha</b>, o cliente paga direto para você. O dinheiro já entra no seu caixa (ou na conta da sua maquininha) e <b>não passa pela plataforma</b>.<br>A comissão e as taxas dessas vendas são deduzidas do saldo do pagamento online.',
-        'En las ventas en <b>efectivo</b> y con <b>POS</b>, el cliente te paga directo a ti. El dinero ya entra en tu caja (o en la cuenta de tu POS) y <b>no pasa por la plataforma</b>.<br>La comisión y las tasas de esas ventas se deducen del saldo del pago online.'),
+        'En las ventas en <b>efectivo</b> y con <b>POS</b>, el cliente te paga directo a ti. El dinero ya entra en tu caja (o en la cuenta de tu POS) y <b>no pasa por la plataforma</b>.<br>La comisión y las tasas de esas ventas se deducen del saldo del pago online.',
+        'On <b>cash</b> and <b>card machine</b> sales, the customer pays you directly. The money goes straight into your register (or your card machine account) and <b>does not go through the platform</b>.<br>The commission and fees for these sales are deducted from the online payment balance.'),
       seguintes: ['taxa_servico', 'repasse_menor'],
     },
     {
-      id: 'feriado', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Tem repasse no feriado?', '¿Hay transferencia en feriado?'),
-      k3: L(['feriado', 'fim semana', 'final semana', 'sabado', 'domingo'], ['feriado', 'fin semana', 'fines semana', 'sabado', 'domingo', 'dia festivo']), k1: L(['repasse', 'cai'], ['transferencia', 'llega']),
+      id: 'feriado', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Tem repasse no feriado?', '¿Hay transferencia en feriado?', 'Are there payouts on holidays?'),
+      k3: L(['feriado', 'fim semana', 'final semana', 'sabado', 'domingo'], ['feriado', 'fin semana', 'fines semana', 'sabado', 'domingo', 'dia festivo'], ['holiday', 'weekend', 'week end', 'saturday', 'sunday', 'bank holiday']), k1: L(['repasse', 'cai'], ['transferencia', 'llega'], ['payout', 'arrive']),
       r: () => L(
         'Não há repasses em <b>fins de semana</b> nem em <b>feriados nacionais ou municipais</b> de Rio Pomba - MG (sede da empresa). Nesses casos, o valor cai no próximo dia útil.',
-        'No hay transferencias los <b>fines de semana</b> ni en <b>feriados nacionales o municipales</b> de Rio Pomba - MG (sede de la empresa). En esos casos, el valor llega el próximo día hábil.'),
+        'No hay transferencias los <b>fines de semana</b> ni en <b>feriados nacionales o municipales</b> de Rio Pomba - MG (sede de la empresa). En esos casos, el valor llega el próximo día hábil.',
+        'There are no payouts on <b>weekends</b> or on <b>national or municipal holidays</b> in Rio Pomba - MG (the company\'s headquarters). In those cases, the money arrives on the next business day.'),
       seguintes: ['quando_cai', 'antecipar'],
     },
     {
-      id: 'pix', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Em qual conta cai o dinheiro?', '¿A qué cuenta llega el dinero?'),
-      k3: L(['pix', 'chave pix', 'dado bancario', 'dados bancario', 'conta bancaria', 'mudar conta', 'trocar conta', 'qual conta'], ['pix', 'llave pix', 'clave pix', 'dato bancario', 'datos bancario', 'cuenta bancaria', 'cambiar cuenta', 'cual cuenta']), k2: L(['banco', 'conta'], ['banco', 'cuenta']),
+      id: 'pix', tema: 'Repasse, antecipação e comprovante', rever: 9, exemplo: L('Em qual conta cai o dinheiro?', '¿A qué cuenta llega el dinero?', 'Which account does the money go to?'),
+      k3: L(['pix', 'chave pix', 'dado bancario', 'dados bancario', 'conta bancaria', 'mudar conta', 'trocar conta', 'qual conta'], ['pix', 'llave pix', 'clave pix', 'dato bancario', 'datos bancario', 'cuenta bancaria', 'cambiar cuenta', 'cual cuenta'], ['pix', 'pix key', 'bank detail', 'bank account', 'banking detail', 'change account', 'update account', 'account number', 'money go']), k2: L(['banco', 'conta'], ['banco', 'cuenta'], ['bank', 'account']),
       r: () => L(
         'A transferência vai para a <b>chave PIX</b> cadastrada. Para evitar atrasos, os dados bancários precisam estar corretos e no nome da pessoa física ou jurídica titular do contrato. Para mudar, fale com o suporte.',
-        'La transferencia va a la <b>llave PIX</b> registrada. Para evitar retrasos, los datos bancarios deben estar correctos y a nombre de la persona física o jurídica titular del contrato. Para cambiarlos, habla con soporte.'),
+        'La transferencia va a la <b>llave PIX</b> registrada. Para evitar retrasos, los datos bancarios deben estar correctos y a nombre de la persona física o jurídica titular del contrato. Para cambiarlos, habla con soporte.',
+        'The transfer goes to the registered <b>PIX key</b>. To avoid delays, the bank details must be correct and in the name of the person or company that holds the contract. To change them, contact support.'),
       seguintes: ['quando_cai', 'suporte'],
     },
     {
-      id: 'cardapio', tema: 'Taxas', rever: 8, exemplo: L('Posso ajustar meus preços?', '¿Puedo ajustar mis precios?'),
-      k3: L(['cardapio', 'ajustar preco', 'aumentar preco', 'mudar preco', 'repassar custo', 'nao absorver'], ['menu', 'carta', 'ajustar precio', 'aumentar precio', 'cambiar precio', 'trasladar costo', 'no absorber']), k2: L(['preco', 'precos'], ['precio', 'precios']),
+      id: 'cardapio', tema: 'Taxas', rever: 8, exemplo: L('Posso ajustar meus preços?', '¿Puedo ajustar mis precios?', 'Can I adjust my prices?'),
+      k3: L(['cardapio', 'ajustar preco', 'aumentar preco', 'mudar preco', 'repassar custo', 'nao absorver'], ['menu', 'carta', 'ajustar precio', 'aumentar precio', 'cambiar precio', 'trasladar costo', 'no absorber'], ['menu', 'adjust price', 'raise price', 'increase price', 'change price', 'update price', 'pass cost', 'not absorb']), k2: L(['preco', 'precos'], ['precio', 'precios'], ['price', 'pricing']),
       r: () => L(
         'Pode. Você pode ajustar o valor dos seus produtos para <b>não absorver o custo da comissão e das taxas</b>. Confira se o seu cardápio está atualizado. Se não estiver, fale com o nosso suporte para atualizar.',
-        'Sí. Puedes ajustar el valor de tus productos para <b>no absorber el costo de la comisión y las tasas</b>. Revisa si tu menú está actualizado. Si no lo está, habla con nuestro soporte para actualizarlo.'),
+        'Sí. Puedes ajustar el valor de tus productos para <b>no absorber el costo de la comisión y las tasas</b>. Revisa si tu menú está actualizado. Si no lo está, habla con nuestro soporte para actualizarlo.',
+        'Yes. You can adjust your product prices so you <b>don\'t absorb the cost of the commission and fees</b>. Check that your menu is up to date. If it isn\'t, contact our support to update it.'),
       seguintes: ['comissao', 'suporte'],
     },
     {
-      id: 'fora', tema: 'Outros assuntos do painel', exemplo: L('Outros assuntos', 'Otros temas'),
+      id: 'fora', tema: 'Outros assuntos do painel', exemplo: L('Outros assuntos', 'Otros temas', 'Other topics'),
       k3: L(['taxa entrega', 'horario funcionamento', 'cadastrar produto', 'cadastro produto', 'produto novo', 'nota fiscal', 'marketing', 'foto', 'senha', 'imprimir', 'impressora', 'travando', 'travou', 'nao abre', 'cancelar contrato', 'contrato', 'avaliacao', 'avaliacoes', 'entregador', 'motoboy'],
-        ['tasa envio', 'costo envio', 'horario', 'registrar producto', 'cargar producto', 'producto nuevo', 'nuevo producto', 'factura fiscal', 'nota fiscal', 'marketing', 'foto', 'contrasena', 'imprimir', 'impresora', 'se traba', 'trabado', 'no abre', 'cancelar contrato', 'contrato', 'calificacion', 'calificaciones', 'resena', 'repartidor', 'motoboy']),
+        ['tasa envio', 'costo envio', 'horario', 'registrar producto', 'cargar producto', 'producto nuevo', 'nuevo producto', 'factura fiscal', 'nota fiscal', 'marketing', 'foto', 'contrasena', 'imprimir', 'impresora', 'se traba', 'trabado', 'no abre', 'cancelar contrato', 'contrato', 'calificacion', 'calificaciones', 'resena', 'repartidor', 'motoboy'],
+        ['delivery fee', 'delivery charge', 'opening hour', 'business hour', 'add product', 'register product', 'new product', 'add item', 'tax invoice', 'fiscal invoice', 'marketing', 'photo', 'picture', 'password', 'login', 'print', 'printer', 'freezing', 'frozen', 'crash', 'crashing', 'not open', 'not load', 'cancel contract', 'contract', 'review', 'rating', 'courier', 'driver', 'motoboy']),
       r: () => L(
         `Esse assunto não faz parte deste treinamento, que fala sobre <b>vendas, taxas e repasses</b>. Fale com o <b>Financeiro Bigou</b>, que vai te ajudar ou encaminhar:<br>${contatoFinanceiro()}<br>Anotamos sua pergunta para melhorar nossos materiais.`,
-        `Este tema no forma parte de esta capacitación, que trata de <b>ventas, tasas y transferencias</b>. Habla con <b>Finanzas Bigou</b>, que te va a ayudar o derivar:<br>${contatoFinanceiro()}<br>Anotamos tu pregunta para mejorar nuestros materiales.`),
+        `Este tema no forma parte de esta capacitación, que trata de <b>ventas, tasas y transferencias</b>. Habla con <b>Finanzas Bigou</b>, que te va a ayudar o derivar:<br>${contatoFinanceiro()}<br>Anotamos tu pregunta para mejorar nuestros materiales.`,
+        `This topic isn't part of this training, which covers <b>sales, fees and payouts</b>. Contact <b>Bigou Finance</b>, who will help you or point you in the right direction:<br>${contatoFinanceiro()}<br>We've noted your question to improve our materials.`),
       seguintes: [],
     },
     {
-      id: 'suporte', tema: 'Suporte', exemplo: L('Como falo com o suporte?', '¿Cómo hablo con soporte?'),
-      k3: L(['suporte', 'atendente', 'falar alguem', 'falar pessoa', 'humano', 'whatsapp', 'telefone', 'atendimento'], ['soporte', 'agente', 'hablar alguien', 'hablar persona', 'humano', 'whatsapp', 'telefono', 'atencion']), k2: L(['contato', 'ajuda', 'reclamar'], ['contacto', 'ayuda', 'reclamar', 'reclamo']),
+      id: 'suporte', tema: 'Suporte', exemplo: L('Como falo com o suporte?', '¿Cómo hablo con soporte?', 'How do I contact support?'),
+      k3: L(['suporte', 'atendente', 'falar alguem', 'falar pessoa', 'humano', 'whatsapp', 'telefone', 'atendimento'], ['soporte', 'agente', 'hablar alguien', 'hablar persona', 'humano', 'whatsapp', 'telefono', 'atencion'], ['support', 'agent', 'talk someone', 'speak someone', 'talk person', 'speak person', 'real person', 'human', 'whatsapp', 'phone', 'customer service']), k2: L(['contato', 'ajuda', 'reclamar'], ['contacto', 'ayuda', 'reclamar', 'reclamo'], ['contact', 'help', 'complain', 'complaint']),
       r: () => L(
         `Para falar com uma pessoa, chame o <b>Financeiro Bigou</b>:<br>${contatoFinanceiro()}`,
-        `Para hablar con una persona, contacta a <b>Finanzas Bigou</b>:<br>${contatoFinanceiro()}`),
+        `Para hablar con una persona, contacta a <b>Finanzas Bigou</b>:<br>${contatoFinanceiro()}`,
+        `To talk to a person, reach out to <b>Bigou Finance</b>:<br>${contatoFinanceiro()}`),
       seguintes: [],
     },
   ];
@@ -305,11 +342,15 @@
   /* ------------------------------ Entendimento ------------------------------ */
   // Em espanhol, "no" é negação (em português é "em + o") e fica na pergunta
   const PARADAS = new Set(L('a o as os e de da do das dos um uma uns umas no na nos nas em ao aos pra pro para pelo pela pelos pelas por que q pq porque meu minha meus minhas eu me mim voce vc se com sem isso esse essa este esta ta tá ja e é eh qual quais ou mas tem ter foi sao sua seu',
-    'a o y e u el la los las lo un una unos unas de del al en para por que q pq xq porque mi mis tu tus su sus yo me te se le les con sin eso esa ese este esta esto es son fue hay ya pero cuales mas').split(' '));
+    'a o y e u el la los las lo un una unos unas de del al en para por que q pq xq porque mi mis tu tus su sus yo me te se le les con sin eso esa ese este esta esto es son fue hay ya pero cuales mas',
+    // Em inglês: "how", "when", "where", "why", "who", "much", "not" e "no" ficam na pergunta (são usados nas chaves)
+    'a an the and or but of to in on at for from by with without as is are was were be been being am do does did i me my mine we our us you your yours it its this that these those there here what which s t d ll ve re m can could would should will shall have has had get just so if about any some please ok').split(' '));
   const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9%\s]/g, ' ').replace(/\s+/g, ' ').trim();
   const raiz = (w) => (w.length <= 3 ? w : w.replace(/(oes|aes)$/, 'ao').replace(/ais$/, 'al').replace(/eis$/, 'el').replace(/s$/, ''));
   const ABREV = L({ qnd: 'quando', qdo: 'quando', qd: 'quando', vcs: 'voces', tb: 'tambem', tbm: 'tambem', msg: 'mensagem', hj: 'hoje', dps: 'depois', n: 'nao' },
-    { cdo: 'cuando', qdo: 'cuando', dnd: 'donde', tb: 'tambien', tmb: 'tambien', msj: 'mensaje', x: 'por', n: 'no' });
+    { cdo: 'cuando', qdo: 'cuando', dnd: 'donde', tb: 'tambien', tmb: 'tambien', msj: 'mensaje', x: 'por', n: 'no' },
+    // Em inglês, as contrações perdem o apóstrofo ("didn't" → "didn t"): a negação vira "not"
+    { u: 'you', ur: 'your', pls: 'please', plz: 'please', y: 'why', wen: 'when', didn: 'not', didnt: 'not', don: 'not', dont: 'not', doesn: 'not', doesnt: 'not', isn: 'not', isnt: 'not', wasn: 'not', wasnt: 'not', haven: 'not', havent: 'not', hasn: 'not', hasnt: 'not', won: 'not', wont: 'not', aren: 'not', arent: 'not', never: 'not', cant: 'cannot', pmt: 'payment', acct: 'account', amt: 'amount' });
   const tokens = (t) => norm(t).split(' ').map((w) => ABREV[w] || w).filter((w) => w && !PARADAS.has(w)).map(raiz);
 
   function lev(a, b) {
@@ -357,8 +398,10 @@
     }).filter((o) => o.s > 0).sort((a, b) => b.s - a.s);
   }
 
-  const RX_OI = L(/^(oi+|ola|opa|bom dia|boa tarde|boa noite|e ai|eai|hey|ei)\b/, /^(hola+|ola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|que tal|hey|ey|oi+)\b/);
-  const RX_OBG = L(/^(obrigad[oa]|brigad[oa]|valeu|vlw|agradeco|show|beleza|blz|ok|certo|entendi|perfeito|top)\b/, /^(gracias|muchas gracias|mil gracias|genial|perfecto|ok|okay|vale|dale|listo|entendido|entendi|claro|excelente|buenisimo|obrigad[oa])\b/);
+  const RX_OI = L(/^(oi+|ola|opa|bom dia|boa tarde|boa noite|e ai|eai|hey|ei)\b/, /^(hola+|ola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|que tal|hey|ey|oi+)\b/,
+    /^(hi+|hii+|hello+|hey+|heya|hiya|howdy|yo|good morning|good afternoon|good evening|morning|greetings|what s up|whats up|sup|oi+|ola|hola)\b/);
+  const RX_OBG = L(/^(obrigad[oa]|brigad[oa]|valeu|vlw|agradeco|show|beleza|blz|ok|certo|entendi|perfeito|top)\b/, /^(gracias|muchas gracias|mil gracias|genial|perfecto|ok|okay|vale|dale|listo|entendido|entendi|claro|excelente|buenisimo|obrigad[oa])\b/,
+    /^(thanks|thank you|thank u|thanks a lot|many thanks|thx|tks|thnx|ty|cheers|great|perfect|ok|okay|okey|k|got it|cool|nice|awesome|understood|i see|alright|all right|sounds good|brilliant|appreciate it|obrigad[oa])\b/);
 
   /** Entende uma pergunta: { tipo: 'resposta' | 'sugestao' | 'sem_resposta' | 'oi' | 'obrigado', intencao, opcoes, confianca } */
   function entender(texto) {
@@ -416,7 +459,7 @@
     const fab = document.createElement('button');
     fab.type = 'button';
     fab.className = 'bt-fab';
-    fab.innerHTML = `<span class="bt-fab-ic">${IC.chat}</span><span class="bt-fab-l">${L('Tire suas dúvidas', 'Resuelve tus dudas')}</span><span class="bt-fab-lock">${IC.lock}</span><i class="bt-dot" aria-hidden="true"></i>`;
+    fab.innerHTML = `<span class="bt-fab-ic">${IC.chat}</span><span class="bt-fab-l">${L('Tire suas dúvidas', 'Resuelve tus dudas', 'Ask a question')}</span><span class="bt-fab-lock">${IC.lock}</span><i class="bt-dot" aria-hidden="true"></i>`;
     const pop = document.createElement('div');
     pop.className = 'bt-pop';
     pop.setAttribute('role', 'status');
@@ -429,16 +472,16 @@
       <section class="bt-panel" role="dialog" aria-modal="true" aria-labelledby="bt-titulo">
         <header class="bt-h">
           <span class="bt-av"><img src="assets/bigou-logo.png" alt="" width="36" height="36"></span>
-          <div class="bt-h-t"><b id="bt-titulo">${L('Assistente Bigou', 'Asistente Bigou')}</b><small><i></i>${L('Online · responde na hora', 'En línea · responde al instante')}</small></div>
-          <button type="button" class="bt-ib" data-bt="novo" title="${L('Nova conversa', 'Nueva conversación')}" aria-label="${L('Nova conversa', 'Nueva conversación')}">${IC.novo}</button>
-          <button type="button" class="bt-ib" data-bt="fechar" title="${L('Fechar', 'Cerrar')}" aria-label="${L('Fechar', 'Cerrar')}">${IC.x}</button>
+          <div class="bt-h-t"><b id="bt-titulo">${L('Assistente Bigou', 'Asistente Bigou', 'Bigou Assistant')}</b><small><i></i>${L('Online · responde na hora', 'En línea · responde al instante', 'Online · replies instantly')}</small></div>
+          <button type="button" class="bt-ib" data-bt="novo" title="${L('Nova conversa', 'Nueva conversación', 'New conversation')}" aria-label="${L('Nova conversa', 'Nueva conversación', 'New conversation')}">${IC.novo}</button>
+          <button type="button" class="bt-ib" data-bt="fechar" title="${L('Fechar', 'Cerrar', 'Close')}" aria-label="${L('Fechar', 'Cerrar', 'Close')}">${IC.x}</button>
         </header>
         <div class="bt-msgs" aria-live="polite"></div>
         <form class="bt-form" autocomplete="off">
-          <input type="text" maxlength="300" placeholder="${L('Escreva sua dúvida…', 'Escribe tu duda…')}" aria-label="${L('Sua dúvida', 'Tu duda')}" enterkeyhint="send">
-          <button type="submit" class="bt-send" aria-label="${L('Enviar', 'Enviar')}" disabled>${IC.enviar}</button>
+          <input type="text" maxlength="300" placeholder="${L('Escreva sua dúvida…', 'Escribe tu duda…', 'Type your question…')}" aria-label="${L('Sua dúvida', 'Tu duda', 'Your question')}" enterkeyhint="send">
+          <button type="submit" class="bt-send" aria-label="${L('Enviar', 'Enviar', 'Send')}" disabled>${IC.enviar}</button>
         </form>
-        <p class="bt-priv">${L('Suas perguntas ajudam a melhorar o sistema. Não envie dados pessoais nem bancários.', 'Tus preguntas ayudan a mejorar el sistema. No envíes datos personales ni bancarios.')}</p>
+        <p class="bt-priv">${L('Suas perguntas ajudam a melhorar o sistema. Não envie dados pessoais nem bancários.', 'Tus preguntas ayudan a mejorar el sistema. No envíes datos personales ni bancarios.', 'Your questions help us improve the system. Don\'t send personal or bank details.')}</p>
       </section>`;
     document.body.append(fab, pop, wrap);
     el = { fab, pop, wrap, msgs: wrap.querySelector('.bt-msgs'), form: wrap.querySelector('.bt-form'), input: wrap.querySelector('input'), send: wrap.querySelector('.bt-send'), panel: wrap.querySelector('.bt-panel') };
@@ -446,7 +489,8 @@
     fab.addEventListener('click', () => {
       if (!st.liberado) return mostrarPop(L(
         `<b>Conclua o treinamento para liberar o assistente.</b><span>Falta${st.restantes === 1 ? '' : 'm'} ${st.restantes} ${st.restantes === 1 ? 'módulo' : 'módulos'}.</span><a href="#/comecar" class="bt-pop-a">Continuar ${IC.seta}</a>`,
-        `<b>Completa la capacitación para habilitar el asistente.</b><span>Falta${st.restantes === 1 ? '' : 'n'} ${st.restantes} ${st.restantes === 1 ? 'módulo' : 'módulos'}.</span><a href="#/comecar" class="bt-pop-a">Continuar ${IC.seta}</a>`), true);
+        `<b>Completa la capacitación para habilitar el asistente.</b><span>Falta${st.restantes === 1 ? '' : 'n'} ${st.restantes} ${st.restantes === 1 ? 'módulo' : 'módulos'}.</span><a href="#/comecar" class="bt-pop-a">Continuar ${IC.seta}</a>`,
+        `<b>Finish the training to unlock the assistant.</b><span>${st.restantes} ${st.restantes === 1 ? 'module' : 'modules'} left.</span><a href="#/comecar" class="bt-pop-a">Continue ${IC.seta}</a>`), true);
       abrir();
     });
     pop.addEventListener('click', (e) => { if (e.target.closest('a')) fecharPop(); });
@@ -474,14 +518,14 @@
     const antes = st.liberado;
     Object.assign(st, o);
     el.fab.classList.toggle('locked', !st.liberado);
-    el.fab.setAttribute('aria-label', st.liberado ? L('Abrir assistente de dúvidas', 'Abrir asistente de dudas') : L('Assistente de dúvidas (bloqueado)', 'Asistente de dudas (bloqueado)'));
+    el.fab.setAttribute('aria-label', st.liberado ? L('Abrir assistente de dúvidas', 'Abrir asistente de dudas', 'Open the help assistant') : L('Assistente de dúvidas (bloqueado)', 'Asistente de dudas (bloqueado)', 'Help assistant (locked)'));
     el.fab.hidden = !st.visivel;
     if (!st.visivel) { fecharPop(); if (st.aberto) fechar(true); }
     // Anúncio na primeira vez que aparece liberado
     if (st.liberado && st.visivel && !ler(chaveAnuncio(), false)) {
       gravar(chaveAnuncio(), true);
       el.fab.classList.add('novo');
-      setTimeout(() => mostrarPop(L('<b>Tem dúvidas?</b><span>Pergunte aqui sobre vendas, taxas e repasses, a qualquer momento.</span>', '<b>¿Tienes dudas?</b><span>Pregunta aquí sobre ventas, tasas y transferencias, en cualquier momento.</span>')), antes ? 0 : 600);
+      setTimeout(() => mostrarPop(L('<b>Tem dúvidas?</b><span>Pergunte aqui sobre vendas, taxas e repasses, a qualquer momento.</span>', '<b>¿Tienes dudas?</b><span>Pregunta aquí sobre ventas, tasas y transferencias, en cualquier momento.</span>', '<b>Have questions?</b><span>Ask here about sales, fees and payouts, any time.</span>')), antes ? 0 : 600);
     }
   };
 
@@ -516,27 +560,27 @@
     gravar(chaveHist(), st.hist);
   }
 
-  const feedbackOk = (util) => (util ? L('Que bom!', '¡Qué bien!') : L('Obrigado! Vamos melhorar essa resposta.', '¡Gracias! Vamos a mejorar esta respuesta.'));
+  const feedbackOk = (util) => (util ? L('Que bom!', '¡Qué bien!', 'Great!') : L('Obrigado! Vamos melhorar essa resposta.', '¡Gracias! Vamos a mejorar esta respuesta.', 'Thanks! We\'ll improve this answer.'));
   const chips = (ids, origem) => (ids.length ? `<div class="bt-chips">${ids.map((id) => POR_ID.get(id)).filter(Boolean).map((x) => `<button type="button" class="bt-chip" data-bt="q" data-id="${x.id}" data-or="${origem}">${esc(x.exemplo)}</button>`).join('')}</div>` : '');
 
   function htmlBot(m) {
     const loja = st.loja ? `, <b>${esc(st.loja)}</b>` : '';
-    if (m.k === 'oi') return `<div class="bt-b">${L(`Olá${loja}! Sou o assistente do treinamento.<br>Pergunte com suas palavras ou toque em uma dúvida comum:`, `¡Hola${loja}! Soy el asistente de la capacitación.<br>Pregunta con tus palabras o toca una duda común:`)}</div>${chips(POPULARES, 'inicio')}`;
-    if (m.k === 'obrigado') return `<div class="bt-b">${L('Por nada! Se surgir outra dúvida, é só perguntar.', '¡De nada! Si te surge otra duda, solo pregunta.')}</div>`;
-    if (m.k === 'sem') return `<div class="bt-b">${L('Ainda não sei responder essa. Tente com outras palavras ou escolha um assunto:', 'Todavía no sé responder eso. Intenta con otras palabras o elige un tema:')}</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b">${L('Se preferir, fale com o <b>Financeiro Bigou</b>:', 'Si prefieres, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
-    if (m.k === 'contato') return `<div class="bt-b">${L('Sentimos muito. Para resolver com uma pessoa, fale com o <b>Financeiro Bigou</b>:', 'Lo sentimos. Para resolverlo con una persona, habla con <b>Finanzas Bigou</b>:')}<br>${contatoFinanceiro()}</div>`;
-    if (m.k === 'sug') return `<div class="bt-b">${L('Você quis dizer:', '¿Quisiste decir…?')}</div>${chips(m.ids, 'sugestao')}`;
+    if (m.k === 'oi') return `<div class="bt-b">${L(`Olá${loja}! Sou o assistente do treinamento.<br>Pergunte com suas palavras ou toque em uma dúvida comum:`, `¡Hola${loja}! Soy el asistente de la capacitación.<br>Pregunta con tus palabras o toca una duda común:`, `Hi${loja}! I'm the training assistant.<br>Ask in your own words or tap a common question:`)}</div>${chips(POPULARES, 'inicio')}`;
+    if (m.k === 'obrigado') return `<div class="bt-b">${L('Por nada! Se surgir outra dúvida, é só perguntar.', '¡De nada! Si te surge otra duda, solo pregunta.', 'You\'re welcome! If you have another question, just ask.')}</div>`;
+    if (m.k === 'sem') return `<div class="bt-b">${L('Ainda não sei responder essa. Tente com outras palavras ou escolha um assunto:', 'Todavía no sé responder eso. Intenta con otras palabras o elige un tema:', 'I can\'t answer that one yet. Try other words or pick a topic:')}</div>${chips(POPULARES.slice(0, 4), 'sem')}<div class="bt-b">${L('Se preferir, fale com o <b>Financeiro Bigou</b>:', 'Si prefieres, habla con <b>Finanzas Bigou</b>:', 'If you prefer, contact <b>Bigou Finance</b>:')}<br>${contatoFinanceiro()}</div>`;
+    if (m.k === 'contato') return `<div class="bt-b">${L('Sentimos muito. Para resolver com uma pessoa, fale com o <b>Financeiro Bigou</b>:', 'Lo sentimos. Para resolverlo con una persona, habla con <b>Finanzas Bigou</b>:', 'Sorry about that. To sort it out with a person, contact <b>Bigou Finance</b>:')}<br>${contatoFinanceiro()}</div>`;
+    if (m.k === 'sug') return `<div class="bt-b">${L('Você quis dizer:', '¿Quisiste decir…?', 'Did you mean:')}</div>${chips(m.ids, 'sugestao')}`;
     const x = POR_ID.get(m.id);
     if (!x) return '';
     let r = x.r();
     if (r.includes('bt-obs')) { if (m.obs) r = r.replace(OBS, '') + OBS; else r = r.replace(OBS, ''); }
     return `<div class="bt-b">${r}</div>
       <div class="bt-acts">
-        ${x.rever ? `<a class="bt-rever" href="#/modulo/${x.rever}">${L('Rever no treinamento', 'Repasar en la capacitación')} ${IC.seta}</a>` : ''}
-        ${x.id === 'fora' ? '' : m.fb == null ? `<span class="bt-fb" data-msg="${m.n}"><small>${L('Ajudou?', '¿Te ayudó?')}</small><button type="button" data-bt="fb" data-v="1" aria-label="${L('Ajudou', 'Me ayudó')}">${IC.up}</button><button type="button" data-bt="fb" data-v="0" aria-label="${L('Não ajudou', 'No me ayudó')}">${IC.down}</button></span>`
+        ${x.rever ? `<a class="bt-rever" href="#/modulo/${x.rever}">${L('Rever no treinamento', 'Repasar en la capacitación', 'Review in the training')} ${IC.seta}</a>` : ''}
+        ${x.id === 'fora' ? '' : m.fb == null ? `<span class="bt-fb" data-msg="${m.n}"><small>${L('Ajudou?', '¿Te ayudó?', 'Was this helpful?')}</small><button type="button" data-bt="fb" data-v="1" aria-label="${L('Ajudou', 'Me ayudó', 'Helpful')}">${IC.up}</button><button type="button" data-bt="fb" data-v="0" aria-label="${L('Não ajudou', 'No me ayudó', 'Not helpful')}">${IC.down}</button></span>`
           : `<span class="bt-fb-ok">${feedbackOk(m.fb)}</span>`}
       </div>
-      ${x.seguintes && x.seguintes.length ? `<small class="bt-mais">${L('Talvez você queira saber:', 'Quizás quieras saber:')}</small>${chips(x.seguintes, 'seguinte')}` : ''}`;
+      ${x.seguintes && x.seguintes.length ? `<small class="bt-mais">${L('Talvez você queira saber:', 'Quizás quieras saber:', 'You might also want to know:')}</small>${chips(x.seguintes, 'seguinte')}` : ''}`;
   }
 
   function bolha(m) {
@@ -571,7 +615,7 @@
   function digitando(fn) {
     const d = document.createElement('div');
     d.className = 'bt-m bot';
-    d.innerHTML = `<div class="bt-b bt-typing" aria-label="${L('Digitando', 'Escribiendo')}"><i></i><i></i><i></i></div>`;
+    d.innerHTML = `<div class="bt-b bt-typing" aria-label="${L('Digitando', 'Escribiendo', 'Typing')}"><i></i><i></i><i></i></div>`;
     el.msgs.appendChild(d);
     rolar();
     setTimeout(() => { d.remove(); fn(); }, calmo() ? 0 : 550);

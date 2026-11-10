@@ -19,16 +19,16 @@
     const sexta = pascoa(ano);
     sexta.setDate(sexta.getDate() - 2);
     return {
-      '1-1': L('Confraternização Universal', 'Año Nuevo'),
-      [chave(sexta)]: L('Paixão de Cristo', 'Viernes Santo'),
+      '1-1': L('Confraternização Universal', 'Año Nuevo', 'New Year\'s Day'),
+      [chave(sexta)]: L('Paixão de Cristo', 'Viernes Santo', 'Good Friday'),
       '4-21': 'Tiradentes',
-      '5-1': L('Dia Mundial do Trabalho', 'Día del Trabajador'),
-      '9-7': L('Independência do Brasil', 'Independencia de Brasil'),
-      '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida'),
-      '11-2': L('Finados', 'Día de los Difuntos'),
-      '11-15': L('Proclamação da República', 'Proclamación de la República'),
-      '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra'),
-      '12-25': L('Natal', 'Navidad'),
+      '5-1': L('Dia Mundial do Trabalho', 'Día del Trabajador', 'Labor Day'),
+      '9-7': L('Independência do Brasil', 'Independencia de Brasil', 'Brazilian Independence Day'),
+      '10-12': L('Nossa Senhora Aparecida', 'Nuestra Señora Aparecida', 'Our Lady of Aparecida'),
+      '11-2': L('Finados', 'Día de los Difuntos', 'All Souls\' Day'),
+      '11-15': L('Proclamação da República', 'Proclamación de la República', 'Proclamation of the Republic'),
+      '11-20': L('Dia Nacional de Zumbi e da Consciência Negra', 'Día de Zumbi y de la Conciencia Negra', 'Zumbi and Black Awareness Day'),
+      '12-25': L('Natal', 'Navidad', 'Christmas'),
     };
   }
 

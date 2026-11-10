@@ -47,16 +47,16 @@
   TREINO.M = M;
 
   const info = (act, tour, label) =>
-    `<button type="button" class="bx-info" data-act="${act}" ${tour ? `data-tour="${tour}"` : ''} aria-label="${label || L('Ver detalhes', 'Ver detalles')}">i</button>`;
+    `<button type="button" class="bx-info" data-act="${act}" ${tour ? `data-tour="${tour}"` : ''} aria-label="${label || L('Ver detalhes', 'Ver detalles', 'View details')}">i</button>`;
   // ⓘ que existe na tela real, mas cujo conteúdo não faz parte do treinamento
   const infoInert = (grey = true) => `<span class="bx-info ${grey ? 'grey' : ''}" aria-hidden="true">i</span>`;
 
   const PAY_TITLE = {
-    online: L('Total pago com pagamento online', 'Total pagado con pago online'),
-    dinheiro: L('Total pago em dinheiro', 'Total pagado en efectivo'),
-    maquininha: L('Total pago com maquininha de cartão', 'Total pagado con POS'),
+    online: L('Total pago com pagamento online', 'Total pagado con pago online', 'Total paid with online payment'),
+    dinheiro: L('Total pago em dinheiro', 'Total pagado en efectivo', 'Total paid in cash'),
+    maquininha: L('Total pago com maquininha de cartão', 'Total pagado con POS', 'Total paid with card machine'),
   };
-  const NAO = L('Esta área não faz parte do treinamento.', 'Esta área no forma parte de la capacitación.');
+  const NAO = L('Esta área não faz parte do treinamento.', 'Esta área no forma parte de la capacitación.', 'This area is not part of the training.');
 
   const Clone = { el: null, d: null, st: null, prev: [] };
   const mobile = () => window.innerWidth < 900;
@@ -102,7 +102,7 @@
     else if (act === 'close') this.set({ modals: s.modals.slice(0, -1) });
     else if (act === 'toast') TREINO.toast(a.dataset.msg || NAO);
     else if (act === 'antecipar-confirm') {
-      TREINO.toast(L('Antecipação solicitada. No treinamento, nenhum valor é enviado de verdade.', 'Anticipo solicitado. En la capacitación, no se envía ningún valor de verdad.'));
+      TREINO.toast(L('Antecipação solicitada. No treinamento, nenhum valor é enviado de verdade.', 'Anticipo solicitado. En la capacitación, no se envía ningún valor de verdad.', 'Early payout requested. In the training, no money is actually sent.'));
       this.set({ modals: s.modals.slice(0, -1), antecipada: true });
     }
   };
@@ -127,15 +127,15 @@
   function header() {
     return `
     <header class="bx-header">
-      <button type="button" class="bx-burger" data-act="toggle-sidebar" data-tour="burger" aria-label="${L('Abrir menu', 'Abrir menú')}">${ic('menu')}</button>
+      <button type="button" class="bx-burger" data-act="toggle-sidebar" data-tour="burger" aria-label="${L('Abrir menu', 'Abrir menú', 'Open menu')}">${ic('menu')}</button>
       <div class="bx-store" data-tour="store">
         <span class="bx-dot"></span>
-        <div><b>${L('LOJA DE TREINAMENTO', 'TIENDA DE CAPACITACIÓN')}</b><small>RIO POMBA - MG</small></div>
+        <div><b>${L('LOJA DE TREINAMENTO', 'TIENDA DE CAPACITACIÓN', 'TRAINING STORE')}</b><small>RIO POMBA - MG</small></div>
         ${ic('caret', 'caret')}
       </div>
       <div class="grow"></div>
-      <button type="button" class="bx-open" data-act="toast" data-msg="${L('No treinamento, a loja fica sempre fechada.', 'En la capacitación, la tienda siempre está cerrada.')}">${L('ABRIR LOJA', 'ABRIR TIENDA')}</button>
-      <div class="bx-user"><span>${L('Olá, Parceiro', 'Hola, Socio')}</span>${ic('caret', 'caret')}</div>
+      <button type="button" class="bx-open" data-act="toast" data-msg="${L('No treinamento, a loja fica sempre fechada.', 'En la capacitación, la tienda siempre está cerrada.', 'In the training, the store always stays closed.')}">${L('ABRIR LOJA', 'ABRIR TIENDA', 'OPEN STORE')}</button>
+      <div class="bx-user"><span>${L('Olá, Parceiro', 'Hola, Socio', 'Hi, Partner')}</span>${ic('caret', 'caret')}</div>
     </header>`;
   }
 
@@ -146,6 +146,12 @@
     'Formas de Pagamento': 'Formas de Pago', 'Cardápio': 'Menú', 'Notificações': 'Notificaciones', 'Configurações': 'Configuración',
     'Perguntas Frequentes': 'Preguntas Frecuentes', 'Compartilhar': 'Compartir', 'Baixar App Android': 'Descargar App Android',
   };
+  const MENU_EN = {
+    'Início': 'Home', 'Pedidos': 'Orders', 'Relatório': 'Report', 'Marketing': 'Marketing', 'Financeiro': 'Finance',
+    'Avaliações': 'Reviews', 'Horário de Funcionamento': 'Opening hours', 'Taxa de Entrega': 'Delivery fee',
+    'Formas de Pagamento': 'Payment methods', 'Cardápio': 'Menu', 'Notificações': 'Notifications', 'Configurações': 'Settings',
+    'Perguntas Frequentes': 'FAQ', 'Compartilhar': 'Share', 'Baixar App Android': 'Download Android App',
+  };
 
   function sidebar(s) {
     const items = [
@@ -155,11 +161,11 @@
       ['gear', 'Configurações'], ['help', 'Perguntas Frequentes'], ['share', 'Compartilhar'], ['android', 'Baixar App Android'],
     ];
     return `
-    <aside class="bx-side" aria-label="${L('Menu', 'Menú')}">
+    <aside class="bx-side" aria-label="${L('Menu', 'Menú', 'Menu')}">
       <div class="sd-cards">
-        <div class="sd-card"><span>${L('CONEXÃO', 'CONEXIÓN')}</span><i class="sd-on"></i></div>
-        <div class="sd-card"><span>${L('TEMPO DE ENTREGA', 'TIEMPO DE ENTREGA')}<small>(1 HORA, 25 MINUTOS)</small></span>${ic('timer')}</div>
-        <div class="sd-card"><span>${L('TEMPO DE RETIRADA', 'TIEMPO DE RETIRO')}<small>(1 HORA)</small></span>${ic('timer')}</div>
+        <div class="sd-card"><span>${L('CONEXÃO', 'CONEXIÓN', 'CONNECTION')}</span><i class="sd-on"></i></div>
+        <div class="sd-card"><span>${L('TEMPO DE ENTREGA', 'TIEMPO DE ENTREGA', 'DELIVERY TIME')}<small>${L('(1 HORA, 25 MINUTOS)', '(1 HORA, 25 MINUTOS)', '(1 HOUR, 25 MINUTES)')}</small></span>${ic('timer')}</div>
+        <div class="sd-card"><span>${L('TEMPO DE RETIRADA', 'TIEMPO DE RETIRO', 'PICKUP TIME')}<small>${L('(1 HORA)', '(1 HORA)', '(1 HOUR)')}</small></span>${ic('timer')}</div>
       </div>
       <nav class="sd-nav">
         ${items
@@ -167,7 +173,7 @@
             const active = page && s.page === page ? 'active' : '';
             const slug = label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]+/g, '-');
             const act = page ? `data-act="nav:${page}" data-tour="nav-${page}"` : `data-act="toast" data-msg="${NAO}" data-tour="nav-${slug}"`;
-            return `<button type="button" class="sd-item ${active}" ${act}>${ic(icon)}<span>${L(label, MENU_ES[label])}</span>${badge ? `<em>${badge}</em>` : ''}</button>`;
+            return `<button type="button" class="sd-item ${active}" ${act}>${ic(icon)}<span>${L(label, MENU_ES[label], MENU_EN[label])}</span>${badge ? `<em>${badge}</em>` : ''}</button>`;
           })
           .join('')}
       </nav>
@@ -178,16 +184,16 @@
   function pedidos(d) {
     const lista = d.sc.pedidosHoje || [];
     const aguardando = lista.filter((p) => p.status === 'confirmacao').length;
-    const ST = { confirmacao: L('AGUARDANDO CONFIRMAÇÃO', 'ESPERANDO CONFIRMACIÓN'), entrega: L('AGUARDANDO ENTREGA', 'EN CAMINO') };
+    const ST = { confirmacao: L('AGUARDANDO CONFIRMAÇÃO', 'ESPERANDO CONFIRMACIÓN', 'AWAITING CONFIRMATION'), entrega: L('AGUARDANDO ENTREGA', 'EN CAMINO', 'AWAITING DELIVERY') };
     const MSG = {
-      confirmacao: L('No sistema, você abre o pedido para aceitar ou recusar. No treinamento, os pedidos não podem ser abertos.', 'En el sistema, abres el pedido para aceptarlo o rechazarlo. En la capacitación, los pedidos no se pueden abrir.'),
-      entrega: L('No treinamento, os pedidos não podem ser abertos.', 'En la capacitación, los pedidos no se pueden abrir.'),
+      confirmacao: L('No sistema, você abre o pedido para aceitar ou recusar. No treinamento, os pedidos não podem ser abertos.', 'En el sistema, abres el pedido para aceptarlo o rechazarlo. En la capacitación, los pedidos no se pueden abrir.', 'In the system, you open the order to accept or decline it. In the training, orders cannot be opened.'),
+      entrega: L('No treinamento, os pedidos não podem ser abertos.', 'En la capacitación, los pedidos no se pueden abrir.', 'In the training, orders cannot be opened.'),
     };
     return `
     <div class="pd">
       <div class="pd-head" data-tour="pd-head">
-        <h2>${aguardando ? pl(aguardando, L('pedido aguardando confirmação', 'pedido esperando confirmación'), L('pedidos aguardando confirmação', 'pedidos esperando confirmación')) : L('Nenhum pedido aguardando confirmação', 'Ningún pedido esperando confirmación')}</h2>
-        <button type="button" class="pd-refresh" data-act="toast" data-msg="${L('A lista de pedidos se atualiza sozinha.', 'La lista de pedidos se actualiza sola.')}" aria-label="${L('Atualizar', 'Actualizar')}">${ic('refresh')}</button>
+        <h2>${aguardando ? pl(aguardando, L('pedido aguardando confirmação', 'pedido esperando confirmación', 'order awaiting confirmation'), L('pedidos aguardando confirmação', 'pedidos esperando confirmación', 'orders awaiting confirmation')) : L('Nenhum pedido aguardando confirmação', 'Ningún pedido esperando confirmación', 'No orders awaiting confirmation')}</h2>
+        <button type="button" class="pd-refresh" data-act="toast" data-msg="${L('A lista de pedidos se atualiza sozinha.', 'La lista de pedidos se actualiza sola.', 'The order list updates on its own.')}" aria-label="${L('Atualizar', 'Actualizar', 'Refresh')}">${ic('refresh')}</button>
       </div>
       <div class="pd-list" data-tour="pd-list">
         ${lista.map((p) => `
@@ -196,8 +202,8 @@
           <span class="pd-info"><b>${p.cliente}</b><span>${TREINO.config.loja.nome}</span><small>Rio Pomba - MG</small><em>Bigou Delivery</em></span>
           <span class="pd-right">
             <span class="pd-boxes">
-              <span class="pd-box"><b>PEDIDO: ${p.cod}</b><span>${F(Math.round(p.valor * 100))}</span></span>
-              <span class="pd-box"><b>HORA</b><span>${p.hora}</span></span>
+              <span class="pd-box"><b>${L('PEDIDO', 'PEDIDO', 'ORDER')}: ${p.cod}</b><span>${F(Math.round(p.valor * 100))}</span></span>
+              <span class="pd-box"><b>${L('HORA', 'HORA', 'TIME')}</b><span>${p.hora}</span></span>
             </span>
             <span class="pd-st ${p.status}" data-tour="pd-st-${p.status}">${ST[p.status]}</span>
           </span>
@@ -212,47 +218,47 @@
     return `
     <div class="rp">
       <div class="rp-top">
-        <div class="rp-search">${ic('search')}<span>${L('Buscar pedidos por código ou nome do cliente', 'Buscar pedidos por código o nombre del cliente')}</span></div>
-        <button type="button" class="bx-btn rp-filter" data-act="toast" data-msg="${L('No treinamento, o filtro fica fixo em Mês Atual.', 'En la capacitación, el filtro queda fijo en Mes Actual.')}">${ic('funnel')} Filtros</button>
+        <div class="rp-search">${ic('search')}<span>${L('Buscar pedidos por código ou nome do cliente', 'Buscar pedidos por código o nombre del cliente', 'Search orders by code or customer name')}</span></div>
+        <button type="button" class="bx-btn rp-filter" data-act="toast" data-msg="${L('No treinamento, o filtro fica fixo em Mês Atual.', 'En la capacitación, el filtro queda fijo en Mes Actual.', 'In the training, the filter stays fixed on Current month.')}">${ic('funnel')} ${L('Filtros', 'Filtros', 'Filters')}</button>
       </div>
 
       <section class="rp-totals" data-tour="rp-totals">
         <div class="rp-t" data-tour="rp-bruto">
-          <div class="rp-l"><b>Total Bruto</b>${info('open:totalBruto', 'rp-bruto-info', L('Ver detalhes do Total Bruto', 'Ver detalles del Total Bruto'))}</div>
+          <div class="rp-l"><b>${L('Total Bruto', 'Total Bruto', 'Gross Total')}</b>${info('open:totalBruto', 'rp-bruto-info', L('Ver detalhes do Total Bruto', 'Ver detalles del Total Bruto', 'View Gross Total details'))}</div>
           <div class="rp-v strong">${M(d.totalBruto)}</div>
         </div>
         <div class="rp-op">=</div>
         <div class="rp-t" data-tour="rp-liquido">
-          <div class="rp-l">${L('Total Líquido', 'Total Neto')} ${infoInert()}</div>
+          <div class="rp-l">${L('Total Líquido', 'Total Neto', 'Net Total')} ${infoInert()}</div>
           <div class="rp-v">${M(d.totalLiquido)}</div>
-          <small>(${pl(d.n, 'pedido', 'pedidos')})</small>
+          <small>(${pl(d.n, L('pedido', 'pedido', 'order'), L('pedidos', 'pedidos', 'orders'))})</small>
         </div>
         <div class="rp-op">+</div>
         <div class="rp-t" data-tour="rp-incentivos">
-          <div class="rp-l">${L('Incentivos do Bigou', 'Incentivos de Bigou')} ${infoInert()}</div>
+          <div class="rp-l">${L('Incentivos do Bigou', 'Incentivos de Bigou', 'Bigou Incentives')} ${infoInert()}</div>
           <div class="rp-v">${M(d.incentivos)}</div>
-          <small>(${pl(d.nIncentivos, L('cupom do Bigou', 'cupón de Bigou'), L('cupons do Bigou', 'cupones de Bigou'))})</small>
+          <small>(${pl(d.nIncentivos, L('cupom do Bigou', 'cupón de Bigou', 'Bigou coupon'), L('cupons do Bigou', 'cupones de Bigou', 'Bigou coupons'))})</small>
         </div>
         <div class="rp-chev">${ic('chevd')}</div>
       </section>
 
       <div class="rp-bar">
-        <div class="rp-chip">${L('Filtro aplicado: Mês Atual', 'Filtro aplicado: Mes Actual')} <span aria-hidden="true">✖</span></div>
-        <button type="button" class="rp-export" data-act="toast" data-msg="${NAO}">Exportar</button>
+        <div class="rp-chip">${L('Filtro aplicado: Mês Atual', 'Filtro aplicado: Mes Actual', 'Filter applied: Current month')} <span aria-hidden="true">✖</span></div>
+        <button type="button" class="rp-export" data-act="toast" data-msg="${NAO}">${L('Exportar', 'Exportar', 'Export')}</button>
       </div>
 
       <div class="rp-table" data-tour="rp-table">
         <div class="rp-scroll">
           <table>
             <thead><tr>
-              <th>Pedido ↑</th><th>${L('Entrega/Retirada', 'Entrega/Retiro')}</th><th>${L('Valor Líquido', 'Valor Neto')}</th><th>Valor Bruto</th>
-              <th>${L('Data', 'Fecha')}</th><th>${L('Status', 'Estado')}</th><th>${L('Origem', 'Origen')}</th><th>${L('Integração', 'Integración')}</th>
+              <th>${L('Pedido', 'Pedido', 'Order')} ↑</th><th>${L('Entrega/Retirada', 'Entrega/Retiro', 'Delivery/Pickup')}</th><th>${L('Valor Líquido', 'Valor Neto', 'Net Amount')}</th><th>${L('Valor Bruto', 'Valor Bruto', 'Gross Amount')}</th>
+              <th>${L('Data', 'Fecha', 'Date')}</th><th>${L('Status', 'Estado', 'Status')}</th><th>${L('Origem', 'Origen', 'Source')}</th><th>${L('Integração', 'Integración', 'Integration')}</th>
             </tr></thead>
             <tbody>${d.orders.map(row).join('')}</tbody>
           </table>
         </div>
         <div class="rp-foot">
-          <span>${L('Linhas por página:', 'Filas por página:')}</span><b>25 ▾</b><span>1-${d.n} de ${d.n}</span><span class="rp-pg">‹</span><span class="rp-pg">›</span>
+          <span>${L('Linhas por página:', 'Filas por página:', 'Rows per page:')}</span><b>25 ▾</b><span>1-${d.n} de ${d.n}</span><span class="rp-pg">‹</span><span class="rp-pg">›</span>
         </div>
       </div>
     </div>`;
@@ -261,12 +267,12 @@
   function row(o) {
     return `
     <tr data-tour="row-${o.cod}" data-pay="${o.pag}">
-      <td class="rp-ped"><b>Código: ${o.cod}</b><span>${o.cliente}</span><span>${TREINO.config.loja.nome}</span><small>Rio Pomba - MG</small></td>
-      <td>Entrega</td>
+      <td class="rp-ped"><b>${L('Código', 'Código', 'Code')}: ${o.cod}</b><span>${o.cliente}</span><span>${TREINO.config.loja.nome}</span><small>Rio Pomba - MG</small></td>
+      <td>${L('Entrega', 'Entrega', 'Delivery')}</td>
       <td class="nowrap">${o.cupom ? ic('tag', 'tag') : ''}${F(o.liquido)}</td>
       <td class="nowrap"><b>${F(o.bruto)}</b></td>
       <td class="nowrap">${o.data}</td>
-      <td><span class="st st-ok">ENTREGA NOTIFICADA</span></td>
+      <td><span class="st st-ok">${L('ENTREGA NOTIFICADA', 'ENTREGA NOTIFICADA', 'DELIVERY NOTIFIED')}</span></td>
       <td><span class="st st-org">Bigou Delivery</span></td>
       <td>${ic('ban', 'ban')}</td>
     </tr>`;
@@ -275,7 +281,8 @@
   /* ------------------------------ FINANCEIRO ------------------------------ */
   function badge(status) {
     const ES = { ANTECIPADA: 'ANTICIPADA' };
-    return `<span class="badge ${status === 'VIGENTE' ? 'b-vig' : 'b-ant'}">${L(status, ES[status])}</span>`;
+    const EN = { VIGENTE: 'OPEN', ANTECIPADA: 'PAID EARLY', FECHADA: 'CLOSED' };
+    return `<span class="badge ${status === 'VIGENTE' ? 'b-vig' : 'b-ant'}">${L(status, ES[status], EN[status])}</span>`;
   }
 
   function financeiro(d) {
@@ -283,25 +290,25 @@
     return `
     <div class="fn">
       <div class="fn-actions" data-tour="fin-botoes">
-        <button type="button" class="fn-pill" data-act="open:boletos" data-tour="btn-boletos">${ic('boleto', 'g')} Boletos</button>
-        <button type="button" class="fn-pill" data-act="open:repasses" data-tour="btn-repasses">${ic('swap', 'g')} ${L('Repasses', 'Transferencias')}</button>
+        <button type="button" class="fn-pill" data-act="open:boletos" data-tour="btn-boletos">${ic('boleto', 'g')} ${L('Boletos', 'Boletos', 'Bank slips')}</button>
+        <button type="button" class="fn-pill" data-act="open:repasses" data-tour="btn-repasses">${ic('swap', 'g')} ${L('Repasses', 'Transferencias', 'Payouts')}</button>
       </div>
       <section class="fn-card">
         <div class="fn-head">
-          <h2>${L('Faturamento do Mês', 'Facturación del Mes')}</h2>
-          <button type="button" class="bx-btn sm" data-act="toast" data-msg="${L('No treinamento, a fatura mostra sempre o mês atual.', 'En la capacitación, la factura siempre muestra el mes actual.')}">${ic('funnel')} ${TREINO.config.mes}</button>
+          <h2>${L('Faturamento do Mês', 'Facturación del Mes', 'Monthly Revenue')}</h2>
+          <button type="button" class="bx-btn sm" data-act="toast" data-msg="${L('No treinamento, a fatura mostra sempre o mês atual.', 'En la capacitación, la factura siempre muestra el mes actual.', 'In the training, the invoice always shows the current month.')}">${ic('funnel')} ${TREINO.config.mes}</button>
         </div>
         <div class="fn-res" data-tour="fin-res">
-          <div class="fn-main" data-tour="fin-resultado"><span>Resultado</span><strong>${M(r.resultado)}</strong></div>
+          <div class="fn-main" data-tour="fin-resultado"><span>${L('Resultado', 'Resultado', 'Result')}</span><strong>${M(r.resultado)}</strong></div>
           <div class="fn-boxes" data-tour="fin-boxes">
-            <div class="fn-box g" data-tour="fin-recebido"><b>${M(r.recebidoLoja)}</b><span>${L('Recebido pela Loja', 'Recibido por la Tienda')}</span></div>
-            <div class="fn-box g" data-tour="fin-repasses"><b>${M(r.repassesRecebidos)}</b><span>${L('Repasses recebidos', 'Transferencias recibidas')}</span></div>
-            <div class="fn-box" data-tour="fin-disponivel"><b>${M(r.repasseDisponivel)}</b><span>${L('Repasse disponível', 'Transferencia disponible')} ${r.repasseDisponivel ? infoInert() : ''}</span></div>
+            <div class="fn-box g" data-tour="fin-recebido"><b>${M(r.recebidoLoja)}</b><span>${L('Recebido pela Loja', 'Recibido por la Tienda', 'Received by the store')}</span></div>
+            <div class="fn-box g" data-tour="fin-repasses"><b>${M(r.repassesRecebidos)}</b><span>${L('Repasses recebidos', 'Transferencias recibidas', 'Payouts received')}</span></div>
+            <div class="fn-box" data-tour="fin-disponivel"><b>${M(r.repasseDisponivel)}</b><span>${L('Repasse disponível', 'Transferencia disponible', 'Available payout')} ${r.repasseDisponivel ? infoInert() : ''}</span></div>
           </div>
         </div>
         <hr>
         <div data-tour="fin-faturas">
-          <h3 class="fn-sub">${L('Faturas do Período', 'Facturas del Período')}</h3>
+          <h3 class="fn-sub">${L('Faturas do Período', 'Facturas del Período', 'Invoices for the Period')}</h3>
           <div class="fn-list">
             <button type="button" class="fn-fat" data-act="open:fatura" data-tour="fatura-item">
               <span>${f.inicio} - ${f.fim}</span>${badge(f.status)}${ic('chevr', 'chev')}
@@ -323,7 +330,7 @@
   }
 
   const head = (title, extra = '') => `
-    <div class="md-head"><div>${title}${extra}</div><button type="button" class="md-x" data-act="close" aria-label="${L('Fechar', 'Cerrar')}">${ic('x')}</button></div>`;
+    <div class="md-head"><div>${title}${extra}</div><button type="button" class="md-x" data-act="close" aria-label="${L('Fechar', 'Cerrar', 'Close')}">${ic('x')}</button></div>`;
 
   const MODALS = {
     totalBruto(d) {
@@ -332,17 +339,17 @@
         return `
         <div class="tb-b" data-tour="tb-${k}">
           <div class="tb-t">${PAY_TITLE[k]}</div>
-          <div class="tb-r"><span>${pl(p.n, 'pedido', 'pedidos')}</span><b class="pos">${M(p.itens, '+')}</b></div>
-          <div class="tb-r"><span>${pl(p.nTaxas, L('taxa de serviço', 'tasa de servicio'), L('taxas de serviço', 'tasas de servicio'))}</span><b class="pos">+${F(p.taxas)}</b></div>
+          <div class="tb-r"><span>${pl(p.n, L('pedido', 'pedido', 'order'), L('pedidos', 'pedidos', 'orders'))}</span><b class="pos">${M(p.itens, '+')}</b></div>
+          <div class="tb-r"><span>${pl(p.nTaxas, L('taxa de serviço', 'tasa de servicio', 'service fee'), L('taxas de serviço', 'tasas de servicio', 'service fees'))}</span><b class="pos">+${F(p.taxas)}</b></div>
         </div>`;
       };
-      return `${head('<h3>Total Bruto</h3>')}
+      return `${head(`<h3>${L('Total Bruto', 'Total Bruto', 'Gross Total')}</h3>`)}
       <div class="md-content">
         <div class="tb-list" data-tour="tb-list">${b('online')}${b('dinheiro')}${b('maquininha')}</div>
         <div class="tb-tot" data-tour="tb-total">
-          <div class="tb-r"><span>Total de ${pl(d.n, 'pedido', 'pedidos')}</span><b class="pos">+${F(d.all.itens)}</b></div>
-          <div class="tb-r" data-tour="tb-taxas"><span>Total de ${pl(d.all.nTaxas, L('taxa de serviço', 'tasa de servicio'), L('taxas de serviço', 'tasas de servicio'))}</span><b class="pos">+${F(d.all.taxas)}</b></div>
-          <div class="tb-r big"><b>Total Bruto</b><b>${M(d.totalBruto)}</b></div>
+          <div class="tb-r"><span>${L('Total de', 'Total de', 'Total of')} ${pl(d.n, L('pedido', 'pedido', 'order'), L('pedidos', 'pedidos', 'orders'))}</span><b class="pos">+${F(d.all.itens)}</b></div>
+          <div class="tb-r" data-tour="tb-taxas"><span>${L('Total de', 'Total de', 'Total of')} ${pl(d.all.nTaxas, L('taxa de serviço', 'tasa de servicio', 'service fee'), L('taxas de serviço', 'tasas de servicio', 'service fees'))}</span><b class="pos">+${F(d.all.taxas)}</b></div>
+          <div class="tb-r big"><b>${L('Total Bruto', 'Total Bruto', 'Gross Total')}</b><b>${M(d.totalBruto)}</b></div>
         </div>
       </div>`;
     },
@@ -353,34 +360,34 @@
         `<div class="fa-l" data-tour="${tour}"><div class="fa-lt">${label}</div><b class="fa-lv ${sign === '+' ? 'pos' : ''}">${M(v, sign === '+' ? '+ ' : '- ')}</b></div>`;
       return `
       <div class="md-head fa-head">
-        <div data-tour="fa-titulo"><h3 class="fa-title">${L('Fatura', 'Factura')} - ${TREINO.config.mesExtenso}</h3><small>${f.inicio} - ${f.fim}</small></div>
-        <div class="fa-hr"><span data-tour="fa-status">${badge(f.status)}</span><button type="button" class="md-x" data-act="close" aria-label="${L('Fechar', 'Cerrar')}">${ic('x')}</button></div>
+        <div data-tour="fa-titulo"><h3 class="fa-title">${L('Fatura', 'Factura', 'Invoice')} - ${TREINO.config.mesExtenso}</h3><small>${f.inicio} - ${f.fim}</small></div>
+        <div class="fa-hr"><span data-tour="fa-status">${badge(f.status)}</span><button type="button" class="md-x" data-act="close" aria-label="${L('Fechar', 'Cerrar', 'Close')}">${ic('x')}</button></div>
       </div>
       <div class="md-content">
-        <h4 class="fa-sec">${L('Cálculo do Repasse ou Boleto', 'Cálculo de la Transferencia o Boleto')}</h4>
+        <h4 class="fa-sec">${L('Cálculo do Repasse ou Boleto', 'Cálculo de la Transferencia o Boleto', 'Payout or Bank Slip Calculation')}</h4>
         <div class="fa-box" data-tour="fl-box">
           <div class="fa-group" data-tour="fl-entradas">
-          ${line('fl-liquido-online', L(`Valor líquido de <b>${pl(f.nOnline, 'venda confirmada', 'vendas confirmadas')} com pagamento online</b>`, `Valor neto de <b>${pl(f.nOnline, 'venta confirmada', 'ventas confirmadas')} con pago online</b>`), f.liquidoOnline, '+')}
-          ${line('fl-incentivos', `${L('Reembolso dos incentivos usados em', 'Reembolso de los incentivos usados en')} <b>${pl(f.nReembolso, L('venda', 'venta'), L('vendas', 'ventas'))}</b> ${infoInert(false)}`, f.reembolso, '+')}
-          ${line('fl-taxas-online', L(`Valor das <b>taxas de serviço</b> advindas de <b>${pl(f.nTaxasOnline, 'venda confirmada', 'vendas confirmadas')} com pagamento online</b><small>(valor pago pelo cliente e repassado para a plataforma)</small>`, `Valor de las <b>tasas de servicio</b> provenientes de <b>${pl(f.nTaxasOnline, 'venta confirmada', 'ventas confirmadas')} con pago online</b><small>(valor pagado por el cliente y transferido a la plataforma)</small>`), f.taxasOnline, '+')}
+          ${line('fl-liquido-online', L(`Valor líquido de <b>${pl(f.nOnline, 'venda confirmada', 'vendas confirmadas')} com pagamento online</b>`, `Valor neto de <b>${pl(f.nOnline, 'venta confirmada', 'ventas confirmadas')} con pago online</b>`, `Net amount from <b>${pl(f.nOnline, 'confirmed sale', 'confirmed sales')} with online payment</b>`), f.liquidoOnline, '+')}
+          ${line('fl-incentivos', `${L('Reembolso dos incentivos usados em', 'Reembolso de los incentivos usados en', 'Refund of incentives used in')} <b>${pl(f.nReembolso, L('venda', 'venta', 'sale'), L('vendas', 'ventas', 'sales'))}</b> ${infoInert(false)}`, f.reembolso, '+')}
+          ${line('fl-taxas-online', L(`Valor das <b>taxas de serviço</b> advindas de <b>${pl(f.nTaxasOnline, 'venda confirmada', 'vendas confirmadas')} com pagamento online</b><small>(valor pago pelo cliente e repassado para a plataforma)</small>`, `Valor de las <b>tasas de servicio</b> provenientes de <b>${pl(f.nTaxasOnline, 'venta confirmada', 'ventas confirmadas')} con pago online</b><small>(valor pagado por el cliente y transferido a la plataforma)</small>`, `<b>Service fees</b> from <b>${pl(f.nTaxasOnline, 'confirmed sale', 'confirmed sales')} with online payment</b><small>(paid by the customer and passed on to the platform)</small>`), f.taxasOnline, '+')}
           </div>
           <div class="fa-debits" data-tour="fl-cobrancas">
-            ${f.debitoRemanescente ? line('fl-debitos', L('Débitos remanescentes', 'Débitos pendientes'), f.debitoRemanescente, '-') : ''}
-            ${line('fl-comissao', `${L('Comissão', 'Comisión')} ${info('open:comissao', 'fl-comissao-info', L('Ver cálculo da comissão', 'Ver cálculo de la comisión'))}`, f.comissao, '-')}
-            ${line('fl-taxa-online', `${L('Taxa do pagamento online', 'Tasa de pago online')} ${info('open:taxaOnline', 'fl-taxa-online-info', L('Ver cálculo da taxa do pagamento online', 'Ver cálculo de la tasa de pago online'))}`, f.taxaOnline, '-')}
-            ${line('fl-transferencia', L('Taxa de transferência', 'Tasa bancaria'), f.transferencia, '-')}
-            ${line('fl-antecipacao', L('Taxa de antecipação', 'Tasa de anticipo'), f.taxaAntecipacao, '-')}
-            ${line('fl-taxa-servico', `${L('Taxa de serviço', 'Tasa de servicio')} ${info('open:taxaServico', 'fl-taxa-servico-info', L('Ver cálculo da taxa de serviço', 'Ver cálculo de la tasa de servicio'))}`, f.taxaServico, '-')}
-            ${f.mensalidade ? line('fl-mensalidade', L('Mensalidade', 'Mensualidad'), f.mensalidade, '-') : ''}
+            ${f.debitoRemanescente ? line('fl-debitos', L('Débitos remanescentes', 'Débitos pendientes', 'Remaining debits'), f.debitoRemanescente, '-') : ''}
+            ${line('fl-comissao', `${L('Comissão', 'Comisión', 'Commission')} ${info('open:comissao', 'fl-comissao-info', L('Ver cálculo da comissão', 'Ver cálculo de la comisión', 'View commission calculation'))}`, f.comissao, '-')}
+            ${line('fl-taxa-online', `${L('Taxa do pagamento online', 'Tasa de pago online', 'Online payment fee')} ${info('open:taxaOnline', 'fl-taxa-online-info', L('Ver cálculo da taxa do pagamento online', 'Ver cálculo de la tasa de pago online', 'View online payment fee calculation'))}`, f.taxaOnline, '-')}
+            ${line('fl-transferencia', L('Taxa de transferência', 'Tasa bancaria', 'Transfer fee'), f.transferencia, '-')}
+            ${line('fl-antecipacao', L('Taxa de antecipação', 'Tasa de anticipo', 'Early payout fee'), f.taxaAntecipacao, '-')}
+            ${line('fl-taxa-servico', `${L('Taxa de serviço', 'Tasa de servicio', 'Service fee')} ${info('open:taxaServico', 'fl-taxa-servico-info', L('Ver cálculo da taxa de serviço', 'Ver cálculo de la tasa de servicio', 'View service fee calculation'))}`, f.taxaServico, '-')}
+            ${f.mensalidade ? line('fl-mensalidade', L('Mensalidade', 'Mensualidad', 'Monthly fee'), f.mensalidade, '-') : ''}
           </div>
         </div>
         <div class="fa-total" data-tour="fl-total"><b>${f.tipo}</b><b class="${f.total >= 0 ? 'pos' : 'neg'}">${M(Math.abs(f.total))}</b></div>
         ${
           f.status === 'VIGENTE'
-            ? `<div class="fa-ant"><button type="button" class="fa-ant-link" data-act="open:antecipacao" data-tour="btn-antecipar">${L('Solicitar antecipação', 'Solicitar anticipo')} ${ic('arrow')}</button></div>`
+            ? `<div class="fa-ant"><button type="button" class="fa-ant-link" data-act="open:antecipacao" data-tour="btn-antecipar">${L('Solicitar antecipação', 'Solicitar anticipo', 'Request early payout')} ${ic('arrow')}</button></div>`
             : Clone.st.repassado
-              ? `<div class="fa-pago" data-tour="fa-repasse-realizado"><b>${L('Repasse realizado', 'Transferencia realizada')}</b><span>${L('A transferência foi realizada em', 'La transferencia se realizó el')} ${d.sc.antecipacaoData}</span>
-                  <button type="button" class="fa-pago-link" data-act="toast" data-msg="${L('No sistema, aqui abre o comprovante da transferência. No treinamento, não há comprovante real.', 'En el sistema, aquí se abre el comprobante de la transferencia. En la capacitación, no hay comprobante real.')}" data-tour="btn-comprovante">${L('Ver comprovante', 'Ver comprobante')} ${ic('arrow')}</button></div>`
+              ? `<div class="fa-pago" data-tour="fa-repasse-realizado"><b>${L('Repasse realizado', 'Transferencia realizada', 'Payout completed')}</b><span>${L('A transferência foi realizada em', 'La transferencia se realizó el', 'The transfer was made on')} ${d.sc.antecipacaoData}</span>
+                  <button type="button" class="fa-pago-link" data-act="toast" data-msg="${L('No sistema, aqui abre o comprovante da transferência. No treinamento, não há comprovante real.', 'En el sistema, aquí se abre el comprobante de la transferencia. En la capacitación, no hay comprobante real.', 'In the system, this opens the transfer receipt. In the training, there is no real receipt.')}" data-tour="btn-comprovante">${L('Ver comprovante', 'Ver comprobante', 'View receipt')} ${ic('arrow')}</button></div>`
               : ''
         }
       </div>`;
@@ -388,15 +395,15 @@
 
     comissao(d) {
       const f = d.f, a = d.all, c = d.canc;
-      const vendas = (n) => `<b>${n} ${n === 1 ? L('venda', 'venta') : L('vendas', 'ventas')}</b>`;
-      const cTxt = L(`${c.n === 1 ? 'cancelada' : 'canceladas'} por tempo`, `${c.n === 1 ? 'cancelada' : 'canceladas'} por tiempo`);
-            const incl = (x) => L(`(incluindo: ${x.nCupons} cupons + 0 subsídios + ${x.nTaxas} taxas de serviço)`, `(incluye: ${x.nCupons} cupones + 0 subsidios + ${x.nTaxas} tasas de servicio)`);
-      return `${head(`<h3>${L('Cálculo da Comissão', 'Cálculo de la Comisión')}</h3>`)}
+      const vendas = (n) => `<b>${n} ${n === 1 ? L('venda', 'venta', 'sale') : L('vendas', 'ventas', 'sales')}</b>`;
+      const cTxt = L(`${c.n === 1 ? 'cancelada' : 'canceladas'} por tempo`, `${c.n === 1 ? 'cancelada' : 'canceladas'} por tiempo`, 'canceled by timeout');
+            const incl = (x) => L(`(incluindo: ${x.nCupons} cupons + 0 subsídios + ${x.nTaxas} taxas de serviço)`, `(incluye: ${x.nCupons} cupones + 0 subsidios + ${x.nTaxas} tasas de servicio)`, `(including: ${x.nCupons} coupons + 0 subsidies + ${x.nTaxas} service fees)`);
+      return `${head(`<h3>${L('Cálculo da Comissão', 'Cálculo de la Comisión', 'Commission Calculation')}</h3>`)}
       <div class="md-content">
-        <div class="cm-sec">${L('Cálculo do total bruto', 'Cálculo del total bruto')}</div>
+        <div class="cm-sec">${L('Cálculo do total bruto', 'Cálculo del total bruto', 'Gross total calculation')}</div>
         <div class="cm-grey col" data-tour="cm-vendas-box">
           <div class="cm-gl" data-tour="cm-vendas">
-            <div><span>${vendas(a.n)} confirmadas</span><small>${incl(a)}</small></div>
+            <div><span>${vendas(a.n)} ${L('confirmadas', 'confirmadas', 'confirmed')}</span><small>${incl(a)}</small></div>
             <b class="pos">${M(a.bruto, '+ ')}</b>
           </div>
           ${c.n ? `<div class="cm-gl" data-tour="cm-canceladas">
@@ -404,79 +411,79 @@
             <b class="pos">${M(c.bruto, '+ ')}</b>
           </div>` : ''}
         </div>
-        <div class="cm-card" data-tour="cm-bruto"><div><b>Total bruto de ${pl(f.nComissao, L('venda', 'venta'), L('vendas', 'ventas'))}</b><small>(${a.n} confirmadas${c.n ? ` + ${c.n} ${cTxt}` : ''})</small></div><b>${F(f.brutoComissao)}</b></div>
+        <div class="cm-card" data-tour="cm-bruto"><div><b>${L('Total bruto de', 'Total bruto de', 'Gross total of')} ${pl(f.nComissao, L('venda', 'venta', 'sale'), L('vendas', 'ventas', 'sales'))}</b><small>(${a.n} ${L('confirmadas', 'confirmadas', 'confirmed')}${c.n ? ` + ${c.n} ${cTxt}` : ''})</small></div><b>${F(f.brutoComissao)}</b></div>
         <div class="cm-group" data-tour="cm-taxas">
-          <div class="cm-card" data-tour="cm-taxa"><b>${L(`Taxa de serviço de ${a.nTaxas} vendas confirmadas`, `Tasa de servicio de ${a.nTaxas} ventas confirmadas`)}</b><b>- ${F(a.taxas)}</b></div>
-          ${c.n ? `<div class="cm-card" data-tour="cm-taxa-canc"><b>${L('Taxa de serviço de', 'Tasa de servicio de')} ${pl(c.nTaxas, L('venda', 'venta'), L('vendas', 'ventas'))} ${cTxt}</b><b>- ${F(c.taxas)}</b></div>` : ''}
+          <div class="cm-card" data-tour="cm-taxa"><b>${L(`Taxa de serviço de ${a.nTaxas} vendas confirmadas`, `Tasa de servicio de ${a.nTaxas} ventas confirmadas`, `Service fee on ${a.nTaxas} confirmed sales`)}</b><b>- ${F(a.taxas)}</b></div>
+          ${c.n ? `<div class="cm-card" data-tour="cm-taxa-canc"><b>${L('Taxa de serviço de', 'Tasa de servicio de', 'Service fee on')} ${pl(c.nTaxas, L('venda', 'venta', 'sale'), L('vendas', 'ventas', 'sales'))} ${cTxt}</b><b>- ${F(c.taxas)}</b></div>` : ''}
         </div>
-        <div class="cm-card" data-tour="cm-base"><b>${L('Base de cálculo da comissão', 'Base de cálculo de la comisión')}</b><b>${M(f.baseComissao)}</b></div>
-        <div class="cm-card" data-tour="cm-comissao"><b>${L('Comissão', 'Comisión')}</b><b>${M(f.comissao)}</b></div>
+        <div class="cm-card" data-tour="cm-base"><b>${L('Base de cálculo da comissão', 'Base de cálculo de la comisión', 'Commission calculation base')}</b><b>${M(f.baseComissao)}</b></div>
+        <div class="cm-card" data-tour="cm-comissao"><b>${L('Comissão', 'Comisión', 'Commission')}</b><b>${M(f.comissao)}</b></div>
       </div>`;
     },
 
     taxaOnline(d) {
       const f = d.f, on = d.pay.online;
-      const vendas = pl(on.n, L('venda', 'venta'), L('vendas', 'ventas'));
-      return `${head(`<h3>${L('Taxa de Pagamento Online', 'Tasa de Pago Online')}</h3>`)}
+      const vendas = pl(on.n, L('venda', 'venta', 'sale'), L('vendas', 'ventas', 'sales'));
+      return `${head(`<h3>${L('Taxa de Pagamento Online', 'Tasa de Pago Online', 'Online Payment Fee')}</h3>`)}
       <div class="md-content">
-        <div class="cm-sec">${L('Cálculo do total bruto com pagamento online', 'Cálculo del total bruto con pago online')}</div>
+        <div class="cm-sec">${L('Cálculo do total bruto com pagamento online', 'Cálculo del total bruto con pago online', 'Gross total calculation with online payment')}</div>
         <div class="cm-grey" data-tour="to-vendas">
-          <div><span><b>${vendas}</b> ${L('com pagamento online confirmadas', 'con pago online confirmadas')}</span><small>${L(`(incluindo: ${on.nCupons} cupons + 0 subsídios + ${on.nTaxas} taxas de serviço)`, `(incluye: ${on.nCupons} cupones + 0 subsidios + ${on.nTaxas} tasas de servicio)`)}</small></div>
+          <div><span><b>${vendas}</b> ${L('com pagamento online confirmadas', 'con pago online confirmadas', 'confirmed with online payment')}</span><small>${L(`(incluindo: ${on.nCupons} cupons + 0 subsídios + ${on.nTaxas} taxas de serviço)`, `(incluye: ${on.nCupons} cupones + 0 subsidios + ${on.nTaxas} tasas de servicio)`, `(including: ${on.nCupons} coupons + 0 subsidies + ${on.nTaxas} service fees)`)}</small></div>
           <b class="pos">${M(on.bruto, '+ ')}</b>
         </div>
-        <div class="cm-card" data-tour="to-bruto"><b>${L(`Total bruto de ${vendas} com pagamento online`, `Total bruto de ${vendas} con pago online`)}</b><b>${M(on.bruto)}</b></div>
-        <div class="cm-card" data-tour="to-taxa"><b>${L(`Taxa de serviço de ${on.nTaxas} vendas confirmadas`, `Tasa de servicio de ${on.nTaxas} ventas confirmadas`)}</b><b>- ${F(on.taxas)}</b></div>
+        <div class="cm-card" data-tour="to-bruto"><b>${L(`Total bruto de ${vendas} com pagamento online`, `Total bruto de ${vendas} con pago online`, `Gross total of ${vendas} with online payment`)}</b><b>${M(on.bruto)}</b></div>
+        <div class="cm-card" data-tour="to-taxa"><b>${L(`Taxa de serviço de ${on.nTaxas} vendas confirmadas`, `Tasa de servicio de ${on.nTaxas} ventas confirmadas`, `Service fee on ${on.nTaxas} confirmed sales`)}</b><b>- ${F(on.taxas)}</b></div>
         <div class="cm-group" data-tour="to-calc">
-          <div class="cm-card" data-tour="to-base"><b>${L('Base de cálculo da taxa de pagamento online', 'Base de cálculo de la tasa de pago online')}</b><b>${M(f.baseOnline)}</b></div>
-          <div class="cm-card" data-tour="to-final"><b>${L('Taxa de pagamento online', 'Tasa de pago online')}</b><b>${M(f.taxaOnline)}</b></div>
+          <div class="cm-card" data-tour="to-base"><b>${L('Base de cálculo da taxa de pagamento online', 'Base de cálculo de la tasa de pago online', 'Online payment fee calculation base')}</b><b>${M(f.baseOnline)}</b></div>
+          <div class="cm-card" data-tour="to-final"><b>${L('Taxa de pagamento online', 'Tasa de pago online', 'Online payment fee')}</b><b>${M(f.taxaOnline)}</b></div>
         </div>
       </div>`;
     },
 
     taxaServico(d) {
       const f = d.f, p = d.pay;
-      const r = (k, label) => `<div class="ts-r"><span><b>${pl(p[k].nTaxas, L('venda', 'venta'), L('vendas', 'ventas'))}</b> ${label}</span><b>-${F(p[k].taxas)}</b></div>`;
+      const r = (k, label) => `<div class="ts-r"><span><b>${pl(p[k].nTaxas, L('venda', 'venta', 'sale'), L('vendas', 'ventas', 'sales'))}</b> ${label}</span><b>-${F(p[k].taxas)}</b></div>`;
       const pctDev = Math.round(TREINO.config.taxas.devolucaoMaquininha * 100);
-      return `${head(`<h3>${L('Taxa de Serviço', 'Tasa de Servicio')}</h3>`, `<span class="ts-link">${L('O que é Taxa de Serviço?', '¿Qué es la Tasa de Servicio?')}</span>`)}
+      return `${head(`<h3>${L('Taxa de Serviço', 'Tasa de Servicio', 'Service Fee')}</h3>`, `<span class="ts-link">${L('O que é Taxa de Serviço?', '¿Qué es la Tasa de Servicio?', 'What is the Service Fee?')}</span>`)}
       <div class="md-content">
-        <div class="cm-sec">${L('Cálculo do total de taxas de serviço', 'Cálculo del total de tasas de servicio')}</div>
+        <div class="cm-sec">${L('Cálculo do total de taxas de serviço', 'Cálculo del total de tasas de servicio', 'Total service fees calculation')}</div>
         <div class="cm-grey col" data-tour="ts-rows">
-          <div data-tour="ts-online">${r('online', L('confirmadas com pagamento online', 'confirmadas con pago online'))}</div>
-          <div data-tour="ts-offline">${r('dinheiro', L('confirmadas em dinheiro', 'confirmadas en efectivo'))}${r('maquininha', L('confirmadas com maquininha de cartão', 'confirmadas con POS'))}</div>
+          <div data-tour="ts-online">${r('online', L('confirmadas com pagamento online', 'confirmadas con pago online', 'confirmed with online payment'))}</div>
+          <div data-tour="ts-offline">${r('dinheiro', L('confirmadas em dinheiro', 'confirmadas en efectivo', 'confirmed in cash'))}${r('maquininha', L('confirmadas com maquininha de cartão', 'confirmadas con POS', 'confirmed with card machine'))}</div>
         </div>
-        <div class="cm-card" data-tour="ts-soma"><b>${L(`Total das taxas de ${d.all.nTaxas} vendas confirmadas`, `Total de las tasas de ${d.all.nTaxas} ventas confirmadas`)}</b><b>-${F(d.all.taxas)}</b></div>
-        <div class="cm-card" data-tour="ts-devolvido"><div><b>${L('Valor da taxa de maquininha de cartão devolvido', 'Valor de la tasa del POS devuelto')}</b><small>${L(`(${pctDev}% de ${F(p.maquininha.taxas)} referentes a ${pl(p.maquininha.nTaxas, 'venda realizada', 'vendas realizadas')} com maquininha de cartão)`, `(${pctDev}% de ${F(p.maquininha.taxas)} correspondientes a ${pl(p.maquininha.nTaxas, 'venta realizada', 'ventas realizadas')} con POS)`)}</small></div><b class="pos">+${F(f.devolucao)}</b></div>
-        <div class="cm-card" data-tour="ts-total"><b>${L('Valor repassado para a plataforma', 'Valor transferido a la plataforma')}</b><b>${M(f.taxaServico)}</b></div>
+        <div class="cm-card" data-tour="ts-soma"><b>${L(`Total das taxas de ${d.all.nTaxas} vendas confirmadas`, `Total de las tasas de ${d.all.nTaxas} ventas confirmadas`, `Total fees on ${d.all.nTaxas} confirmed sales`)}</b><b>-${F(d.all.taxas)}</b></div>
+        <div class="cm-card" data-tour="ts-devolvido"><div><b>${L('Valor da taxa de maquininha de cartão devolvido', 'Valor de la tasa del POS devuelto', 'Card machine service fee refunded')}</b><small>${L(`(${pctDev}% de ${F(p.maquininha.taxas)} referentes a ${pl(p.maquininha.nTaxas, 'venda realizada', 'vendas realizadas')} com maquininha de cartão)`, `(${pctDev}% de ${F(p.maquininha.taxas)} correspondientes a ${pl(p.maquininha.nTaxas, 'venta realizada', 'ventas realizadas')} con POS)`, `(${pctDev}% of ${F(p.maquininha.taxas)} from ${pl(p.maquininha.nTaxas, 'sale', 'sales')} made with a card machine)`)}</small></div><b class="pos">+${F(f.devolucao)}</b></div>
+        <div class="cm-card" data-tour="ts-total"><b>${L('Valor repassado para a plataforma', 'Valor transferido a la plataforma', 'Amount passed on to the platform')}</b><b>${M(f.taxaServico)}</b></div>
       </div>`;
     },
 
 
     antecipacao(d) {
       const f = d.f;
-      return `${head(`<h3>${L('Antecipação', 'Anticipo')}</h3>`)}
+      return `${head(`<h3>${L('Antecipação', 'Anticipo', 'Early payout')}</h3>`)}
       <div class="md-content">
-        <div class="an-box" data-tour="ant-box"><b>${L('Valor a receber', 'Valor a recibir')}: ${F(f.total)}</b><span>${L('Período de apuração', 'Período de cálculo')}: ${f.inicio} - ${f.fim}.</span></div>
+        <div class="an-box" data-tour="ant-box"><b>${L('Valor a receber', 'Valor a recibir', 'Amount to receive')}: ${F(f.total)}</b><span>${L('Período de apuração', 'Período de cálculo', 'Calculation period')}: ${f.inicio} - ${f.fim}.</span></div>
         <ul class="an-list">
-          <li data-tour="ant-data">${L(`A transferência do valor antecipado ocorrerá no dia <u>${d.sc.antecipacaoData} (próximo dia útil)</u>, e será enviada para a chave PIX 000.000.000-00.`, `La transferencia del valor anticipado se realizará el día <u>${d.sc.antecipacaoData} (próximo día hábil)</u> y se enviará a la clave PIX 000.000.000-00.`)}</li>
-          <li>${L('Feriados municipais da cidade de Rio Pomba (sede da empresa) não são considerados como dia útil.', 'Los feriados municipales de la ciudad de Rio Pomba (sede de la empresa) no se consideran días hábiles.')}</li>
-          <li>${L('Para evitar atrasos no recebimento, certifique-se que os dados bancários estão corretos e em nome da pessoa física ou jurídica titular do contrato.', 'Para evitar demoras en el cobro, asegúrate de que los datos bancarios sean correctos y estén a nombre de la persona física o jurídica titular del contrato.')}</li>
-          <li data-tour="ant-aviso">${L('Ao clicar em CONFIRMAR, o sistema efetivará a contabilidade de todos os pedidos confirmados e compreendidos no período de apuração. Sendo assim, não será possível solicitar o cancelamento destes pedidos.', 'Al hacer clic en CONFIRMAR, el sistema registrará contablemente todos los pedidos confirmados dentro del período de cálculo. Por lo tanto, no será posible solicitar la cancelación de estos pedidos.')}</li>
+          <li data-tour="ant-data">${L(`A transferência do valor antecipado ocorrerá no dia <u>${d.sc.antecipacaoData} (próximo dia útil)</u>, e será enviada para a chave PIX 000.000.000-00.`, `La transferencia del valor anticipado se realizará el día <u>${d.sc.antecipacaoData} (próximo día hábil)</u> y se enviará a la clave PIX 000.000.000-00.`, `The early payout will be transferred on <u>${d.sc.antecipacaoData} (next business day)</u> and sent to PIX key 000.000.000-00.`)}</li>
+          <li>${L('Feriados municipais da cidade de Rio Pomba (sede da empresa) não são considerados como dia útil.', 'Los feriados municipales de la ciudad de Rio Pomba (sede de la empresa) no se consideran días hábiles.', 'Municipal holidays in the city of Rio Pomba (company headquarters) are not counted as business days.')}</li>
+          <li>${L('Para evitar atrasos no recebimento, certifique-se que os dados bancários estão corretos e em nome da pessoa física ou jurídica titular do contrato.', 'Para evitar demoras en el cobro, asegúrate de que los datos bancarios sean correctos y estén a nombre de la persona física o jurídica titular del contrato.', 'To avoid payment delays, make sure your bank details are correct and in the name of the individual or company that holds the contract.')}</li>
+          <li data-tour="ant-aviso">${L('Ao clicar em CONFIRMAR, o sistema efetivará a contabilidade de todos os pedidos confirmados e compreendidos no período de apuração. Sendo assim, não será possível solicitar o cancelamento destes pedidos.', 'Al hacer clic en CONFIRMAR, el sistema registrará contablemente todos los pedidos confirmados dentro del período de cálculo. Por lo tanto, no será posible solicitar la cancelación de estos pedidos.', 'When you click CONFIRMAR, the system will post all confirmed orders within the calculation period. After that, it will not be possible to request cancellation of these orders.')}</li>
         </ul>
         <div class="an-actions">
           <button type="button" class="bx-btn" data-act="antecipar-confirm" data-tour="btn-confirmar">CONFIRMAR</button>
-          <button type="button" class="an-close" data-act="close">${L('FECHAR', 'CERRAR')}</button>
+          <button type="button" class="an-close" data-act="close">${L('FECHAR', 'CERRAR', 'CLOSE')}</button>
         </div>
       </div>`;
     },
 
     boletos() {
-      return `${head('<h3>Boletos</h3>')}
-      <div class="md-content"><p class="md-empty" data-tour="bol-empty">${L('Você não possui boletos pendentes', 'No tienes boletos pendientes')}</p></div>`;
+      return `${head(`<h3>${L('Boletos', 'Boletos', 'Bank slips')}</h3>`)}
+      <div class="md-content"><p class="md-empty" data-tour="bol-empty">${L('Você não possui boletos pendentes', 'No tienes boletos pendientes', 'You have no pending bank slips')}</p></div>`;
     },
 
     repasses() {
-      return `${head(`<h3>${L('Repasses', 'Transferencias')}</h3>`)}
-      <div class="md-content"><p class="md-empty" data-tour="rep-list">${L('Você não possui nenhum repasse', 'No tienes ninguna transferencia')}</p></div>`;
+      return `${head(`<h3>${L('Repasses', 'Transferencias', 'Payouts')}</h3>`)}
+      <div class="md-content"><p class="md-empty" data-tour="rep-list">${L('Você não possui nenhum repasse', 'No tienes ninguna transferencia', 'You have no payouts')}</p></div>`;
     },
   };
 

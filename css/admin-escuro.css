@@ -2,23 +2,6 @@
 :root[data-tema="escuro"] .btn {
   background: #1b2520;
 }
-:root[data-tema="escuro"] .lg,
-:root[data-tema="escuro"] .ld {
-  background: #1b2520;
-}
-:root[data-tema="escuro"] .lg-card input {
-  border: 1.5px solid #383c40;
-}
-:root[data-tema="escuro"] .lg-err {
-  color: #eb7d75;
-}
-:root[data-tema="escuro"] .lg-qr {
-  background: #1b2520;
-  border: 1px solid #2c2e32;
-}
-:root[data-tema="escuro"] .lg-chave code {
-  background: #131416;
-}
 :root[data-tema="escuro"] .hd {
   background: #1b2520;
 }
@@ -436,9 +419,6 @@
 }
 :root[data-tema="escuro"] .sel select {
   border-color: #303633;
-}
-:root[data-tema="escuro"] .lg-card {
-  background: #1b2520;
 }
 :root[data-tema="escuro"] .tabs {
   background: #1b2520;

@@ -23,7 +23,7 @@
   let Utt = window.SpeechSynthesisUtterance;
 
   // Em espanhol não há narração: a gravação e a pronúncia abaixo são em português
-  const semNarracao = !!TREINO.es;
+  const semNarracao = !TREINO.pt;   // áudios gravados e vozes só em português
   const GRAVADA = semNarracao ? {} : window.TREINO_NARRACAO || {};
   const temGravada = Object.keys(GRAVADA).length > 0;
   let player = null;

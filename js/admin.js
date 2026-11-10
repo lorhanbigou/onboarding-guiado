@@ -138,6 +138,8 @@
     feedback: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/><path d="M12 7.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/>'),
     lapis: sv('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
     cartoes: sv('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
+    cadeado: sv('<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>'),
+    olhoX: sv('<path d="M3 3l18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c5 0 8.5 4.5 9.5 6-.5.8-1.6 2.3-3.2 3.6M6.6 6.6C4.6 7.9 3.2 9.8 2.5 12c1 1.5 4.5 6 9.5 6 1.6 0 3-.4 4.3-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
     lua: sv('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
     sol: sv('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>'),
     funil: sv('<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>'),
@@ -674,7 +676,6 @@
       ['Narração por voz', 'raio', usouSet('voz', (e) => e.detalhe && e.detalhe.ligada)],
       ['Ouvir a explicação da tela', 'olho', usouSet('explicacao')],
       ['Modo livre (explorar as telas)', 'rota', usouSet('explorar')],
-      ['Dicas', 'lampada', usouSet('dica')],
       ['Revisão "O que você aprendeu"', 'livro', usouSet('revisao'), true],
       ['Refazer as perguntas que errou', 'atualizar', usouSet('refazer_inicio'), true],
     ].concat(TREINO.recurso('assistente') ? [['Assistente de dúvidas', 'chat', usouSet('bot_aberto')]] : []).map(([t, ic, set, apos]) => {
@@ -700,7 +701,7 @@
       grupos: {
         dispositivo: grupo((s) => NOME_DISP[s.p.dispositivo] || s.p.dispositivo || 'Desconhecido'),
         navegador: grupo((s) => s.p.navegador || 'Outro'),
-        idioma: grupo((s) => (s.idioma === 'es' ? 'Español' : 'Português')),
+        idioma: grupo((s) => ({ es: 'Español', en: 'English' }[s.idioma] || 'Português')),
         usoApp: grupo((s) => { const t = usoTxt(s.uso); return t === 'Celular e computador' ? 'Os dois' : t; }).filter((g) => g.k !== 'Não informado'),
       },
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
@@ -882,24 +883,44 @@
   // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
   const CHAT = TREINO.recurso('assistente');
 
-  function telaLogin(msg) {
-    root.innerHTML = `
+  // Telas de entrada (login, código, erro): sempre claras, com o lado da marca no computador
+  const moldura = (conteudo) => `
       <main class="lg">
-        <form class="lg-card" id="lg-form">
-          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
-          <h1>Painel de Treinamento Financeiro</h1>
-          <p>Acesso restrito à equipe Bigou.</p>
-          <label><span>Senha</span><input id="lg-senha" type="password" autocomplete="current-password" required></label>
-          ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
-          <button class="btn primary" type="submit">Entrar</button>
-        </form>
+        <aside class="lg-marca" aria-hidden="true">
+          <div class="lg-marca-t"><img src="../assets/bigou-logo.png" alt="" width="52" height="52"><b>Treinamento <span>Financeiro</span></b></div>
+          <p>Acompanhe o treinamento das lojas parceiras: quem começou, onde param e o que ainda gera dúvida.</p>
+          <ul class="lg-pontos">
+            <li><span>${IC.critico}</span><div><b>Quem precisa de contato</b><small>Lojas paradas, sem começar ou sem certificado.</small></div></li>
+            <li><span>${IC.rota}</span><div><b>Onde as lojas param</b><small>O passo a passo de cada módulo.</small></div></li>
+            <li><span>${IC.chat}</span><div><b>O que ainda gera dúvida</b><small>Perguntas, chat e avaliações num lugar só.</small></div></li>
+          </ul>
+          <svg class="lg-ondas" viewBox="0 0 400 120" preserveAspectRatio="none"><path d="M0 70 C80 30 160 110 260 60 S 360 40 400 60 V120 H0z" fill="rgba(255,255,255,.08)"/><path d="M0 95 C90 70 170 120 260 95 S 360 80 400 92 V120 H0z" fill="rgba(255,255,255,.1)"/></svg>
+        </aside>
+        <section class="lg-lado">${conteudo}</section>
       </main>`;
+  const msgErro = (msg) => (msg ? `<p class="lg-err" role="alert">${IC.alerta}<span>${esc(msg)}</span></p>` : '');
+
+  function telaLogin(msg) {
+    root.innerHTML = moldura(`
+        <form class="lg-card" id="lg-form">
+          <img class="lg-logo" src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <span class="lg-kicker">Treinamento Financeiro</span>
+          <h1>Entrar no painel</h1>
+          <p>Acesso restrito à equipe Bigou.</p>
+          <label class="lg-campo"><span>Senha</span>
+            <span class="lg-in">${IC.cadeado}<input id="lg-senha" type="password" autocomplete="current-password" placeholder="Digite a senha" required><button type="button" class="lg-olho" id="lg-olho" aria-label="Mostrar senha" title="Mostrar senha">${IC.olho}</button></span>
+          </label>
+          ${msgErro(msg)}
+          <button class="btn primary" type="submit">Entrar${IC.seta}</button>
+        </form>`);
     const fm = document.getElementById('lg-form');
+    const olho = document.getElementById('lg-olho'), senha = document.getElementById('lg-senha');
+    olho.addEventListener('click', () => { const ver = senha.type === 'password'; senha.type = ver ? 'text' : 'password'; olho.innerHTML = ver ? IC.olhoX : IC.olho; olho.setAttribute('aria-label', ver ? 'Ocultar senha' : 'Mostrar senha'); olho.title = olho.getAttribute('aria-label'); senha.focus(); });
     document.getElementById('lg-senha').focus();
     fm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const b = fm.querySelector('button');
-      b.disabled = true; b.textContent = 'Entrando…';
+      b.disabled = true; b.innerHTML = '<i class="lg-gira" aria-hidden="true"></i>Entrando…';
       try { const etapa = await login(document.getElementById('lg-senha').value); if (etapa) telaCodigo(etapa); else iniciar(); }
       catch (err) { telaLogin(err.message); }
     });
@@ -907,20 +928,19 @@
 
   function telaCodigo(etapa, msg) {
     const novo = etapa.novo;
-    root.innerHTML = `
-      <main class="lg">
+    root.innerHTML = moldura(`
         <form class="lg-card" id="lg-form">
-          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <img class="lg-logo" src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <span class="lg-kicker">Segurança</span>
           <h1>${novo ? 'Ative a verificação em duas etapas' : 'Verificação em duas etapas'}</h1>
           <p>${novo ? 'Escaneie o QR code com um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…) e digite o código de 6 dígitos que aparecer.' : 'Digite o código de 6 dígitos do seu app autenticador.'}</p>
           ${novo ? `<img class="lg-qr" id="lg-qr" alt="QR code para o app autenticador" width="180" height="180">
           <details class="lg-chave"><summary>Não consegue escanear?</summary><p>Digite esta chave no app:</p><code id="lg-segredo">${esc(novo.secret)}</code></details>` : ''}
-          <label><span>Código</span><input id="lg-cod" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></label>
-          ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
+          <label class="lg-campo"><span>Código</span><span class="lg-in">${IC.cadeado}<input id="lg-cod" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required></span></label>
+          ${msgErro(msg)}
           <button class="btn primary" type="submit">Confirmar</button>
           <button class="lg-demo lg-link" type="button" id="lg-voltar">Voltar</button>
-        </form>
-      </main>`;
+        </form>`);
     // O Supabase devolve o QR como SVG puro (ou já como data:); vira imagem sem passar por innerHTML
     if (novo) document.getElementById('lg-qr').src = /^data:/.test(novo.qr_code) ? novo.qr_code : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(novo.qr_code);
     const fm = document.getElementById('lg-form');
@@ -936,23 +956,30 @@
   }
 
   function telaSemConfig() {
-    root.innerHTML = `
-      <main class="lg">
+    root.innerHTML = moldura(`
         <div class="lg-card">
-          <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
-          <h1>Painel de Treinamento Financeiro</h1>
-          <p class="lg-err" role="alert">O painel não está configurado: faltam a URL e a chave do Supabase (veja "Ambientes" no README).</p>
-        </div>
-      </main>`;
+          <img class="lg-logo" src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
+          <h1>Painel não configurado</h1>
+          ${msgErro('Faltam a URL e a chave do Supabase (veja "Ambientes" no README).')}
+        </div>`);
   }
 
   function telaCarregando() {
     root.innerHTML = `
-      <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel de Treinamento Financeiro</b><small>Carregando dados…</small></div></div></div>
-      <main class="pg" aria-busy="true">
-        <div class="kpis k4">${'<div class="sk sk-kpi"></div>'.repeat(4)}</div>
-        <div class="sk sk-card"></div>
-      </main>`;
+      <div class="painel carregando ${sbMini ? 'sb-mini' : ''}">
+        <aside class="sb" aria-hidden="true">
+          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="" width="40" height="40"><b>Treinamento <span>Financeiro</span></b></div>
+          <nav class="sb-nav">${'<i class="sk sk-nav"></i>'.repeat(7)}</nav>
+        </aside>
+        <div class="painel-main">
+          <header class="ph"><div class="ph-t"><span class="sk sk-ic"></span><div><span class="sk sk-h1"></span><span class="sk sk-p"></span></div></div></header>
+          <main class="pg" aria-busy="true" aria-label="Carregando dados do painel">
+            <div class="kpis k4">${'<div class="sk sk-kpi"></div>'.repeat(4)}</div>
+            <div class="cols vg"><div class="sk sk-card"></div><div class="sk sk-card"></div></div>
+            <p class="sk-msg">Carregando os dados do treinamento…</p>
+          </main>
+        </div>
+      </div>`;
   }
 
   async function iniciar() {
@@ -960,7 +987,7 @@
     if (!sessao.get()) return telaLogin();
     telaCarregando();
     try { st.dados = await carregar(); render(); }
-    catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else { root.innerHTML = `<main class="ld"><p class="lg-err">${esc(err.message)}</p><button class="btn" id="ld-retry">Tentar de novo</button></main>`; root.querySelector('#ld-retry').addEventListener('click', () => location.reload()); } }
+    catch (err) { if (err.auth) { sessao.sair(); telaLogin(err.message); } else { root.innerHTML = moldura(`<div class="lg-card"><img class="lg-logo" src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56"><h1>Não deu para carregar</h1><p>Confira a internet e tente de novo. Se continuar, avise a equipe técnica.</p>${msgErro(err.message)}<button class="btn primary" id="ld-retry" type="button">${IC.atualizar}Tentar de novo</button></div>`); root.querySelector('#ld-retry').addEventListener('click', () => location.reload()); } }
   }
 
   const sec = (id, titulo, desc, corpo, extra) => `
@@ -1068,7 +1095,7 @@
     root.innerHTML = `
       <div class="painel ${st.menu ? 'menu-on' : ''} ${sbMini ? 'sb-mini' : ''}">
         <aside class="sb" aria-label="Menu do painel">
-          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><b>Painel de Treinamento Financeiro</b></div>
+          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><b>Treinamento <span>Financeiro</span></b></div>
           <button type="button" class="sb-tg" data-a="sbmini" aria-expanded="${!sbMini}" aria-label="${sbMini ? 'Expandir menu' : 'Recolher menu'}" title="${sbMini ? 'Expandir menu' : 'Recolher menu'}">${IC.chevron}</button>
           <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''} data-sbtip="${p.t}${cont[p.id] ? ` · ${n(cont[p.id])}` : ''}">${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
@@ -1793,7 +1820,7 @@
 
   // Reemite o certificado de uma loja certificada (quando ela pede), numa aba própria para imprimir ou salvar em PDF
   function abrirCertificado(s) {
-    const c = { loja: s.p.loja, cidade: s.p.cidade, quando: s.certEm || s.concluiuEm || Date.now(), nMods: NMOD, es: s.idioma === 'es' };
+    const c = { loja: s.p.loja, cidade: s.p.cidade, quando: s.certEm || s.concluiuEm || Date.now(), nMods: NMOD, es: s.idioma === 'es', idioma: s.idioma || 'pt' };
     if (!window.open('certificado.html#' + encodeURIComponent(JSON.stringify(c)), '_blank')) alert('O navegador bloqueou a nova aba. Permita pop-ups para este site e tente de novo.');
   }
 
@@ -1822,7 +1849,7 @@
     else if (a === 'contato') { fxContato = true; abrirFicha(fxId); }
     else if (a === 'contato-cancelar') { fxContato = false; abrirFicha(fxId); }
     else if (a === 'resumo') { fxResumo = !fxResumo; const y = fx.querySelector('.fx') ? fx.querySelector('.fx').scrollTop : 0; abrirFicha(fxId); const p = fx.querySelector('.fx'); if (p) p.scrollTop = y; const t = fx.querySelector('.fx-rs-t'); if (t) t.focus({ preventScroll: true }); }
-    else if (a === 'resumo-copiar') { const t = fx.querySelector('.fx-rs-t'); const ok = t && await copiarTexto(t.value); const sp = b.querySelector('span'); if (sp) { sp.textContent = ok ? 'Copiado!' : 'Não deu para copiar'; setTimeout(() => { sp.textContent = 'Copiar texto'; }, 1800); } }
+    else if (a === 'resumo-copiar') { const t = fx.querySelector('.fx-rs-t'); const ok = t && await copiarTexto(t.value); if (ok) aviso('Resumo copiado'); const sp = b.querySelector('span'); if (sp) { sp.textContent = ok ? 'Copiado!' : 'Não deu para copiar'; setTimeout(() => { sp.textContent = 'Copiar texto'; }, 1800); } }
     else if (a === 'resumo-whats') { const t = fx.querySelector('.fx-rs-t'); if (t) window.open('https://wa.me/?text=' + encodeURIComponent(t.value), '_blank', 'noopener'); }
     else if (a === 'resumo-nota') {
       // Preenche o formulário de nova anotação; quem salva é a pessoa, depois de revisar
@@ -1833,7 +1860,7 @@
     else if (a === 'certificado') { const s = st.R.lojas.find((x) => x.p.id === fxId); if (s) abrirCertificado(s); }
     else if (a === 'excluir') {
       if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
-      try { await Notas.excluir(b.dataset.id); atualizarDepois(fxId); } catch (err) { alert(err.message); }
+      try { await Notas.excluir(b.dataset.id); atualizarDepois(fxId); aviso('Anotação excluída'); } catch (err) { alert(err.message); }
     }
   });
   fx.addEventListener('submit', async (e) => {
@@ -1847,10 +1874,12 @@
     const bt = f.querySelector('[type=submit]');
     bt.disabled = true; bt.textContent = 'Salvando…';
     try {
-      if (f.dataset.fxForm === 'nova') await Notas.criar(fxId, dados.assunto, dados.texto, dados.autor);
+      const novaNota = f.dataset.fxForm === 'nova';
+      if (novaNota) await Notas.criar(fxId, dados.assunto, dados.texto, dados.autor);
       else await Notas.editar(f.dataset.fxForm, dados.assunto, dados.texto, dados.autor);
       fxEditando = null; fxContato = false;
       atualizarDepois(fxId);
+      aviso(dados.assunto === ASSUNTO_CONTATO ? 'Contato registrado' : novaNota ? 'Anotação salva' : 'Anotação atualizada');
     } catch (err) {
       erro.textContent = err.message;
       bt.disabled = false; bt.textContent = 'Tentar de novo';
@@ -1989,7 +2018,7 @@
       else if (pq.dataset.pq === 'cancelar') st.editPerg = null;
       else if (pq.dataset.pq === 'restaurar') {
         if (!confirm('Voltar esta pergunta ao texto original? A edição feita no painel será descartada.')) return;
-        try { await Perg.restaurar(pq.dataset.id); st.editPerg = null; } catch (err) { alert(err.message); if (err.auth) { sessao.sair(); telaLogin(err.message); } return; }
+        try { await Perg.restaurar(pq.dataset.id); st.editPerg = null; aviso('Pergunta voltou ao texto original'); } catch (err) { alert(err.message); if (err.auth) { sessao.sair(); telaLogin(err.message); } return; }
       }
       render(); scrollTo(0, y);
       return;
@@ -2001,7 +2030,7 @@
     const ex = e.target.closest('[data-excluir]');
     if (ex) {
       if (!confirm('Excluir esta anotação? Essa ação não pode ser desfeita.')) return;
-      try { await Notas.excluir(ex.dataset.excluir); const y = scrollY; render(); scrollTo(0, y); } catch (err) { alert(err.message); }
+      try { await Notas.excluir(ex.dataset.excluir); const y = scrollY; render(); scrollTo(0, y); aviso('Anotação excluída'); } catch (err) { alert(err.message); }
       return;
     }
     const row = e.target.closest('.lj-row');
@@ -2030,6 +2059,7 @@
       await Perg.salvar(dados);
       st.editPerg = null;
       const y = scrollY; render(); scrollTo(0, y);
+      aviso('Pergunta salva. O treinamento já usa o texto novo.');
     } catch (err) {
       erro.textContent = err.message;
       bt.disabled = false; bt.textContent = 'Tentar de novo';
@@ -2216,6 +2246,20 @@
     varrer(document.body);
     return { fechar };
   })();
+
+  // Aviso discreto de confirmação (ex.: "Anotação salva")
+  const avisoEl = document.createElement('div');
+  avisoEl.className = 'adm-aviso';
+  avisoEl.setAttribute('role', 'status');
+  avisoEl.setAttribute('aria-live', 'polite');
+  document.body.appendChild(avisoEl);
+  let avisoT = 0;
+  function aviso(msg) {
+    avisoEl.innerHTML = `${IC.ok}<span>${esc(msg)}</span>`;
+    avisoEl.classList.add('on');
+    clearTimeout(avisoT);
+    avisoT = setTimeout(() => avisoEl.classList.remove('on'), 2600);
+  }
 
   // Exposto para testes
   window.ADMIN = { calcular, estado: st, abrirFicha, MODS };
