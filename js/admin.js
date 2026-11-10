@@ -877,7 +877,7 @@
      ===================================================================== */
   const st = {
     dados: null, filtros: { dias: 28, cidade: '' }, R: null, P: null, menu: false,
-    busca: '', status: '', ordLoja: 'urgencia', pOrd: 'ordem', buscaCid: '', cidSel: '', cidSemMapa: false, mapaVB: null, ordem: { k: 'ultimo', dir: -1 },
+    busca: '', status: '', ordLoja: 'urgencia', pOrd: 'ordem', buscaCid: '', ordCid: 'lojas', ordem: { k: 'ultimo', dir: -1 },
     pag: {}, fModulo: '', fTema: '', fBaixo: false, editPerg: null, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
   };
   // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
@@ -1003,7 +1003,7 @@
     { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, onde saem, quais assuntos precisam de reforço e como respondem cada pergunta.' },
   ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
     { id: 'feedback', t: 'Feedback', ic: 'feedback', d: () => 'O que as lojas acharam do treinamento e o que a equipe registrou, num lugar só.' },
-    { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Visão geográfica: desempenho e contatos pendentes por cidade.' },
+    { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Onde agir, como cada cidade está indo e onde ainda não chegamos.' },
     { id: 'uso', t: 'Uso', ic: 'grafico', d: (ctx) => `Como o treinamento é usado ${ctx.periodoTxt}: conversão, ritmo, recursos e aparelhos.` },
     { id: 'exportar', t: 'Exportar', ic: 'baixar', d: () => 'Baixe os dados completos em CSV. Eles são a base para o plano de melhorias.' },
   ]);
@@ -1116,7 +1116,6 @@
         </div>
       </div>`;
     if (document.getElementById('linha')) desenharLinha();
-    if (document.getElementById('mp-svg')) { if (!st.mapaVB) st.mapaVB = vbRegiao(); requestAnimationFrame(aplicarVB); }
     avisarSeEscondido();
   }
 
@@ -1455,134 +1454,100 @@
         <div id="t-feedback">${TABELAS.feedback()}</div>`, 'fb-card', 'chat')}`;
   };
 
-  /* Cidades */
-  TABELAS.cidades = () => {
-    const b = st.buscaCid.trim().toLowerCase();
-    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b));
-    const { itens, ctrl } = paginar('cidades', rows);
-    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Cidade</th><th class="num">Lojas</th><th class="num">Começaram</th><th class="num">Concluíram</th><th class="num">Certificadas</th><th class="num">Acerto médio</th><th class="num">Precisam de contato</th></tr></thead>
-      <tbody>${itens.map((c) => { const t = c.comecaram ? c.concluiram / c.comecaram : null; const sd = saude(c.comecaram >= 3 ? t : null);
-        return `<tr class="cid-tr ${st.cidSel === c.cidade ? 'sel' : ''}" data-cidsel="${esc(c.cidade)}" tabindex="0" title="Ver no mapa"><td>${esc(c.cidade)}</td><td class="num">${n(c.lojas)}</td><td class="num">${n(c.comecaram)}</td>
-        <td class="num"><span class="saude mini ${sd.cls}" title="${t == null ? 'Sem dados' : sd.rot + ' · de quem começou'}">${t == null ? '—' : pct(c.concluiram, c.comecaram)}</span></td>
-        <td class="num">${n(c.certificadas)}</td><td class="num">${c.respondidas ? pct(c.certas, c.respondidas) : '<span class="mut">—</span>'}</td>
-        <td class="num">${c.contato ? `<b class="ct">${n(c.contato)}</b>` : '<span class="mut">0</span>'}</td></tr>`; }).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhuma cidade encontrada.</p>';
-  };
-  /* Cidades: visão geográfica (mapa em SVG próprio, gerado por scripts/gerar-mapa.js) */
-  const MAPA = TREINO.MAPA || null;
+  /* Cidades: onde agir, desempenho por cidade e estado, onde ainda não chegamos */
   const ufDe = (nome) => (String(nome).match(/ - ([A-Z]{2})$/) || [])[1] || '';
   const semUf = (nome) => String(nome).replace(/ - [A-Z]{2}(?= \/|$)/g, '');
-  // Área inicial: as cidades do treinamento, com folga
-  function vbRegiao() {
-    const pts = Object.values(MAPA.cid);
-    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    const w = Math.max(x1 - x0, 60) * 1.7, h = Math.max(y1 - y0, 60) * 1.7;
-    const lado = Math.max(w, h * 1.45);
-    return [(x0 + x1) / 2 - lado / 2, (y0 + y1) / 2 - (lado / 1.45) / 2, lado, lado / 1.45];
+  const lojasDa = (cidade) => st.R.lojas.filter((s) => s.p.cidade === cidade);
+  const maisComum = (lista) => { const m = new Map(); lista.forEach((x) => { if (x) m.set(x, (m.get(x) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1])[0] || null; };
+  const temaComMaisErro = (lojas) => maisComum(lojas.flatMap((s) => s.erros.map((e) => e.tema)));
+  const nomeCid = (c) => `${esc(semUf(c))}${ufDe(c) ? `<span class="cz-uf">${ufDe(c)}</span>` : ''}`;
+  function textoSemLojas() {
+    const g = {};
+    st.R.semCadastro.forEach((c) => { const u = ufDe(c) || 'Outras'; (g[u] = g[u] || []).push(semUf(c)); });
+    return `Cidades do Treinamento Financeiro ainda sem lojas cadastradas (${st.R.semCadastro.length}):\n\n` + Object.keys(g).sort().map((u) => `${u} (${g[u].length}): ${g[u].sort((a, b) => a.localeCompare(b, 'pt-BR')).join(', ')}`).join('\n\n');
   }
-  const vbTudo = () => { const [x, y, w, h] = MAPA.vb; const W = Math.max(w, h * 1.45); return [x + w / 2 - W / 2, y + h / 2 - W / 1.45 / 2, W, W / 1.45]; };
-  function cidadeDados(nome) { return (st.R.cidades || []).find((c) => c.cidade === nome || c.cidade === semUf(nome)) || { cidade: nome, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0, certas: 0, respondidas: 0 }; }
-  function pinos() {
-    const porNome = new Map((st.R.cidades || []).map((c) => [c.cidade, c]));
-    // Cadastros antigos podem ter a cidade sem a UF ("Muriaé"): casa pelo nome também
-    const lista = Object.entries(MAPA.cid).map(([nome, [x, y]]) => ({ nome, x, y, c: porNome.get(nome) || porNome.get(semUf(nome)) }));
-    // Desenha primeiro as sem loja, depois as com loja (por cima)
-    lista.sort((a, b) => (a.c ? 1 : 0) - (b.c ? 1 : 0) || (a.c && b.c ? a.c.lojas - b.c.lojas : 0));
-    return lista.map(({ nome, x, y, c }) => {
-      const tip = c ? `<b>${esc(nome)}</b><br>${plural(c.lojas, 'loja', 'lojas')} · ${plural(c.concluiram, 'concluiu', 'concluíram')}${c.contato ? `<br>${plural(c.contato, 'precisa', 'precisam')} de contato` : ''}` : `<b>${esc(nome)}</b><br>Nenhuma loja cadastrada`;
-      const cls = !c ? 'vazia' : c.contato ? 'alerta' : 'ok';
-      const tam = c ? Math.min(1.5, 1 + (c.lojas - 1) * 0.12) : 1;
-      return `<g class="pin ${cls} ${st.cidSel === nome ? 'sel' : ''}" data-cidsel="${esc(nome)}" data-x="${x}" data-y="${y}" data-k="${tam}" ${tipAttr(tip)} role="button" aria-label="${esc(nome)}">${c
-        ? '<circle class="pin-anel" cx="0" cy="-15" r="15"/><path class="pin-f" d="M0 0C-1.5-5-9-8.5-9-15.5a9 9 0 0 1 18 0C9-8.5 1.5-5 0 0z"/><circle class="pin-c" cx="0" cy="-15.5" r="3.6"/>'
-        : '<circle class="pin-anel" cx="0" cy="0" r="9"/><circle class="pin-v" cx="0" cy="0" r="3.4"/>'}</g>`;
-    }).join('');
-  }
-  // Pinos e rótulos com tamanho fixo na tela, qualquer que seja o zoom
-  function aplicarVB() {
-    const svg = document.getElementById('mp-svg');
-    if (!svg || !st.mapaVB) return;
-    svg.setAttribute('viewBox', st.mapaVB.map((v) => Math.round(v * 10) / 10).join(' '));
-    const k = st.mapaVB[2] / Math.max(1, svg.getBoundingClientRect().width || 700);
-    svg.querySelectorAll('.pin').forEach((g) => g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${(k * +g.dataset.k).toFixed(4)})`));
-    svg.querySelectorAll('.mp-rot text').forEach((t) => t.setAttribute('font-size', (12.5 * k).toFixed(2)));
-  }
-  function zoomMapa(fator, cx, cy) {
-    const [x, y, w, h] = st.mapaVB, [, , W] = vbTudo();
-    const nw = Math.min(W * 1.05, Math.max(40, w * fator)), nh = nw * (h / w);
-    const px = cx == null ? x + w / 2 : cx, py = cy == null ? y + h / 2 : cy;
-    st.mapaVB = [px - (px - x) * (nw / w), py - (py - y) * (nh / h), nw, nh];
-    aplicarVB();
-  }
-  function detalheCidade(R) {
-    if (!st.cidSel) {
-      const top = (R.cidades || []).slice(0, 4);
-      return `<h3 class="cz-t">Detalhes da seleção</h3>
-        <div class="cz-n2"><div><small>Total de lojas</small><b>${n(R.kpi.cadastradas)}</b></div><div><small>Conclusão geral</small><b>${R.kpi.taxa == null ? '—' : pct(R.kpi.concluiram, R.kpi.comecaram)}</b></div></div>
-        <p class="cz-dica">${IC.cidade}<span>Clique numa cidade no mapa ou na lista para ver os detalhes.</span></p>
-        ${top.length ? `<div class="cz-top"><small>Mais lojas</small><div>${top.map((c) => `<button type="button" class="cz-chip" data-cidsel="${esc(c.cidade)}">${esc(semUf(c.cidade))}<em>${n(c.lojas)}</em></button>`).join('')}</div></div>` : ''}`;
-    }
-    const c = cidadeDados(st.cidSel), t = c.comecaram ? c.concluiram / c.comecaram : null;
-    return `<div class="cz-sel-h"><h3 class="cz-t">${esc(semUf(st.cidSel))}<span>${esc(ufDe(st.cidSel))}</span></h3><button type="button" class="cz-x" data-cidlimpa="1" aria-label="Limpar seleção" title="Limpar seleção">${IC.x}</button></div>
-      ${c.lojas ? `<div class="cz-n3">
-        <div><small>Lojas</small><b>${n(c.lojas)}</b></div>
-        <div><small>Começaram</small><b>${n(c.comecaram)}</b></div>
-        <div><small>Concluíram</small><b>${n(c.concluiram)}${t == null ? '' : ` <em class="${t >= 0.7 ? 'ok' : t >= 0.4 ? 'am' : 'vm'}">${pct(c.concluiram, c.comecaram)}</em>`}</b></div>
-        <div><small>Certificadas</small><b>${n(c.certificadas)}</b></div>
-        <div><small>Acerto médio</small><b>${c.respondidas ? pct(c.certas, c.respondidas) : '—'}</b></div>
-        <div><small>Precisam de contato</small><b class="${c.contato ? 'vm' : ''}">${n(c.contato)}</b></div>
-      </div>
-      <button type="button" class="btn primary cz-lojas" data-cidlojas="${esc(c.cidade)}">${IC.loja}<span>Ver lojas desta cidade</span></button>`
-      : `<p class="cz-dica">${IC.loja}<span>Nenhuma loja desta cidade se cadastrou no período.</span></p>`}`;
-  }
-  const atualizarSelecaoCidade = () => {
-    const el = document.getElementById('cz-det');
-    if (el) el.innerHTML = detalheCidade(st.R);
-    document.querySelectorAll('#mp-svg .pin').forEach((g) => g.classList.toggle('sel', g.dataset.cidsel === st.cidSel));
-    document.querySelectorAll('.cid-tr').forEach((tr) => tr.classList.toggle('sel', tr.dataset.cidsel === st.cidSel || tr.dataset.cidsel === semUf(st.cidSel)));
+  const ORD_CID = [['lojas', 'Mais lojas'], ['conclusao', 'Menor conclusão'], ['contato', 'Mais contatos'], ['acerto', 'Menor acerto']];
+  TABELAS.cidades = () => {
+    const b = st.buscaCid.trim().toLowerCase();
+    const taxa = (c) => (c.comecaram ? c.concluiram / c.comecaram : 2);
+    const acerto = (c) => (c.respondidas ? c.certas / c.respondidas : 2);
+    const cmp = { lojas: (a, c) => c.lojas - a.lojas, conclusao: (a, c) => taxa(a) - taxa(c) || c.lojas - a.lojas, contato: (a, c) => c.contato - a.contato || c.lojas - a.lojas, acerto: (a, c) => acerto(a) - acerto(c) }[st.ordCid] || ((a, c) => c.lojas - a.lojas);
+    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b)).slice().sort(cmp);
+    if (!rows.length) return '<p class="empty">Nenhuma cidade encontrada.</p>';
+    return `<div class="cz-g">${rows.map((c) => {
+      const t = c.comecaram ? c.concluiram / c.comecaram : null, sd = saude(c.comecaram >= 3 ? t : null);
+      const tema = temaComMaisErro(lojasDa(c.cidade));
+      const barra = (rot, v) => `<div class="cz-f"><span>${rot}</span><i><b style="width:${c.lojas ? Math.max(v ? 4 : 0, (v / c.lojas) * 100) : 0}%"></b></i><em>${n(v)}</em></div>`;
+      return `<article class="cz-c">
+        <header><h4>${nomeCid(c.cidade)}</h4><span class="saude mini ${sd.cls}" title="${c.comecaram >= 3 ? 'Conclusão de quem começou' : 'Poucas lojas para avaliar a cidade'}">${t == null ? 'Ninguém começou' : c.comecaram >= 3 ? `${sd.rot} · ${pct(c.concluiram, c.comecaram)}` : `${pct(c.concluiram, c.comecaram)} concluíram`}</span></header>
+        <div class="cz-fs">${barra('Cadastraram', c.lojas)}${barra('Começaram', c.comecaram)}${barra('Concluíram', c.concluiram)}${barra('Certificadas', c.certificadas)}</div>
+        <dl class="cz-dl"><div><dt>Acerto médio</dt><dd>${c.respondidas ? pct(c.certas, c.respondidas) : '—'}</dd></div><div><dt>Mais erram em</dt><dd>${tema ? esc(tema[0]) : '—'}</dd></div></dl>
+        <footer>${c.contato ? `<span class="cz-pend">${IC.critico}${plural(c.contato, 'precisa', 'precisam')} de contato</span>` : '<span class="cz-ok">' + IC.ok + 'Sem pendências</span>'}<button type="button" class="btn sm" data-cidlojas="${esc(c.cidade)}"><span>Ver lojas</span>${IC.seta}</button></footer>
+      </article>`;
+    }).join('')}</div>`;
   };
   PG.cidades = ({ R }) => {
     const K = R.kpi;
-    const atendidos = new Set(Object.keys(MAPA ? MAPA.cid : {}).map(ufDe));
-    const semPorUf = {};
-    R.semCadastro.forEach((c) => { const u = ufDe(c); (semPorUf[u] = semPorUf[u] || []).push(semUf(c)); });
+    const comLojas = R.cidades.length, totalCid = comLojas + R.semCadastro.length;
     const kz = (ic, rot, v, cls) => `<div class="cz-k ${cls || ''}"><span class="cz-k-ic">${IC[ic]}</span><div><small>${rot}</small><b>${v}</b></div></div>`;
-    const mapa = MAPA ? `
-      <div class="card cz-mapa">
-        <div class="mp-wrap ${st.cidSemMapa ? 'sem-on' : ''}" id="mp-wrap">
-          <svg id="mp-svg" class="mp" viewBox="${(st.mapaVB || vbRegiao()).join(' ')}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa das cidades do treinamento">
-            <g class="mp-uf">${Object.entries(MAPA.uf).map(([u, o]) => `<path class="${atendidos.has(u) ? 'on' : ''}" d="${o.d}" vector-effect="non-scaling-stroke"/>`).join('')}</g>
-            <g class="mp-rot">${Object.entries(MAPA.uf).filter(([u]) => atendidos.has(u)).map(([u, o]) => `<text x="${o.c[0]}" y="${o.c[1]}" text-anchor="middle">${u}</text>`).join('')}</g>
-            <g class="mp-cid">${pinos()}</g>
-          </svg>
-          <div class="mp-ctl" role="group" aria-label="Zoom do mapa">
-            <button type="button" data-mp="mais" aria-label="Aproximar" title="Aproximar">+</button>
-            <button type="button" data-mp="menos" aria-label="Afastar" title="Afastar">−</button>
-          </div>
-          <div class="mp-ctl2">
-            <button type="button" data-mp="regiao" title="Ver as cidades do treinamento">${IC.cidade}<span>Região</span></button>
-            <button type="button" data-mp="tudo" title="Ver o Brasil inteiro">${IC.rota}<span>Brasil</span></button>
-          </div>
-          <div class="mp-leg"><span><i class="ok"></i>Com lojas</span><span><i class="alerta"></i>Precisa de contato</span><span><i class="vazia"></i>Sem lojas</span></div>
-        </div>
-      </div>` : card('', '', '<p class="empty">Mapa indisponível.</p>');
+    // Onde agir primeiro: cidades com lojas que precisam de contato
+    const pend = R.cidades.filter((c) => c.contato).sort((a, b) => b.contato - a.contato || b.lojas - a.lojas).map((c) => {
+      const ls = lojasDa(c.cidade).filter((s) => s.contato);
+      return { c, ls, motivo: maisComum(ls.map((s) => s.sit)), tema: temaComMaisErro(ls) };
+    });
+    const agir = pend.length ? `<div class="cz-ag">${pend.slice(0, 6).map(({ c, ls, motivo, tema }) => `
+      <article class="cz-a">
+        <header><h4>${nomeCid(c.cidade)}</h4><span class="cz-pend">${IC.critico}${plural(c.contato, 'precisa', 'precisam')} de contato</span></header>
+        <ul class="cz-a-i">
+          ${motivo ? `<li>${IC[SIT[motivo[0]][2]]}<span>Mais comum: <b>${SIT[motivo[0]][0].toLowerCase()}</b>${motivo[1] > 1 ? ` (${motivo[1]})` : ''}</span></li>` : ''}
+          ${tema ? `<li>${IC.pergunta}<span>Mais erram em <b>${esc(tema[0])}</b></span></li>` : ''}
+          <li>${IC.loja}<span>${ls.slice(0, 3).map((s) => `<button type="button" class="cz-lj" data-ficha="${esc(s.p.id)}">${esc(s.p.loja)}</button>`).join(', ')}${ls.length > 3 ? ` e mais ${ls.length - 3}` : ''}</span></li>
+        </ul>
+        <button type="button" class="btn primary sm" data-cidlojas="${esc(c.cidade)}" data-aba="contato"><span>Ver quem precisa de contato</span>${IC.seta}</button>
+      </article>`).join('')}</div>${pend.length > 6 ? `<p class="note">E mais ${plural(pend.length - 6, 'cidade', 'cidades')} com pendências. Ordene os cartões abaixo por "Mais contatos".</p>` : ''}`
+      : `<p class="empty bom">${IC.ok}Nenhuma cidade com contato pendente.</p>`;
+    // Por estado
+    const ufs = {};
+    const U = (u) => (ufs[u] = ufs[u] || { u, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0, comLoja: 0, total: 0 });
+    R.cidades.forEach((c) => { const o = U(ufDe(c.cidade) || '—'); o.lojas += c.lojas; o.comecaram += c.comecaram; o.concluiram += c.concluiram; o.certificadas += c.certificadas; o.contato += c.contato; o.comLoja++; o.total++; });
+    R.semCadastro.forEach((c) => { U(ufDe(c) || '—').total++; });
+    const estados = Object.values(ufs).sort((a, b) => b.lojas - a.lojas || b.total - a.total);
+    const porEstado = `<div class="cz-uf-l">${estados.map((o) => `
+      <div class="cz-uf-r">
+        <span class="cz-uf-s">${esc(o.u)}</span>
+        <div class="cz-uf-m"><b>${plural(o.lojas, 'loja', 'lojas')}</b><small>${o.comLoja} de ${plural(o.total, 'cidade', 'cidades')} com loja</small><i class="cz-cob"><b style="width:${o.total ? (o.comLoja / o.total) * 100 : 0}%"></b></i></div>
+        <div class="cz-uf-n"><span><small>Conclusão</small><b>${o.comecaram ? pct(o.concluiram, o.comecaram) : '—'}</b></span><span><small>Certificadas</small><b>${n(o.certificadas)}</b></span><span><small>Contato</small><b class="${o.contato ? 'vm' : ''}">${n(o.contato)}</b></span></div>
+      </div>`).join('')}</div>`;
+    // Destaques (só cidades com 3+ lojas que começaram)
+    const elegiveis = R.cidades.filter((c) => c.comecaram >= 3);
+    const melhor = elegiveis.slice().sort((a, b) => b.concluiram / b.comecaram - a.concluiram / a.comecaram)[0];
+    const pior = elegiveis.slice().sort((a, b) => a.concluiram / a.comecaram - b.concluiram / b.comecaram)[0];
+    const dest = melhor && pior && melhor !== pior ? `<div class="cz-dest">
+        <div class="cz-d ok">${IC.trofeu}<div><small>Melhor conclusão</small><b>${esc(semUf(melhor.cidade))}</b><span>${pct(melhor.concluiram, melhor.comecaram)} de quem começou concluiu</span></div></div>
+        <div class="cz-d am">${IC.alerta}<div><small>Precisa de reforço</small><b>${esc(semUf(pior.cidade))}</b><span>${pct(pior.concluiram, pior.comecaram)} de quem começou concluiu</span></div></div>
+      </div>` : '';
+    // Onde ainda não chegamos
+    const semPorUf = {};
+    R.semCadastro.forEach((c) => { const u = ufDe(c) || 'Outras'; (semPorUf[u] = semPorUf[u] || []).push(semUf(c)); });
     return `
       <div class="card cz-ks">
         ${kz('loja', 'Total de lojas', n(K.cadastradas))}
+        ${kz('cidade', 'Cidades com lojas', `${n(comLojas)}<small> de ${n(totalCid)}</small>`)}
         ${kz('grafico', 'Conclusão média', K.taxa == null ? '—' : pct(K.concluiram, K.comecaram))}
         ${kz('medalha', 'Certificadas', n(K.certificadas))}
         ${kz('critico', 'Precisam de contato', n(R.sit.contato), R.sit.contato ? 'vm' : '')}
       </div>
-      <div class="cz">
-        ${mapa}
-        <div class="cz-lado">
-          <div class="card cz-det" id="cz-det" aria-live="polite">${detalheCidade(R)}</div>
-          ${R.semCadastro.length ? `<details class="card cz-sem" open>
-            <summary><h3 class="cz-t">Cidades sem lojas <span>(${n(R.semCadastro.length)})</span></h3><button type="button" class="btn sm cz-sem-b ${st.cidSemMapa ? 'on' : ''}" data-semmapa="1" aria-pressed="${st.cidSemMapa}">${IC.olho}<span>${st.cidSemMapa ? 'Ocultar no mapa' : 'Mostrar no mapa'}</span></button></summary>
-            <div class="cz-sem-g">${Object.keys(semPorUf).sort().map((u) => `<div><h4>${u}</h4><ul>${semPorUf[u].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((c) => `<li><button type="button" data-cidsel="${esc(c + ' - ' + u)}">${esc(c)}</button></li>`).join('')}</ul></div>`).join('')}</div>
-          </details>` : ''}
-        </div>
+      <div class="cols cz-top2">
+        ${card('Onde agir primeiro', 'Cidades com lojas que precisam de contato, da que tem mais pendências para a que tem menos.', agir, '', 'critico')}
+        ${card('Por estado', 'Lojas, alcance nas cidades da lista e resultado de cada estado.', estados.length ? porEstado : '<p class="empty">Sem lojas no período.</p>', '', 'cidade')}
       </div>
-      ${card('Todas as cidades', 'Toque numa cidade para vê-la no mapa.', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div id="t-cidades">${TABELAS.cidades()}</div>`, '', 'lista')}`;
+      ${card('Desempenho por cidade', 'Do cadastro ao certificado em cada cidade. Use para comparar e decidir onde reforçar.', `
+        ${dest}
+        <div class="cz-ctl"><input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><label class="sel"><span>Ordenar</span><select data-loc="ordCid">${ORD_CID.map(([k, t]) => `<option value="${k}" ${st.ordCid === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
+        <div id="t-cidades">${TABELAS.cidades()}</div>`, '', 'grafico')}
+      ${R.semCadastro.length ? card('Onde ainda não chegamos', `${plural(R.semCadastro.length, 'cidade da lista ainda não tem', 'cidades da lista ainda não têm')} nenhuma loja cadastrada no período. Boa lista para divulgar o treinamento.`, `
+        <div class="cz-semtop"><button type="button" class="btn sm" data-copiarsem="1">${IC.baixar}<span>Copiar lista</span></button></div>
+        <div class="cz-sem-g">${Object.keys(semPorUf).sort().map((u) => `<div><h4>${u} <small>${semPorUf[u].length}</small></h4><ul>${semPorUf[u].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`).join('')}</div>`, '', 'rota') : ''}`;
   };
 
   /* Uso: conversão, ritmo, tempo, recursos, saídas, horários e aparelhos */
@@ -2106,29 +2071,9 @@
     if (dm) { st.fModulo = dm.dataset.modulo; st.pag.passos = 1; }   // o link segue para #jornada:passos
     const ds = e.target.closest('[data-status]');
     if (ds) { st.status = ''; st.pag.lojas = 1; const h = '#lojas:' + ds.dataset.status; if (location.hash === h) render(); else location.hash = h; return; }
-    const mp = e.target.closest('[data-mp]');
-    if (mp) { const a = mp.dataset.mp; if (a === 'mais') zoomMapa(0.7); else if (a === 'menos') zoomMapa(1.45); else { st.mapaVB = a === 'tudo' ? vbTudo() : vbRegiao(); aplicarVB(); } return; }
     const cl = e.target.closest('[data-cidlojas]');
-    if (cl) { st.filtros.cidade = cl.dataset.cidlojas; st.pag = {}; location.hash = '#lojas:todas'; return; }
-    if (e.target.closest('[data-cidlimpa]')) { st.cidSel = ''; atualizarSelecaoCidade(); return; }
-    const sm = e.target.closest('[data-semmapa]');
-    if (sm) { e.preventDefault(); st.cidSemMapa = !st.cidSemMapa; const w = document.getElementById('mp-wrap'); if (w) w.classList.toggle('sem-on', st.cidSemMapa); sm.classList.toggle('on', st.cidSemMapa); sm.setAttribute('aria-pressed', String(st.cidSemMapa)); sm.querySelector('span').textContent = st.cidSemMapa ? 'Ocultar no mapa' : 'Mostrar no mapa'; if (st.cidSemMapa) { st.mapaVB = vbRegiao(); aplicarVB(); } return; }
-    const cs = e.target.closest('[data-cidsel]');
-    if (cs) {
-      if (mpArrastou) return;
-      // Nome salvo sem UF ("Muriaé") vira o nome do mapa ("Muriaé - MG")
-      const alvo = MAPA && !MAPA.cid[cs.dataset.cidsel] ? Object.keys(MAPA.cid).find((k) => semUf(k) === cs.dataset.cidsel) || cs.dataset.cidsel : cs.dataset.cidsel;
-      st.cidSel = st.cidSel === alvo && cs.closest('#mp-svg') ? '' : alvo;
-      atualizarSelecaoCidade();
-      // Selecionou pela lista: leva o mapa até a cidade
-      if (st.cidSel && !cs.closest('#mp-svg') && MAPA && MAPA.cid[st.cidSel]) {
-        const [x, y] = MAPA.cid[st.cidSel], [, , w, h] = st.mapaVB || vbRegiao();
-        st.mapaVB = [x - w / 2, y - h / 2, w, h]; aplicarVB();
-        const wr = document.getElementById('mp-wrap'); if (wr && wr.getBoundingClientRect().top < 0) wr.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      return;
-    }
-    if (e.target.closest('#mp-svg') && !mpArrastou && st.cidSel) { st.cidSel = ''; atualizarSelecaoCidade(); return; }
+    if (cl) { st.filtros.cidade = cl.dataset.cidlojas; st.pag = {}; st.status = ''; location.hash = cl.dataset.aba ? '#lojas:' + cl.dataset.aba : '#lojas:todas'; return; }
+    if (e.target.closest('[data-copiarsem]')) { const ok = await copiarTexto(textoSemLojas()); aviso(ok ? 'Lista de cidades copiada' : 'O navegador não deixou copiar. Selecione a lista e copie.'); return; }
     const vw = e.target.closest('[data-vista]');
     if (vw) { vistaLoja = vw.dataset.vista; try { localStorage.setItem(K_VISTA, vistaLoja); } catch (err) { /* */ } document.querySelectorAll('[data-vista]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vista === vistaLoja))); const lg = document.querySelector('.lj-leg'); if (lg) lg.classList.toggle('so-cel', vistaLoja === 'lista'); desenharLojas(); return; }
     const pm = e.target.closest('[data-pmenu]');
@@ -2380,35 +2325,6 @@
     varrer(document.body);
     return { fechar };
   })();
-
-  // Mapa: roda do mouse aproxima no ponto do cursor; arrastar move
-  let mpArrasto = null, mpArrastou = false;
-  const ptSvg = (svg, ev) => { const r = svg.getBoundingClientRect(), [x, y, w, h] = st.mapaVB; const esc2 = Math.max(w / r.width, h / r.height); const ox = (r.width * esc2 - w) / 2, oy = (r.height * esc2 - h) / 2; return [x - ox + (ev.clientX - r.left) * esc2, y - oy + (ev.clientY - r.top) * esc2, esc2]; };
-  root.addEventListener('wheel', (e) => {
-    const svg = e.target.closest && e.target.closest('#mp-svg');
-    if (!svg || !st.mapaVB) return;
-    e.preventDefault();
-    const [px, py] = ptSvg(svg, e);
-    zoomMapa(e.deltaY > 0 ? 1.18 : 1 / 1.18, px, py);
-  }, { passive: false });
-  root.addEventListener('pointerdown', (e) => {
-    const svg = e.target.closest && e.target.closest('#mp-svg');
-    if (!svg || e.button !== 0) return;
-    mpArrastou = false;
-    mpArrasto = { x: e.clientX, y: e.clientY, vb: st.mapaVB.slice(), k: ptSvg(svg, e)[2] };
-  });
-  window.addEventListener('pointermove', (e) => {
-    if (!mpArrasto) return;
-    const dx = e.clientX - mpArrasto.x, dy = e.clientY - mpArrasto.y;
-    if (!mpArrastou && Math.hypot(dx, dy) < 4) return;
-    mpArrastou = true;
-    const [x, y, w, h] = mpArrasto.vb;
-    st.mapaVB = [x - dx * mpArrasto.k, y - dy * mpArrasto.k, w, h];
-    aplicarVB();
-    const wr = document.getElementById('mp-wrap'); if (wr) wr.classList.add('arrastando');
-  });
-  window.addEventListener('pointerup', () => { if (!mpArrasto) return; mpArrasto = null; const wr = document.getElementById('mp-wrap'); if (wr) wr.classList.remove('arrastando'); setTimeout(() => { mpArrastou = false; }, 0); });
-  window.addEventListener('resize', () => aplicarVB());
 
   // Aviso discreto de confirmação (ex.: "Anotação salva")
   const avisoEl = document.createElement('div');
