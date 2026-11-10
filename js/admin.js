@@ -137,6 +137,7 @@
     aparelho: sv('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'),
     feedback: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/><path d="M12 7.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/>'),
     lapis: sv('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
+    cartoes: sv('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
     funil: sv('<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>'),
     alvo: sv('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>'),
   };
@@ -1245,13 +1246,31 @@
         <span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span>
         <b>${tot ? pct(o.n, tot) : '—'}<small>${n(o.n)}</small></b></li>`).join('')}</ul>`;
     };
+    const nTema = (t) => R.perguntas.filter((q) => q.tema === t).length;
+    const COR_T = ['#12a150', '#2f6fdb', '#d97706', '#9b51e0', '#e0457b', '#0ea5a4', '#64748b', '#c2410c', '#4f46e5', '#15803d', '#be123c'];
+    const ativo = st.fTema || st.fBaixo || st.pOrd === 'acerto';
+    const resumo = [st.fTema || 'Todos os assuntos', st.fBaixo ? 'Abaixo de 60%' : '', st.pOrd === 'acerto' ? 'Menor acerto' : 'Ordem do treinamento'].filter(Boolean).join(' · ');
+    const op = (attr, val, on, rot, extra) => `<button type="button" role="menuitemradio" aria-checked="${on}" class="fm-op ${on ? 'on' : ''}" ${attr}="${esc(val)}">${extra || ''}<span>${rot}</span><i class="fm-ck">${IC.check}</i></button>`;
     return `
-      <div class="pq-flt">
-        <div class="chips" role="group" aria-label="Assunto"><button type="button" class="${st.fTema ? '' : 'on'}" data-ptema="">Todos os assuntos</button>${temasQ.map((t) => `<button type="button" class="${st.fTema === t ? 'on' : ''}" data-ptema="${esc(t)}">${esc(t)}</button>`).join('')}</div>
-        <div class="chips">
-          <button type="button" class="tg ${st.fBaixo ? 'on' : ''}" data-pbaixo="1">${IC.alerta}Acerto abaixo de 60% <em>${n(baixo)}</em></button>
-          <button type="button" class="${st.pOrd !== 'acerto' ? 'on' : ''}" data-pord="ordem">Ordem do treinamento</button>
-          <button type="button" class="${st.pOrd === 'acerto' ? 'on' : ''}" data-pord="acerto">Menor acerto primeiro</button>
+      <div class="pq-tb">
+        <div class="pq-tt"><b>${plural(lista.length, 'pergunta', 'perguntas')}</b><small>${lista.length < R.perguntas.length ? `de ${n(R.perguntas.length)} no total` : 'no treinamento'}</small></div>
+        <div class="fm">
+          ${ativo ? '<button type="button" class="fm-limpar" data-plimpar="1">Limpar</button>' : ''}
+          <button type="button" class="fm-btn ${ativo ? 'ativo' : ''}" data-pmenu="1" aria-haspopup="true" aria-expanded="false">${IC.funil}<span class="fm-bt"><b>Filtrar</b><small>${esc(resumo)}</small></span><i class="fm-chev" aria-hidden="true"></i></button>
+          <div class="fm-menu" role="menu" aria-label="Filtrar perguntas">
+            <div class="fm-sec"><h5>Assunto</h5><div class="fm-scroll">
+              ${op('data-ptema', '', !st.fTema, 'Todos os assuntos', '<i class="fm-dot" style="background:#9ca3af"></i>').replace('</span><i class="fm-ck">', `</span><em>${n(R.perguntas.length)}</em><i class="fm-ck">`)}
+              ${temasQ.map((t, i) => op('data-ptema', t, st.fTema === t, esc(t), `<i class="fm-dot" style="background:${COR_T[i % COR_T.length]}"></i>`).replace('</span><i class="fm-ck">', `</span><em>${n(nTema(t))}</em><i class="fm-ck">`)).join('')}
+            </div></div>
+            <div class="fm-sec"><h5>Mostrar</h5>
+              ${op('data-pbaixo', '0', !st.fBaixo, 'Todas as perguntas')}
+              ${op('data-pbaixo', '1', st.fBaixo, 'Só acerto abaixo de 60%', '').replace('</span><i class="fm-ck">', `</span><em class="am">${n(baixo)}</em><i class="fm-ck">`)}
+            </div>
+            <div class="fm-sec"><h5>Ordenar</h5>
+              ${op('data-pord', 'ordem', st.pOrd !== 'acerto', 'Ordem do treinamento')}
+              ${op('data-pord', 'acerto', st.pOrd === 'acerto', 'Menor acerto primeiro')}
+            </div>
+          </div>
         </div>
       </div>
       ${Perg.semTabela ? '<p class="fx-aviso">Para editar as perguntas, aplique no Supabase a migração <b>20261021120000_perguntas_editaveis.sql</b>.</p>' : ''}
@@ -1508,12 +1527,27 @@
     return rows.sort(cmp);
   }
   const bolinhas = (s) => `<ol class="dots" aria-label="${s.fim.size} de ${NMOD} módulos concluídos">${MODS.map((m) => `<li class="${s.fim.has(m.n) ? 'ok' : s.ini.has(m.n) ? 'meio' : ''}" title="Módulo ${m.n}: ${esc(m.titulo)}"></li>`).join('')}</ol>`;
+  const K_VISTA = 'bigou-admin-vista-lojas';
+  let vistaLoja = (() => { try { return localStorage.getItem(K_VISTA) === 'lista' ? 'lista' : 'cartoes'; } catch (e) { return 'cartoes'; } })();
+  const emLista = () => vistaLoja === 'lista' && !matchMedia('(max-width: 759px)').matches;
+  const tabelaLojas = (itens) => `<div class="lj-tw"><table class="lj-tb">
+      <thead><tr><th>Loja</th><th>Situação</th><th>Progresso</th><th>O que aconteceu</th><th>Último acesso</th><th><span class="sr">Ações</span></th></tr></thead>
+      <tbody>${itens.map((s) => `
+        <tr class="lj-row lj-l ${s.contato ? 'need' : ''} s-${s.sit}" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
+          <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-ci">${IC.cidade}${esc(s.p.cidade)}${s.reincidente ? ' <span class="badge warn">Reincidente</span>' : ''}${s.contatada ? ` <span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}</small></td>
+          <td>${sitBadge(s.sit)}</td>
+          <td><span class="lj-pb" title="${s.fim.size} de ${NMOD} módulos"><span><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span><b>${s.fim.size}/${NMOD}</b></span></td>
+          <td class="lj-mo" title="${esc(s.motivo)}">${esc(s.motivo)}</td>
+          <td class="lj-ua" title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>
+          <td class="lj-ac">${s.contato ? `<button type="button" class="btn ct-btn sm" data-contato="${esc(s.p.id)}" title="Registrar contato feito">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="btn sm" data-ficha="${esc(s.p.id)}" aria-label="Abrir a ficha de ${esc(s.p.loja)}"><span>Abrir</span>${IC.seta}</button></td>
+        </tr>`).join('')}</tbody></table></div>`;
   TABELAS.lojas = () => {
     const { itens, ctrl } = paginar('lojas', linhasLojas());
     if (!itens.length) {
       const aba = abaLojas();
       return `<p class="empty ${aba === 'contato' ? 'bom' : ''}">${aba === 'contato' && !st.busca && !st.status ? `${IC.ok}Nenhuma loja precisa de contato agora.` : 'Nenhuma loja com esse filtro.'}</p>`;
     }
+    if (emLista()) return tabelaLojas(itens) + ctrl;
     return `<div class="lj-g">${itens.map((s) => `
       <article class="lj-row lj-c ${s.contato ? 'need' : ''} s-${s.sit}" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
         <header class="lj-ch"><div><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-ci">${IC.cidade}${esc(s.p.cidade)}</small></div>${sitBadge(s.sit)}</header>
@@ -1544,12 +1578,17 @@
           <input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}">
           <label class="sel"><span>Mais filtros</span><select data-loc="status">${MAIS_FILTROS.map(([k, t]) => `<option value="${k}" ${st.status === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
           <label class="sel"><span>Ordenar</span><select data-loc="ordLoja">${[['urgencia', 'Mais urgentes primeiro'], ['ultimo', 'Último acesso'], ['nome', 'Nome'], ['prog', 'Progresso']].map(([k, t]) => `<option value="${k}" ${st.ordLoja === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <div class="vw" role="group" aria-label="Ver lojas como">
+            <button type="button" data-vista="cartoes" aria-pressed="${vistaLoja !== 'lista'}" title="Ver em cartões">${IC.cartoes}<span>Cartões</span></button>
+            <button type="button" data-vista="lista" aria-pressed="${vistaLoja === 'lista'}" title="Ver em lista">${IC.lista}<span>Lista</span></button>
+          </div>
         </div>
-        <div class="lj-leg"><span><i class="ok"></i>Módulo concluído</span><span><i class="meio"></i>Começou</span><span><i></i>Não abriu</span></div>
+        <div class="lj-leg ${vistaLoja === 'lista' ? 'so-cel' : ''}"><span><i class="ok"></i>Módulo concluído</span><span><i class="meio"></i>Começou</span><span><i></i>Não abriu</span></div>
         <div id="t-lojas">${TABELAS.lojas()}</div>`, 'lj-card', 'lista')}`;
   };
 
   const desenharLojas = () => redesenhar('lojas');
+  function fecharMenus() { document.querySelectorAll('.fm.open').forEach((m) => { m.classList.remove('open'); const b = m.querySelector('[data-pmenu]'); if (b) b.setAttribute('aria-expanded', 'false'); }); }
   const contatoTxt = (a) => `Contato feito em ${dataHoraBR(+new Date(a.criado_em))}${a.autor ? ` por ${a.autor}` : ''}`;
 
   /* ------------------------------ Ficha da loja ------------------------------ */
@@ -1699,7 +1738,10 @@
       if (err.auth) { sessao.sair(); }
     }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fx.hidden) fecharFicha(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.querySelector('.fm.open')) { const b = document.querySelector('.fm.open [data-pmenu]'); fecharMenus(); if (b) b.focus(); return; }
+    if (e.key === 'Escape' && !fx.hidden) fecharFicha();
+  });
 
   function baixarCSV(nome, linhas) {
     // Texto vindo de visitantes pode começar com = + - @ e virar fórmula no Excel/Sheets: prefixa com '.
@@ -1801,8 +1843,13 @@
     if (dm) { st.fModulo = dm.dataset.modulo; st.pag.passos = 1; }   // o link segue para #jornada:passos
     const ds = e.target.closest('[data-status]');
     if (ds) { st.status = ''; st.pag.lojas = 1; const h = '#lojas:' + ds.dataset.status; if (location.hash === h) render(); else location.hash = h; return; }
-    const pt = e.target.closest('[data-ptema],[data-pbaixo],[data-pord]');
-    if (pt) { if (pt.dataset.ptema != null) st.fTema = pt.dataset.ptema; else if (pt.dataset.pbaixo) st.fBaixo = !st.fBaixo; else st.pOrd = pt.dataset.pord; const y = scrollY; render(); scrollTo(0, y); return; }
+    const vw = e.target.closest('[data-vista]');
+    if (vw) { vistaLoja = vw.dataset.vista; try { localStorage.setItem(K_VISTA, vistaLoja); } catch (err) { /* */ } document.querySelectorAll('[data-vista]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vista === vistaLoja))); const lg = document.querySelector('.lj-leg'); if (lg) lg.classList.toggle('so-cel', vistaLoja === 'lista'); desenharLojas(); return; }
+    const pm = e.target.closest('[data-pmenu]');
+    if (pm) { const fmEl = pm.closest('.fm'), abre = !fmEl.classList.contains('open'); fecharMenus(); if (abre) { fmEl.classList.add('open'); pm.setAttribute('aria-expanded', 'true'); const on = fmEl.querySelector('.fm-op.on'); if (on) on.focus({ preventScroll: true }); } return; }
+    if (!e.target.closest('.fm-menu')) fecharMenus();
+    const pt = e.target.closest('[data-ptema],[data-pbaixo],[data-pord],[data-plimpar]');
+    if (pt) { if (pt.dataset.plimpar) { st.fTema = ''; st.fBaixo = false; st.pOrd = 'ordem'; } else if (pt.dataset.ptema != null) st.fTema = pt.dataset.ptema; else if (pt.dataset.pbaixo != null) st.fBaixo = pt.dataset.pbaixo === '1'; else st.pOrd = pt.dataset.pord; const y = scrollY; render(); scrollTo(0, y); return; }
     const pb = e.target.closest('[data-pgn] [data-ir]');
     if (pb) {
       const ch = pb.closest('[data-pgn]').dataset.pgn;

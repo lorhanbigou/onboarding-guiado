@@ -110,6 +110,8 @@
     grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
     percent: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18.5 5.5l-13 13"/></svg>',
     calendario: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9.5 15l2 2 3.5-3.5"/></svg>',
+    lampada: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
+    barras: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="13" width="4" height="7.5" rx="1.2"/><rect x="10" y="8.5" width="4" height="12" rx="1.2"/><rect x="16.5" y="3.5" width="4" height="17" rx="1.2"/></svg>',
     cadeado: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/></svg>',
   };
 
@@ -342,12 +344,11 @@
 
   /* ------------------------------ Tela inicial ------------------------------ */
   const FASES = [
-    { t: L('Vendas e pagamentos', 'Ventas y pagos'), s: L('Relatório e as 3 formas de pagamento', 'Informe y las 3 formas de pago'), m: [1, 2, 3] },
-    { t: L('Tela Financeiro', 'Pantalla Finanzas'), s: L('Resultado e repasses', 'Resultado y transferencias'), m: [4] },
-    { t: L('A fatura', 'La factura'), s: L('O que entrou e o que saiu', 'Lo que entró y lo que salió'), m: [5, 6, 7, 8] },
-    { t: L('Repasse e prática', 'Transferencia y práctica'), s: L('Antecipação e exercício final', 'Anticipo y ejercicio final'), m: [9, 10] },
+    { c: L('Vendas', 'Ventas'), t: L('Vendas e pagamentos', 'Ventas y pagos'), s: L('Relatório e as 3 formas de pagamento', 'Informe y las 3 formas de pago'), m: [1, 2, 3] },
+    { c: L('Financeiro', 'Finanzas'), t: L('Tela Financeiro', 'Pantalla Finanzas'), s: L('Resultado e repasses', 'Resultado y transferencias'), m: [4] },
+    { c: L('Fatura', 'Factura'), t: L('A fatura', 'La factura'), s: L('O que entrou e o que saiu', 'Lo que entró y lo que salió'), m: [5, 6, 7, 8] },
+    { c: L('Repasse', 'Transferencia'), t: L('Repasse e prática', 'Transferencia y práctica'), s: L('Antecipação e exercício final', 'Anticipo y ejercicio final'), m: [9, 10] },
   ];
-  const AVISO = L('Todos os dados são fictícios, inclusive os valores de comissão e taxas. Confira no seu contrato os valores praticados na sua loja.', 'Todos los datos son ficticios, incluidos los valores de comisión y tasas. Consulta en tu contrato los valores que se aplican a tu tienda.');
 
   function viewHome() {
     const done = doneCount(), total = A.mods.length;
@@ -367,43 +368,85 @@
     else main = { href: '#/comecar', ic: ICON.play, t: L('Começar o treinamento', 'Comenzar la capacitación'), s: L('Passo a passo, no seu ritmo.', 'Paso a paso, a tu ritmo.') };
 
     const tile = (href, ic, t, sub, extra) => `
-      <a class="hm-tile ${extra || ''}" href="${href}">
-        <span class="hm-tile-ic">${ic}</span>
+      <a class="nh-tile ${extra || ''}" href="${href}">
+        <span class="nh-tile-ic">${ic}</span>
+        <span class="nh-tile-go" aria-hidden="true">${ICON.arrowR}</span>
         <b>${t}</b>
         <small>${sub}</small>
       </a>`;
 
+    // Jornada: as fases reais do treinamento
+    const atual = FASES.findIndex((f) => f.m.some((n) => status(n) !== 'done'));
+    const fases = FASES.map((f, i) => {
+      const feita = f.m.every((n) => status(n) === 'done');
+      const est = feita ? 'ok' : i === atual ? 'agora' : 'depois';
+      const alvo = f.m.find((n) => status(n) !== 'done') || f.m[0];
+      const rot = `${f.t}: ${feita ? L('concluída', 'completada') : i === atual ? L('você está aqui', 'estás aquí') : L('próxima', 'siguiente')}`;
+      return `<li class="nh-f ${est}"><a href="#/modulo/${alvo}" aria-label="${rot}" title="${f.t}"${est === 'agora' ? ' aria-current="step"' : ''}><span class="nh-f-b">${feita ? ICON.check : i + 1}</span><span class="nh-f-t">${f.c}</span></a></li>`;
+    }).join('');
+    const feitas = FASES.filter((f) => f.m.every((n) => status(n) === 'done')).length;
+
+    const inc = tudo ? { t: L('Parabéns, treinamento concluído!', '¡Felicitaciones, capacitación completada!'), s: L('Agora você sabe ler suas vendas, taxas e repasses. Volte quando quiser revisar.', 'Ahora sabes leer tus ventas, tasas y transferencias. Vuelve cuando quieras repasar.') }
+      : started ? { t: L('Você está indo muito bem!', '¡Vas muy bien!'), s: L('Continue aprendendo para aproveitar todas as funcionalidades da plataforma.', 'Sigue aprendiendo para aprovechar todas las funcionalidades de la plataforma.') }
+      : { t: L('Vamos começar?', '¿Empezamos?'), s: L(`São ${total} módulos curtos. Em poucos minutos você entende o seu financeiro.`, `Son ${total} módulos cortos. En pocos minutos entiendes tus finanzas.`) };
+
+    const titulo = tudo ? L('Parabéns', 'Felicitaciones') : L('Olá', 'Hola');
+    const tam = loja.length > 32 ? 'xl' : loja.length > 20 ? 'l' : '';
+    const AV1 = L('Todos os dados são fictícios, inclusive os valores de comissão e taxas.', 'Todos los datos son ficticios, incluidos los valores de comisión y tasas.');
+    const AV2 = L('Confira no seu contrato os valores praticados na sua loja.', 'Consulta en tu contrato los valores que se aplican a tu tienda.');
+
     app.innerHTML = `
-      <div class="tv tv-home">
-        <header class="t-top">
-          <div class="t-logo">
-            <img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32">
-            <span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span>
+      <div class="tv tv-home nh">
+        <header class="nh-top">
+          <div class="nh-logo">
+            <img src="assets/bigou-logo.png" alt="Bigou" width="48" height="48">
+            <span>${L('Treinamento<br>Financeiro', 'Capacitación<br>Financiera')}</span>
           </div>
           ${vozToggle('bar')}
         </header>
-        <main class="hm">
-          <h1 class="hm-ola">${L('', '¡')}${tudo ? L('Parabéns', 'Felicitaciones') : L('Olá', 'Hola')}${loja ? `, <span>${esc(loja)}</span>` : ''}!</h1>
-          <p class="hm-sub">${tudo ? L('Você pode rever qualquer módulo quando quiser.', 'Puedes repasar cualquier módulo cuando quieras.') : L('Aprenda como funcionam suas vendas, taxas e repasses.', 'Aprende cómo funcionan tus ventas, tasas y transferencias.')}</p>
-
-          <a class="hm-main" href="${main.href}">
-            <span class="hm-main-ic">${main.ic}</span>
-            <span class="hm-main-t"><b>${main.t}</b><small>${main.s}</small></span>
-            ${ICON.arrowR}
-            ${started && !tudo ? `<span class="hm-main-bar" aria-label="${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
+        <section class="nh-hero" aria-label="${L('Boas-vindas', 'Bienvenida')}">
+          <img class="nh-hero-img" src="assets/home/hero.webp" alt="" width="852" height="462" decoding="async" fetchpriority="high">
+          <div class="nh-hero-t">
+            <h1 class="nh-ola ${tam}">${L('', '¡')}${titulo}${loja ? `,<span>${esc(loja)}!</span>` : '!'}</h1>
+            <p>${tudo ? L('Você pode rever qualquer módulo quando quiser.', 'Puedes repasar cualquier módulo cuando quieras.') : L('Aprenda como funcionam suas vendas, taxas e repasses.', 'Aprende cómo funcionan tus ventas, tasas y transferencias.')}</p>
+          </div>
+        </section>
+        <main class="nh-main">
+          <a class="nh-cta" href="${main.href}">
+            <span class="nh-cta-ic">${main.ic}</span>
+            <span class="nh-cta-t"><b>${main.t}</b><small>${main.s}</small></span>
+            <span class="nh-cta-go">${ICON.arrowR}</span>
+            ${started && !tudo ? `<span class="nh-cta-bar" aria-label="${L(`${done} de ${total} módulos concluídos`, `${done} de ${total} módulos completados`)}"><i style="width:${(done / total) * 100}%"></i></span>` : ''}
           </a>
 
-          <nav class="hm-grid" aria-label="${L('Atalhos', 'Accesos directos')}">
+          <nav class="nh-grid" aria-label="${L('Atalhos', 'Accesos directos')}">
             ${tile('#/modulos', ICON.grid, L('Módulos', 'Módulos'), started ? L(`${done} de ${total} concluídos`, `${done} de ${total} completados`) : L(`${total} módulos curtos`, `${total} módulos cortos`))}
             ${tile('#/repasses', ICON.calendario, L('Datas de repasse', 'Fechas de transferencia'), L('Calendário do ano', 'Calendario del año'))}
-            ${tile('#/explorar', ICON.cursor, L('Explorar a tela', 'Explorar la pantalla'), L('Clique à vontade', 'Haz clic libremente'))}
+            ${tile('#/explorar', ICON.cursor, L('Explorar a tela', 'Explorar la pantalla'), L('Clique e conheça', 'Haz clic y conoce'))}
             ${tile('#/certificado', cert.ok ? ICON.certificado : ICON.cadeado, L('Certificado', 'Certificado'), cert.ok ? L('Pronto para baixar', 'Listo para descargar') : L('Veja o que falta', 'Mira lo que falta'), cert.ok ? 'ok' : 'lock')}
           </nav>
 
-          <p class="hm-aviso">${ICON.info}<span><b>${L('Treinamento ilustrativo.', 'Capacitación ilustrativa.')}</b> ${AVISO}</span></p>
+          <details class="nh-aviso">
+            <summary><span class="nh-aviso-ic">${ICON.lampada}</span><span class="nh-aviso-t"><b>${L('Treinamento ilustrativo.', 'Capacitación ilustrativa.')}</b> ${AV1}</span><span class="nh-aviso-go">${ICON.arrowR}</span></summary>
+            <p>${AV2}</p>
+          </details>
+
+          <div class="nh-duo">
+            <section class="nh-card nh-jor" aria-labelledby="nh-jor-t">
+              <h2 id="nh-jor-t">${ICON.barras}${L('Sua jornada de aprendizado', 'Tu camino de aprendizaje')}<small>${feitas}/${FASES.length}</small></h2>
+              <ol class="nh-fases" style="--feito:${FASES.length > 1 ? Math.min(1, Math.max(0, (atual < 0 ? FASES.length - 1 : atual) / (FASES.length - 1))) : 0}">${fases}</ol>
+            </section>
+            <section class="nh-card nh-inc">
+              <span class="nh-inc-ic"><img src="assets/bigou-logo.png" alt="" width="64" height="64"></span>
+              <div><b>${inc.t}</b><p>${inc.s}</p></div>
+              <i class="nh-risco" aria-hidden="true"><i></i><i></i><i></i></i>
+            </section>
+          </div>
+
           ${loja ? `<p class="hm-loja">${L('Não é a sua loja?', '¿No es tu tienda?')} <a href="#/cadastro">${L('Trocar loja', 'Cambiar tienda')}</a></p>` : ''}
           <p class="hm-idioma" aria-label="${L('Idioma', 'Idioma')}">${TREINO.IDIOMAS.map((id) => `<button type="button" data-idioma="${id}" lang="${id}" aria-pressed="${id === TREINO.idioma}">${id.toUpperCase()}</button>`).join('<span aria-hidden="true">·</span>')}</p>
         </main>
+        <svg class="nh-ondas" viewBox="0 0 390 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C 70 30, 130 40, 190 70 S 320 110, 390 60 V120 H0z" fill="#d6f3e1"/><path d="M0 95 C 90 70, 170 80, 250 100 S 360 110, 390 92 V120 H0z" fill="#a9e6c1"/></svg>
       </div>`;
   }
 
@@ -426,6 +469,9 @@
       const d = prox.data, dias = Math.round((d - hoje) / 864e5);
       const vendas = new Date(d.getFullYear(), d.getMonth() - 1, 1);
       const falta = dias === 0 ? L('É hoje', 'Es hoy') : dias === 1 ? L('Amanhã', 'Mañana') : L(`Faltam ${dias} dias`, `Faltan ${dias} días`);
+      // Quanto do caminho entre o último repasse e o próximo já passou
+      const ant = todas.filter((r) => r.data < hoje).pop();
+      const pctCaminho = ant ? Math.min(100, Math.max(4, Math.round(((hoje - ant.data) / (d - ant.data)) * 100))) : 0;
       destaque = `
         <section class="rp-prox" aria-label="${L('Próximo repasse', 'Próxima transferencia')}">
           <span class="rp-prox-ic">${ICON.calendario}</span>
@@ -435,6 +481,7 @@
             <span>${SEMANA[d.getDay()]} · ${L('vendas de', 'ventas de')} ${MESES[vendas.getMonth()]}${vendas.getFullYear() !== d.getFullYear() ? ` de ${vendas.getFullYear()}` : ''}</span>
           </div>
           <span class="rp-prox-falta">${falta}</span>
+          ${ant ? `<span class="rp-prox-bar" role="img" aria-label="${L(`${pctCaminho}% do caminho até o próximo repasse`, `${pctCaminho}% del camino hasta la próxima transferencia`)}"><i style="width:${pctCaminho}%"></i></span>` : ''}
         </section>`;
     }
 
@@ -461,26 +508,31 @@
       if (ano === anoAberto) return `<section class="rp-ano"><h2>${ano}<small>${resumo}</small></h2>${grade(meses)}</section>`;
       return `
         <details class="rp-ano rp-mais">
-          <summary><b>${ano > anoAberto ? L('Ver datas de', 'Ver fechas de') : L('Rever datas de', 'Repasar fechas de')} ${ano}</b><small>${resumo}</small><span class="rp-chev" aria-hidden="true"></span></summary>
+          <summary><span class="rp-mais-ic">${ICON.calendario}</span><b>${ano > anoAberto ? L('Ver datas de', 'Ver fechas de') : L('Rever datas de', 'Repasar fechas de')} ${ano}</b><small>${resumo}</small><span class="rp-mais-go" aria-hidden="true">${ICON.arrowR}</span></summary>
           ${grade(meses)}
         </details>`;
     };
 
     app.innerHTML = `
-      <div class="tv tv-rp">
-        <header class="t-top">
-          <a class="t-link" href="#/">${ICON.arrowL}${L('Início', 'Inicio')}</a>
-          <div class="t-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="32" height="32"><span>${L('Treinamento Financeiro', 'Capacitación Financiera')}</span></div>
-          <span></span>
+      <div class="tv tv-rp nh nrp">
+        <header class="nh-top">
+          <a class="nh-voltar" href="#/">${ICON.arrowL}<span>${L('Início', 'Inicio')}</span></a>
+          <div class="nh-logo"><img src="assets/bigou-logo.png" alt="Bigou" width="40" height="40"><span>${L('Treinamento<br>Financeiro', 'Capacitación<br>Financiera')}</span></div>
         </header>
-        <main class="dc rp">
-          <h1>${L('Datas de repasse', 'Fechas de transferencia')}</h1>
-          <p class="hm-sub">${L('O saldo positivo do mês é enviado no <b>2º dia útil</b> do mês seguinte.', 'El saldo positivo del mes se envía el <b>2.º día hábil</b> del mes siguiente.')}</p>
+        <section class="nrp-hero">
+          <div class="nrp-hero-t">
+            <h1>${L('Datas de repasse', 'Fechas de transferencia')}</h1>
+            <p>${L('O saldo positivo do mês é enviado no <b>2º dia útil</b> do mês seguinte.', 'El saldo positivo del mes se envía el <b>2.º día hábil</b> del mes siguiente.')}</p>
+          </div>
+          <img class="nrp-hero-img" src="assets/home/carteira.webp" alt="" width="292" height="312" decoding="async">
+        </section>
+        <main class="nh-main dc rp">
           ${destaque}
           ${anos.filter((a) => a.ano <= anoAberto).sort((a, b) => b.ano - a.ano).map(blocoAno).join('')}
           ${anos.filter((a) => a.ano > anoAberto).map(blocoAno).join('')}
-          <p class="rp-nota">${ICON.info}<span>${L('Sábados, domingos e feriados nacionais não contam como dia útil. Quer receber antes? Você pode <b>solicitar antecipação</b> a qualquer momento no app, confira as condições.', 'Los sábados, domingos y feriados nacionales no cuentan como días hábiles. ¿Quieres recibir antes? Puedes <b>solicitar un anticipo</b> en cualquier momento en la app, consulta las condiciones.')}</span></p>
+          <p class="rp-nota"><span class="nh-aviso-ic">${ICON.lampada}</span><span>${L('Sábados, domingos e feriados nacionais não contam como dia útil. Quer receber antes? Você pode <b>solicitar antecipação</b> a qualquer momento no app, confira as condições.', 'Los sábados, domingos y feriados nacionales no cuentan como días hábiles. ¿Quieres recibir antes? Puedes <b>solicitar un anticipo</b> en cualquier momento en la app, consulta las condiciones.')}</span></p>
         </main>
+        <svg class="nh-ondas" viewBox="0 0 390 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C 70 30, 130 40, 190 70 S 320 110, 390 60 V120 H0z" fill="#d6f3e1"/><path d="M0 95 C 90 70, 170 80, 250 100 S 360 110, 390 92 V120 H0z" fill="#a9e6c1"/></svg>
       </div>`;
   }
 

@@ -11,7 +11,7 @@ const configLocal = ambiente && montarConfig(ambiente, `local · ${ambiente.AMBI
 // Mesmos cabeçalhos de segurança (CSP etc.) do site publicado: lidos do bloco for = "/*" do netlify.toml.
 const blocoHeaders = (fs.readFileSync(path.join(root, 'netlify.toml'), 'utf8').split('[[headers]]').find((b) => /for\s*=\s*"\/\*"/.test(b)) || '');
 const seguranca = Object.fromEntries([...blocoHeaders.matchAll(/^\s*([A-Za-z-]+)\s*=\s*"([^"]*)"\s*$/gm)].filter((m) => m[1] !== 'for').map((m) => [m[1], m[2]]));
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp' };
 
 function getNetworkIp() {
   const interfaces = os.networkInterfaces();
