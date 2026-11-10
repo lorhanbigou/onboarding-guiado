@@ -877,7 +877,7 @@
      ===================================================================== */
   const st = {
     dados: null, filtros: { dias: 28, cidade: '' }, R: null, P: null, menu: false,
-    busca: '', status: '', ordLoja: 'urgencia', pOrd: 'ordem', buscaCid: '', ordCid: 'lojas', ordem: { k: 'ultimo', dir: -1 },
+    busca: '', status: '', ordLoja: 'urgencia', pOrd: 'ordem', buscaCid: '', fCid: '', ordem: { k: 'ultimo', dir: -1 },
     pag: {}, fModulo: '', fTema: '', fBaixo: false, editPerg: null, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
   };
   // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
@@ -1003,7 +1003,7 @@
     { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, onde saem, quais assuntos precisam de reforço e como respondem cada pergunta.' },
   ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
     { id: 'feedback', t: 'Feedback', ic: 'feedback', d: () => 'O que as lojas acharam do treinamento e o que a equipe registrou, num lugar só.' },
-    { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Onde agir, como cada cidade está indo e onde ainda não chegamos.' },
+    { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Cidades onde a plataforma atua: em verde, as que já tiveram treinamento.' },
     { id: 'uso', t: 'Uso', ic: 'grafico', d: (ctx) => `Como o treinamento é usado ${ctx.periodoTxt}: conversão, ritmo, recursos e aparelhos.` },
     { id: 'exportar', t: 'Exportar', ic: 'baixar', d: () => 'Baixe os dados completos em CSV. Eles são a base para o plano de melhorias.' },
   ]);
@@ -1454,100 +1454,51 @@
         <div id="t-feedback">${TABELAS.feedback()}</div>`, 'fb-card', 'chat')}`;
   };
 
-  /* Cidades: onde agir, desempenho por cidade e estado, onde ainda não chegamos */
+  /* Cidades: as cidades onde a plataforma atua. Verde = já teve treinamento (alguma loja da cidade
+     se cadastrou, em qualquer época); cinza = ainda não. */
   const ufDe = (nome) => (String(nome).match(/ - ([A-Z]{2})$/) || [])[1] || '';
   const semUf = (nome) => String(nome).replace(/ - [A-Z]{2}(?= \/|$)/g, '');
-  const lojasDa = (cidade) => st.R.lojas.filter((s) => s.p.cidade === cidade);
-  const maisComum = (lista) => { const m = new Map(); lista.forEach((x) => { if (x) m.set(x, (m.get(x) || 0) + 1); }); return [...m.entries()].sort((a, b) => b[1] - a[1])[0] || null; };
-  const temaComMaisErro = (lojas) => maisComum(lojas.flatMap((s) => s.erros.map((e) => e.tema)));
-  const nomeCid = (c) => `${esc(semUf(c))}${ufDe(c) ? `<span class="cz-uf">${ufDe(c)}</span>` : ''}`;
-  function textoSemLojas() {
-    const g = {};
-    st.R.semCadastro.forEach((c) => { const u = ufDe(c) || 'Outras'; (g[u] = g[u] || []).push(semUf(c)); });
-    return `Cidades do Treinamento Financeiro ainda sem lojas cadastradas (${st.R.semCadastro.length}):\n\n` + Object.keys(g).sort().map((u) => `${u} (${g[u].length}): ${g[u].sort((a, b) => a.localeCompare(b, 'pt-BR')).join(', ')}`).join('\n\n');
+  const UF_NOME = { MG: 'Minas Gerais', RJ: 'Rio de Janeiro', SP: 'São Paulo', ES: 'Espírito Santo' };
+  function cidadesAtivas() {
+    // Lojas de todas as épocas (ignora o filtro de período), casando também cadastros sem UF
+    const cont = new Map();
+    (st.dados.participantes || []).forEach((p) => { if (p.cidade) cont.set(p.cidade, (cont.get(p.cidade) || 0) + 1); });
+    return TREINO.cidades.map((c) => ({ nome: c, uf: ufDe(c) || 'Outras', lojas: (cont.get(c) || 0) + (cont.get(semUf(c)) || 0) }));
   }
-  const ORD_CID = [['lojas', 'Mais lojas'], ['conclusao', 'Menor conclusão'], ['contato', 'Mais contatos'], ['acerto', 'Menor acerto']];
   TABELAS.cidades = () => {
-    const b = st.buscaCid.trim().toLowerCase();
-    const taxa = (c) => (c.comecaram ? c.concluiram / c.comecaram : 2);
-    const acerto = (c) => (c.respondidas ? c.certas / c.respondidas : 2);
-    const cmp = { lojas: (a, c) => c.lojas - a.lojas, conclusao: (a, c) => taxa(a) - taxa(c) || c.lojas - a.lojas, contato: (a, c) => c.contato - a.contato || c.lojas - a.lojas, acerto: (a, c) => acerto(a) - acerto(c) }[st.ordCid] || ((a, c) => c.lojas - a.lojas);
-    const rows = st.R.cidades.filter((c) => !b || c.cidade.toLowerCase().includes(b)).slice().sort(cmp);
-    if (!rows.length) return '<p class="empty">Nenhuma cidade encontrada.</p>';
-    return `<div class="cz-g">${rows.map((c) => {
-      const t = c.comecaram ? c.concluiram / c.comecaram : null, sd = saude(c.comecaram >= 3 ? t : null);
-      const tema = temaComMaisErro(lojasDa(c.cidade));
-      const barra = (rot, v) => `<div class="cz-f"><span>${rot}</span><i><b style="width:${c.lojas ? Math.max(v ? 4 : 0, (v / c.lojas) * 100) : 0}%"></b></i><em>${n(v)}</em></div>`;
-      return `<article class="cz-c">
-        <header><h4>${nomeCid(c.cidade)}</h4><span class="saude mini ${sd.cls}" title="${c.comecaram >= 3 ? 'Conclusão de quem começou' : 'Poucas lojas para avaliar a cidade'}">${t == null ? 'Ninguém começou' : c.comecaram >= 3 ? `${sd.rot} · ${pct(c.concluiram, c.comecaram)}` : `${pct(c.concluiram, c.comecaram)} concluíram`}</span></header>
-        <div class="cz-fs">${barra('Cadastraram', c.lojas)}${barra('Começaram', c.comecaram)}${barra('Concluíram', c.concluiram)}${barra('Certificadas', c.certificadas)}</div>
-        <dl class="cz-dl"><div><dt>Acerto médio</dt><dd>${c.respondidas ? pct(c.certas, c.respondidas) : '—'}</dd></div><div><dt>Mais erram em</dt><dd>${tema ? esc(tema[0]) : '—'}</dd></div></dl>
-        <footer>${c.contato ? `<span class="cz-pend">${IC.critico}${plural(c.contato, 'precisa', 'precisam')} de contato</span>` : '<span class="cz-ok">' + IC.ok + 'Sem pendências</span>'}<button type="button" class="btn sm" data-cidlojas="${esc(c.cidade)}"><span>Ver lojas</span>${IC.seta}</button></footer>
-      </article>`;
-    }).join('')}</div>`;
-  };
-  PG.cidades = ({ R }) => {
-    const K = R.kpi;
-    const comLojas = R.cidades.length, totalCid = comLojas + R.semCadastro.length;
-    const kz = (ic, rot, v, cls) => `<div class="cz-k ${cls || ''}"><span class="cz-k-ic">${IC[ic]}</span><div><small>${rot}</small><b>${v}</b></div></div>`;
-    // Onde agir primeiro: cidades com lojas que precisam de contato
-    const pend = R.cidades.filter((c) => c.contato).sort((a, b) => b.contato - a.contato || b.lojas - a.lojas).map((c) => {
-      const ls = lojasDa(c.cidade).filter((s) => s.contato);
-      return { c, ls, motivo: maisComum(ls.map((s) => s.sit)), tema: temaComMaisErro(ls) };
-    });
-    const agir = pend.length ? `<div class="cz-ag">${pend.slice(0, 6).map(({ c, ls, motivo, tema }) => `
-      <article class="cz-a">
-        <header><h4>${nomeCid(c.cidade)}</h4><span class="cz-pend">${IC.critico}${plural(c.contato, 'precisa', 'precisam')} de contato</span></header>
-        <ul class="cz-a-i">
-          ${motivo ? `<li>${IC[SIT[motivo[0]][2]]}<span>Mais comum: <b>${SIT[motivo[0]][0].toLowerCase()}</b>${motivo[1] > 1 ? ` (${motivo[1]})` : ''}</span></li>` : ''}
-          ${tema ? `<li>${IC.pergunta}<span>Mais erram em <b>${esc(tema[0])}</b></span></li>` : ''}
-          <li>${IC.loja}<span>${ls.slice(0, 3).map((s) => `<button type="button" class="cz-lj" data-ficha="${esc(s.p.id)}">${esc(s.p.loja)}</button>`).join(', ')}${ls.length > 3 ? ` e mais ${ls.length - 3}` : ''}</span></li>
-        </ul>
-        <button type="button" class="btn primary sm" data-cidlojas="${esc(c.cidade)}" data-aba="contato"><span>Ver quem precisa de contato</span>${IC.seta}</button>
-      </article>`).join('')}</div>${pend.length > 6 ? `<p class="note">E mais ${plural(pend.length - 6, 'cidade', 'cidades')} com pendências. Ordene os cartões abaixo por "Mais contatos".</p>` : ''}`
-      : `<p class="empty bom">${IC.ok}Nenhuma cidade com contato pendente.</p>`;
-    // Por estado
+    const b = st.buscaCid.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const lista = cidadesAtivas().filter((c) => (st.fCid === 'com' ? c.lojas : st.fCid === 'sem' ? !c.lojas : true) && (!b || c.nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(b)));
+    if (!lista.length) return '<p class="empty">Nenhuma cidade encontrada.</p>';
     const ufs = {};
-    const U = (u) => (ufs[u] = ufs[u] || { u, lojas: 0, comecaram: 0, concluiram: 0, certificadas: 0, contato: 0, comLoja: 0, total: 0 });
-    R.cidades.forEach((c) => { const o = U(ufDe(c.cidade) || '—'); o.lojas += c.lojas; o.comecaram += c.comecaram; o.concluiram += c.concluiram; o.certificadas += c.certificadas; o.contato += c.contato; o.comLoja++; o.total++; });
-    R.semCadastro.forEach((c) => { U(ufDe(c) || '—').total++; });
-    const estados = Object.values(ufs).sort((a, b) => b.lojas - a.lojas || b.total - a.total);
-    const porEstado = `<div class="cz-uf-l">${estados.map((o) => `
-      <div class="cz-uf-r">
-        <span class="cz-uf-s">${esc(o.u)}</span>
-        <div class="cz-uf-m"><b>${plural(o.lojas, 'loja', 'lojas')}</b><small>${o.comLoja} de ${plural(o.total, 'cidade', 'cidades')} com loja</small><i class="cz-cob"><b style="width:${o.total ? (o.comLoja / o.total) * 100 : 0}%"></b></i></div>
-        <div class="cz-uf-n"><span><small>Conclusão</small><b>${o.comecaram ? pct(o.concluiram, o.comecaram) : '—'}</b></span><span><small>Certificadas</small><b>${n(o.certificadas)}</b></span><span><small>Contato</small><b class="${o.contato ? 'vm' : ''}">${n(o.contato)}</b></span></div>
-      </div>`).join('')}</div>`;
-    // Destaques (só cidades com 3+ lojas que começaram)
-    const elegiveis = R.cidades.filter((c) => c.comecaram >= 3);
-    const melhor = elegiveis.slice().sort((a, b) => b.concluiram / b.comecaram - a.concluiram / a.comecaram)[0];
-    const pior = elegiveis.slice().sort((a, b) => a.concluiram / a.comecaram - b.concluiram / b.comecaram)[0];
-    const dest = melhor && pior && melhor !== pior ? `<div class="cz-dest">
-        <div class="cz-d ok">${IC.trofeu}<div><small>Melhor conclusão</small><b>${esc(semUf(melhor.cidade))}</b><span>${pct(melhor.concluiram, melhor.comecaram)} de quem começou concluiu</span></div></div>
-        <div class="cz-d am">${IC.alerta}<div><small>Precisa de reforço</small><b>${esc(semUf(pior.cidade))}</b><span>${pct(pior.concluiram, pior.comecaram)} de quem começou concluiu</span></div></div>
-      </div>` : '';
-    // Onde ainda não chegamos
-    const semPorUf = {};
-    R.semCadastro.forEach((c) => { const u = ufDe(c) || 'Outras'; (semPorUf[u] = semPorUf[u] || []).push(semUf(c)); });
+    lista.forEach((c) => (ufs[c.uf] = ufs[c.uf] || []).push(c));
+    const todasPorUf = {};
+    cidadesAtivas().forEach((c) => { const o = (todasPorUf[c.uf] = todasPorUf[c.uf] || { t: 0, ok: 0 }); o.t++; if (c.lojas) o.ok++; });
+    return Object.keys(ufs).sort((x, y) => todasPorUf[y].t - todasPorUf[x].t).map((u) => {
+      const tt = todasPorUf[u];
+      const itens = ufs[u].sort((x, y) => (y.lojas ? 1 : 0) - (x.lojas ? 1 : 0) || semUf(x.nome).localeCompare(semUf(y.nome), 'pt-BR'));
+      return `<section class="cv-uf">
+        <header><span class="cv-sg">${u}</span><div><h3>${UF_NOME[u] || u}</h3><small>${tt.ok} de ${plural(tt.t, 'cidade', 'cidades')} já tiveram treinamento</small></div><i class="cv-bar"><b style="width:${(tt.ok / tt.t) * 100}%"></b></i></header>
+        <ul class="cv-l">${itens.map((c) => c.lojas
+          ? `<li><button type="button" class="cv-c on" data-cidlojas="${esc(c.nome)}" title="${esc(semUf(c.nome))}: ver as lojas"><span class="cv-dot">${IC.check}</span><span class="cv-n">${esc(semUf(c.nome))}</span><em>${plural(c.lojas, 'loja', 'lojas')}</em></button></li>`
+          : `<li><span class="cv-c" title="${esc(semUf(c.nome))}: ainda não teve treinamento"><span class="cv-dot"></span><span class="cv-n">${esc(semUf(c.nome))}</span></span></li>`).join('')}</ul>
+      </section>`;
+    }).join('');
+  };
+  PG.cidades = () => {
+    const todas = cidadesAtivas(), com = todas.filter((c) => c.lojas).length;
+    const fb = (k, t, q) => `<button type="button" class="${(st.fCid || '') === k ? 'on' : ''}" data-fcid="${k}">${t}<em>${n(q)}</em></button>`;
     return `
-      <div class="card cz-ks">
-        ${kz('loja', 'Total de lojas', n(K.cadastradas))}
-        ${kz('cidade', 'Cidades com lojas', `${n(comLojas)}<small> de ${n(totalCid)}</small>`)}
-        ${kz('grafico', 'Conclusão média', K.taxa == null ? '—' : pct(K.concluiram, K.comecaram))}
-        ${kz('medalha', 'Certificadas', n(K.certificadas))}
-        ${kz('critico', 'Precisam de contato', n(R.sit.contato), R.sit.contato ? 'vm' : '')}
-      </div>
-      <div class="cols cz-top2">
-        ${card('Onde agir primeiro', 'Cidades com lojas que precisam de contato, da que tem mais pendências para a que tem menos.', agir, '', 'critico')}
-        ${card('Por estado', 'Lojas, alcance nas cidades da lista e resultado de cada estado.', estados.length ? porEstado : '<p class="empty">Sem lojas no período.</p>', '', 'cidade')}
-      </div>
-      ${card('Desempenho por cidade', 'Do cadastro ao certificado em cada cidade. Use para comparar e decidir onde reforçar.', `
-        ${dest}
-        <div class="cz-ctl"><input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><label class="sel"><span>Ordenar</span><select data-loc="ordCid">${ORD_CID.map(([k, t]) => `<option value="${k}" ${st.ordCid === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
-        <div id="t-cidades">${TABELAS.cidades()}</div>`, '', 'grafico')}
-      ${R.semCadastro.length ? card('Onde ainda não chegamos', `${plural(R.semCadastro.length, 'cidade da lista ainda não tem', 'cidades da lista ainda não têm')} nenhuma loja cadastrada no período. Boa lista para divulgar o treinamento.`, `
-        <div class="cz-semtop"><button type="button" class="btn sm" data-copiarsem="1">${IC.baixar}<span>Copiar lista</span></button></div>
-        <div class="cz-sem-g">${Object.keys(semPorUf).sort().map((u) => `<div><h4>${u} <small>${semPorUf[u].length}</small></h4><ul>${semPorUf[u].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>`).join('')}</div>`, '', 'rota') : ''}`;
+      <div class="card cv">
+        <div class="cv-top">
+          <div class="cv-res"><b>${n(com)} <small>de ${plural(todas.length, 'cidade', 'cidades')}</small></b><span>já tiveram treinamento</span><i class="cv-bar"><b style="width:${todas.length ? (com / todas.length) * 100 : 0}%"></b></i></div>
+          <div class="cv-leg"><span><i class="on"></i>Já teve treinamento</span><span><i></i>Ainda não teve</span></div>
+        </div>
+        <div class="cv-ctl">
+          <input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}">
+          <div class="cv-fil" role="group" aria-label="Mostrar">${fb('', 'Todas', todas.length)}${fb('com', 'Com treinamento', com)}${fb('sem', 'Sem treinamento', todas.length - com)}</div>
+        </div>
+        <div id="t-cidades" class="cv-grupos">${TABELAS.cidades()}</div>
+      </div>`;
   };
 
   /* Uso: conversão, ritmo, tempo, recursos, saídas, horários e aparelhos */
@@ -2073,7 +2024,8 @@
     if (ds) { st.status = ''; st.pag.lojas = 1; const h = '#lojas:' + ds.dataset.status; if (location.hash === h) render(); else location.hash = h; return; }
     const cl = e.target.closest('[data-cidlojas]');
     if (cl) { st.filtros.cidade = cl.dataset.cidlojas; st.pag = {}; st.status = ''; location.hash = cl.dataset.aba ? '#lojas:' + cl.dataset.aba : '#lojas:todas'; return; }
-    if (e.target.closest('[data-copiarsem]')) { const ok = await copiarTexto(textoSemLojas()); aviso(ok ? 'Lista de cidades copiada' : 'O navegador não deixou copiar. Selecione a lista e copie.'); return; }
+    const fc = e.target.closest('[data-fcid]');
+    if (fc) { st.fCid = fc.dataset.fcid; document.querySelectorAll('[data-fcid]').forEach((x) => x.classList.toggle('on', x === fc)); redesenhar('cidades'); return; }
     const vw = e.target.closest('[data-vista]');
     if (vw) { vistaLoja = vw.dataset.vista; try { localStorage.setItem(K_VISTA, vistaLoja); } catch (err) { /* */ } document.querySelectorAll('[data-vista]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vista === vistaLoja))); const lg = document.querySelector('.lj-leg'); if (lg) lg.classList.toggle('so-cel', vistaLoja === 'lista'); desenharLojas(); return; }
     const pm = e.target.closest('[data-pmenu]');

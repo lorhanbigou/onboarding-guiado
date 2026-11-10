@@ -600,22 +600,29 @@
   border: 1px solid #303633;
   background: #1b2520;
 }
-:root[data-tema="escuro"] .cz-a {
-  border: 1px solid #482a22;
-  background: linear-gradient(180deg, #28130d, #1b2520);
+:root[data-tema="escuro"] .cv-bar {
+  background: #29302b;
 }
-:root[data-tema="escuro"] .cz-cob {
-  background: #262c27;
+:root[data-tema="escuro"] .cv-leg i {
+  background: #35493f;
 }
-:root[data-tema="escuro"] .cz-d.ok > svg {
+:root[data-tema="escuro"] .cv-fil {
+  background: #252c28;
+}
+:root[data-tema="escuro"] .cv-fil button.on {
   background: #1b2520;
 }
-:root[data-tema="escuro"] .cz-d.am > svg {
-  background: #1b2520;
+:root[data-tema="escuro"] .cv-c {
+  border: 1px solid #293931;
+  background: #151917;
 }
-:root[data-tema="escuro"] .cz-c {
-  background: #1b2520;
+:root[data-tema="escuro"] .cv-dot {
+  background: #2b3c33;
 }
-:root[data-tema="escuro"] .cz-f i {
-  background: #262c27;
+:root[data-tema="escuro"] .cv-c.on {
+  border-color: #324e3f;
+  background: linear-gradient(180deg, #101b15, #1f3529);
+}
+:root[data-tema="escuro"] .cv-c em {
+  background: #1b2520;
 }
