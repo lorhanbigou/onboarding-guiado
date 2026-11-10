@@ -58,14 +58,8 @@
 :root[data-tema="escuro"] .ac-ic.critico {
   background: #443717;
 }
-:root[data-tema="escuro"] .ac-ic.critico svg {
-  stroke: #edc780;
-}
 :root[data-tema="escuro"] .ac-ic.alerta {
   background: #0d131b;
-}
-:root[data-tema="escuro"] .ac-ic.alerta svg {
-  stroke: #72a5e4;
 }
 :root[data-tema="escuro"] .pd-c-n {
   background: #1d0b0b;
@@ -276,9 +270,6 @@
   border-color: #324e3f;
   background: #122017;
 }
-:root[data-tema="escuro"] .ic-st svg {
-  stroke: #72a5e4;
-}
 :root[data-tema="escuro"] .erro-pg {
   border-color: #553325;
   background: #29180e;
@@ -307,9 +298,6 @@
 :root[data-tema="escuro"] .kpi.hl .kpi-ic {
   background: #1b2520;
 }
-:root[data-tema="escuro"] .kpi.am .kpi-ic svg {
-  stroke: #ebb271;
-}
 :root[data-tema="escuro"] .sd-b {
   background: linear-gradient(160deg, #1d3327, #243e2e);
 }
@@ -331,9 +319,6 @@
 :root[data-tema="escuro"] .ac-i:hover,
 :root[data-tema="escuro"] .ac-i:focus-visible {
   box-shadow: 0 6px 18px -10px rgba(16,40,24,.35), 0 0 0 1px #304338;
-}
-:root[data-tema="escuro"] .ac-ic.am svg {
-  stroke: #ebb271;
 }
 @media (min-width: 1400px) {
 :root[data-tema="escuro"] .card.ac-card > .ac-deco {
@@ -514,9 +499,6 @@
 :root[data-tema="escuro"] .lj-c.s-semcert .lj-mt {
   background: #3b3014;
 }
-:root[data-tema="escuro"] .lj-c.s-semcert .lj-mt svg {
-  stroke: #ebb271;
-}
 :root[data-tema="escuro"] .lj-c.s-certificada .lj-mt {
   background: #1e2f25;
 }
@@ -617,4 +599,44 @@
 :root[data-tema="escuro"] .fx-rs-t {
   border: 1px solid #303633;
   background: #1b2520;
+}
+:root[data-tema="escuro"] .mp-wrap {
+  background: radial-gradient(120% 90% at 30% 20%, #131916 0, #28302c 100%);
+}
+:root[data-tema="escuro"] .pin:hover .pin-v {
+  fill: #96a39c;
+}
+:root[data-tema="escuro"] .pin.vazia.sel .pin-anel {
+  stroke: #96a39c;
+}
+:root[data-tema="escuro"] .sem-on .pin.vazia .pin-v {
+  fill: #8d97a5;
+}
+:root[data-tema="escuro"] .mp-ctl {
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .mp-ctl button {
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .mp-ctl2 {
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .mp-leg {
+  background: rgba(27,37,32,.92);
+}
+:root[data-tema="escuro"] .cz-chip {
+  border: 1px solid #303633;
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .cz-x {
+  background: #1b2520;
+}
+:root[data-tema="escuro"] .cz-n3 em.am {
+  color: #ecaa77;
+}
+:root[data-tema="escuro"] .cz-sem-b {
+  border-color: #324e3f;
+}
+:root[data-tema="escuro"] .cid-tr:hover td {
+  background: #131a16;
 }

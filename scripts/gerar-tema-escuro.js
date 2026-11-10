@@ -71,6 +71,8 @@ function converter(prop, valor) {
   });
   const novo = valor.replace(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g, (c) => {
     // fill/stroke claros (ícone branco sobre botão verde) ficam; fill escuro de texto clareia
+    // Ícones e desenhos (fill/stroke) coloridos mantêm a cor; só a tinta neutra clareia
+    if (!fundo && prop !== 'color' && rgbHsl(hexRgb(c))[1] >= 0.3) return c;
     const r = fundo ? superficie(c) : texto(c);
     if (r && r.toLowerCase() !== c.toLowerCase()) { mudou = true; return r; }
     return c;
