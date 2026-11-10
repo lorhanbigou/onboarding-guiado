@@ -9,7 +9,8 @@
   const tip = document.getElementById('adm-tip');
   const DIA = 864e5;
   const COR = { a: '#2a78d6', b: '#eb6834' };            // validados (dataviz): série 1 e 2
-  const SEQ = ['#f1f6fd', '#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+  const SEQ = ['#eef5f0', '#cfeedb', '#a5dcb9', '#72c592', '#43a96f', '#22894f', '#126b3a', '#0a4f2a'];   // mapa de calor (verde)
+  const LINHA = { a: '#2563eb', b: '#12a150' };   // acessos (azul) e conclusões (verde)
   const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const configurado = !!(CFG.url && CFG.anonKey && CFG.adminEmail);
@@ -132,8 +133,47 @@
     lampada: sv('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>'),
     lupa: sv('<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>'),
     pulso: sv('<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>'),
+    clique: sv('<path d="M9 3.5v3M4.2 5.2l2.1 2.1M3 10h3M12 10l8 3.3-3.4 1.4 3.2 3.2-1.9 1.9-3.2-3.2-1.4 3.4z"/>'),
+    aparelho: sv('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'),
+    feedback: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/><path d="M12 7.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/>'),
     alvo: sv('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>'),
   };
+  // Alvo com flecha (ilustração do "O que fazer agora?"): disco inclinado com volume, flecha cravada no centro
+  const ALVO3D = `<svg class="alvo3d" viewBox="0 0 240 280" role="presentation" focusable="false">
+    <defs>
+      <radialGradient id="a3-v" cx="34%" cy="28%" r="80%"><stop offset="0" stop-color="#9be86f"/><stop offset=".45" stop-color="#43c447"/><stop offset="1" stop-color="#17892e"/></radialGradient>
+      <radialGradient id="a3-b" cx="34%" cy="28%" r="80%"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f3f8f3"/><stop offset="1" stop-color="#d9e8db"/></radialGradient>
+      <linearGradient id="a3-borda" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#1f9a35"/><stop offset="1" stop-color="#0e6424"/></linearGradient>
+      <linearGradient id="a3-haste" x1="0" x2="1"><stop offset="0" stop-color="#1c8a31"/><stop offset=".5" stop-color="#3fbf45"/><stop offset="1" stop-color="#2aa83a"/></linearGradient>
+      <linearGradient id="a3-pena1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7fdc63"/><stop offset="1" stop-color="#2fae3e"/></linearGradient>
+      <linearGradient id="a3-pena2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#2a9f3a"/><stop offset="1" stop-color="#167a2b"/></linearGradient>
+      <filter id="a3-sombra" x="-30%" y="-80%" width="160%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>
+      <filter id="a3-luz" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+    </defs>
+    <ellipse cx="128" cy="258" rx="74" ry="11" fill="#0b5a24" opacity=".22" filter="url(#a3-sombra)"/>
+    <g transform="rotate(-14 112 168)">
+      <ellipse cx="121" cy="172" rx="76" ry="86" fill="url(#a3-borda)"/>
+      <ellipse cx="117" cy="170" rx="76" ry="86" fill="#14772a"/>
+      <ellipse cx="112" cy="168" rx="76" ry="86" fill="url(#a3-v)"/>
+      <ellipse cx="112" cy="168" rx="60" ry="68" fill="url(#a3-b)"/>
+      <ellipse cx="112" cy="168" rx="44" ry="50" fill="url(#a3-v)"/>
+      <ellipse cx="112" cy="168" rx="28" ry="32" fill="url(#a3-b)"/>
+      <ellipse cx="112" cy="168" rx="13" ry="15" fill="url(#a3-v)"/>
+      <path d="M58 118 A76 86 0 0 1 120 82" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".45" filter="url(#a3-luz)"/>
+    </g>
+    <ellipse cx="113" cy="169" rx="5" ry="4" fill="#0c4d1d" opacity=".55"/>
+    <g transform="translate(113 168) rotate(-47)">
+      <rect x="-2" y="-4.5" width="124" height="9" rx="4.5" fill="url(#a3-haste)"/>
+      <rect x="4" y="-2" width="110" height="2.2" rx="1.1" fill="#c4f5ad" opacity=".6"/>
+      <path d="M92 -4 Q110 -8 134 -30 Q138 -14 126 -4 Z" fill="url(#a3-pena1)"/>
+      <path d="M92 4 Q110 8 134 30 Q138 14 126 4 Z" fill="url(#a3-pena2)"/>
+      <path d="M100 -4 Q112 -6 128 -20" fill="none" stroke="#c4f5ad" stroke-width="1.6" stroke-linecap="round" opacity=".7"/>
+      <rect x="118" y="-6" width="10" height="12" rx="4" fill="#146f28"/>
+    </g>
+    <g stroke="#8ee07a" stroke-width="7" stroke-linecap="round" opacity=".9">
+      <path d="M112 62 L102 42"/><path d="M136 52 L136 28"/><path d="M160 58 L172 40"/>
+    </g>
+  </svg>`;
   // Estrela preenchida (avaliações) e as 5 estrelas de uma nota
   const EST = '<span class="est" aria-hidden="true">' + IC.estrela + '</span>';
   const EST_OFF = '<span class="est off" aria-hidden="true">' + IC.estrela + '</span>';
@@ -613,7 +653,44 @@
     };
     L.forEach((s) => { s.tempoTotal = Object.values(s.msMod).reduce((a, b) => a + b, 0); });
 
+    // Uso: conversão, retorno, recursos usados e saídas
+    const visitantes = semCidade ? new Set(acessos.filter((e) => !todosIds.has(e.participante_id)).map((e) => e.participante_id)).size : null;
+    const diasAtivos = new Map();
+    evP.forEach((e) => { if (!diasAtivos.has(e.participante_id)) diasAtivos.set(e.participante_id, new Set()); diasAtivos.get(e.participante_id).add(diaKey(e.t)); });
+    const usouSet = (tipo, cond) => new Set(evP.filter((e) => e.tipo === tipo && (!cond || cond(e))).map((e) => e.participante_id));
+    const C0 = L.filter((s) => s.comecou);
+    const recursos = [
+      ['Narração por voz', 'raio', usouSet('voz', (e) => e.detalhe && e.detalhe.ligada)],
+      ['Ouvir a explicação da tela', 'olho', usouSet('explicacao')],
+      ['Modo livre (explorar as telas)', 'rota', usouSet('explorar')],
+      ['Dicas', 'lampada', usouSet('dica')],
+      ['Revisão "O que você aprendeu"', 'livro', usouSet('revisao'), true],
+      ['Refazer as perguntas que errou', 'atualizar', usouSet('refazer_inicio'), true],
+    ].concat(TREINO.recurso('assistente') ? [['Assistente de dúvidas', 'chat', usouSet('bot_aberto')]] : []).map(([t, ic, set, apos]) => {
+      const com = C0.filter((s) => set.has(s.p.id)), sem = C0.filter((s) => !set.has(s.p.id));
+      return { t, ic, apos: !!apos, usaram: L.filter((s) => set.has(s.p.id)).length, com: com.length, comOk: com.filter((s) => s.concluiu).length, sem: sem.length, semOk: sem.filter((s) => s.concluiu).length };
+    });
+    const faixa = (arr, cortes) => cortes.map(([t, lim], i) => ({ t, n: arr.filter((v) => v >= (i ? cortes[i - 1][1] : -Infinity) && v < lim).length }));
+    const MOT = { fechou: ['Fecharam a página', 'x'], navegou: ['Voltaram ao menu ou trocaram de tela', 'sair'] };
+    const sEv = evP.filter((e) => e.tipo === 'modulo_saida' && e.t >= desde);
+    const porMot = new Map();
+    sEv.forEach((e) => { const k = MOT[(e.detalhe || {}).motivo] ? e.detalhe.motivo : 'outro'; if (!porMot.has(k)) porMot.set(k, []); porMot.get(k).push(e); });
+    const saidas = [...porMot.entries()].map(([k, a]) => ({ t: MOT[k] ? MOT[k][0] : 'Outro motivo', ic: MOT[k] ? MOT[k][1] : 'alerta', n: a.length, ms: mediana(a.map((e) => (e.detalhe || {}).ms_no_passo).filter((x) => x > 0)) })).sort((a, b) => b.n - a.n);
+    const grupo = (fn) => { const m = new Map(); L.forEach((s) => { const k = fn(s), o = m.get(k) || { k, n: 0, com: 0, ok: 0 }; o.n++; if (s.comecou) o.com++; if (s.concluiu) o.ok++; m.set(k, o); }); return [...m.values()].sort((a, b) => b.n - a.n); };
+    const NOME_DISP = { celular: 'Celular', computador: 'Computador', tablet: 'Tablet' };
+
     const uso = {
+      visitantes, recursos, saidas, saidasTot: sEv.length,
+      tempoInicio: mediana(L.filter((s) => s.primeiroIni).map((s) => s.primeiroIni - +new Date(s.p.criado_em)).filter((x) => x >= 0)),
+      voltaram: C0.filter((s) => (diasAtivos.get(s.p.id) || new Set()).size >= 2).length,
+      retomaram: usouSet('sessao_retomada').size,
+      faixaDias: faixa(tempoCal, [['Mesmo dia', DIA], ['1 a 2 dias', 3 * DIA], ['3 a 7 dias', 8 * DIA], ['8 dias ou +', Infinity]]),
+      faixaTela: faixa(tempoAtivo, [['Até 15 min', 15 * 60e3], ['15 a 30 min', 30 * 60e3], ['30 a 60 min', 60 * 60e3], ['Mais de 1 h', Infinity]]),
+      grupos: {
+        dispositivo: grupo((s) => NOME_DISP[s.p.dispositivo] || s.p.dispositivo || 'Desconhecido'),
+        navegador: grupo((s) => s.p.navegador || 'Outro'),
+        idioma: grupo((s) => (s.idioma === 'es' ? 'Español' : 'Português')),
+      },
       celular: parts.filter((p) => p.dispositivo === 'celular').length,
       voz: L.filter((s) => s.voz).length,
       tempoAtivo: mediana(tempoAtivo),
@@ -670,13 +747,13 @@
     return { cls: 'critico', ic: IC.critico, rot: 'Crítico' };
   }
 
-  function anel(taxa) {
+  function anel(taxa, rotulo) {
     const r = 46, c = 2 * Math.PI * r, v = taxa == null ? 0 : Math.max(0, Math.min(1, taxa));
     return `<svg class="anel" viewBox="0 0 120 120" role="img" aria-label="Taxa de conclusão ${Math.round(v * 100)}%">
       <circle cx="60" cy="60" r="${r}" fill="none" stroke="#e6f2ea" stroke-width="11"/>
       <circle cx="60" cy="60" r="${r}" fill="none" stroke="#14a04f" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(c * v).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
       <text x="60" y="62" text-anchor="middle" class="anel-v">${taxa == null ? '—' : Math.round(v * 100) + '%'}</text>
-      <text x="60" y="80" text-anchor="middle" class="anel-r">de conclusão</text>
+      <text x="60" y="80" text-anchor="middle" class="anel-r">${rotulo || 'de conclusão'}</text>
     </svg>`;
   }
 
@@ -735,26 +812,6 @@
   const ROT_NIVEL = { vazio: 'sem respostas', poucos: 'poucos dados', ruim: 'reforçar', medio: 'atenção', bom: 'bem entendido' };
 
   // Assuntos do pior para o melhor; ao abrir, as perguntas e o erro mais comum
-  function assuntosVisual(R) {
-    if (!R.assuntos.length) return '<p class="empty">Ninguém respondeu as perguntas ainda.</p>';
-    return `<div class="as">${R.assuntos.map((t) => {
-      const nv = nivel(t.taxa, t.tot), v = t.taxa == null ? null : Math.round(t.taxa * 100);
-      return `<details class="as-i nv-${nv}">
-        <summary>
-          <span class="as-t"><b>${esc(t.tema)}</b><small>${plural(t.perguntas.length, 'pergunta', 'perguntas')} · ${plural(t.tot, 'resposta', 'respostas')}</small></span>
-          <span class="as-bar"><i style="width:${v == null ? 0 : Math.max(2, v)}%"></i></span>
-          <span class="as-v">${v == null ? '—' : v + '%'}<em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em></span>
-        </summary>
-        <ul class="as-q">${t.perguntas.map((q) => `
-          <li>
-            <div><small>${esc(q.onde)}</small><b>${esc(q.q)}</b>
-              ${q.erroComum ? `<span class="as-err">Erro mais comum: “${esc(q.erroComum.t)}” (${pct(q.erroComum.n, q.tot)})</span>` : ''}            </div>
-            <b class="as-qv">${q.tot ? pct(q.ok, q.tot) : '—'}<small>${plural(q.tot, 'resposta', 'respostas')}</small></b>
-          </li>`).join('')}</ul>
-      </details>`;
-    }).join('')}</div>`;
-  }
-
   // Mapa de calor: sequencial azul, do claro (pouco) ao escuro (muito)
   function graficoCalor(R) {
     const mx = Math.max(1, ...R.calor.flat());
@@ -786,17 +843,17 @@
     const passo = Math.max(1, Math.ceil(S.length / 7));
     const xl = S.map((x, i) => (i % passo === 0 || i === S.length - 1 ? `<text x="${X(i)}" y="${H - 6}" class="ax" text-anchor="${i === 0 ? 'start' : i === S.length - 1 ? 'end' : 'middle'}">${dataBR(x.t)}</text>` : '')).join('');
     return `
-      <div class="legend"><span><i style="background:${COR.a}"></i>Acessos</span><span><i style="background:${COR.b}"></i>Treinamentos concluídos</span></div>
+      <div class="legend"><span><i style="background:${LINHA.a}"></i>Acessos</span><span><i style="background:${LINHA.b}"></i>Treinamentos concluídos</span></div>
       <div class="lc" data-linha='${esc(JSON.stringify(S.map((x) => [x.t, x.acessos, x.conclusoes])))}' data-geo='${JSON.stringify({ W, H, pl, pr, pt, pb, top })}'>
         <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Acessos e conclusões por dia">
-          <defs><linearGradient id="lc-g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${COR.a}" stop-opacity=".16"/><stop offset="1" stop-color="${COR.a}" stop-opacity="0"/></linearGradient></defs>
+          <defs><linearGradient id="lc-g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${LINHA.a}" stop-opacity=".16"/><stop offset="1" stop-color="${LINHA.a}" stop-opacity="0"/></linearGradient></defs>
           ${grid}${xl}
           <path d="${area}" fill="url(#lc-g)"/>
-          <path d="${path('acessos')}" fill="none" stroke="${COR.a}" stroke-width="2" stroke-linejoin="round"/>
-          <path d="${path('conclusoes')}" fill="none" stroke="${COR.b}" stroke-width="2" stroke-linejoin="round"/>
+          <path d="${path('acessos')}" fill="none" stroke="${LINHA.a}" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="${path('conclusoes')}" fill="none" stroke="${LINHA.b}" stroke-width="2.5" stroke-linejoin="round"/>
           <line class="lc-x" x1="0" x2="0" y1="${pt}" y2="${H - pb}" visibility="hidden"/>
-          <circle class="lc-a" r="4" fill="${COR.a}" stroke="#fff" stroke-width="2" visibility="hidden"/>
-          <circle class="lc-b" r="4" fill="${COR.b}" stroke="#fff" stroke-width="2" visibility="hidden"/>
+          <circle class="lc-a" r="4" fill="${LINHA.a}" stroke="#fff" stroke-width="2" visibility="hidden"/>
+          <circle class="lc-b" r="4" fill="${LINHA.b}" stroke="#fff" stroke-width="2" visibility="hidden"/>
           <rect class="lc-hit" x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}" fill="transparent"/>
         </svg>
       </div>`;
@@ -818,7 +875,7 @@
       <main class="lg">
         <form class="lg-card" id="lg-form">
           <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
-          <h1>Painel do Treinamento</h1>
+          <h1>Painel de Treinamento Financeiro</h1>
           <p>Acesso restrito à equipe Bigou.</p>
           <label><span>Senha</span><input id="lg-senha" type="password" autocomplete="current-password" required></label>
           ${msg ? `<p class="lg-err" role="alert">${esc(msg)}</p>` : ''}
@@ -871,7 +928,7 @@
       <main class="lg">
         <div class="lg-card">
           <img src="../assets/bigou-logo.png" alt="Bigou" width="56" height="56">
-          <h1>Painel do Treinamento</h1>
+          <h1>Painel de Treinamento Financeiro</h1>
           <p class="lg-err" role="alert">O painel não está configurado: faltam a URL e a chave do Supabase (veja "Ambientes" no README).</p>
         </div>
       </main>`;
@@ -879,7 +936,7 @@
 
   function telaCarregando() {
     root.innerHTML = `
-      <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel do Treinamento</b><small>Carregando dados…</small></div></div></div>
+      <div class="hd"><div class="hd-l"><img src="../assets/bigou-logo.png" alt="" width="32" height="32"><div><b>Painel de Treinamento Financeiro</b><small>Carregando dados…</small></div></div></div>
       <main class="pg" aria-busy="true">
         <div class="kpis k4">${'<div class="sk sk-kpi"></div>'.repeat(4)}</div>
         <div class="sk sk-card"></div>
@@ -918,38 +975,31 @@
         `);
   }
 
-  // Avaliação do treinamento: feita antes do certificado
-  function avaliacaoCard(AV) {
-    if (!AV.n) return card('Avaliação do treinamento', 'Feita ao concluir, antes do certificado.', '<p class="empty">Nenhuma avaliação ainda.</p>');
-    const mx = Math.max(1, ...AV.dist.map((d) => d.n));
-    return card('Avaliação do treinamento', `${n(AV.n)} ${AV.n === 1 ? 'loja avaliou' : 'lojas avaliaram'} ao concluir, antes do certificado.`, `
-      <div class="avl">
-        <div class="avl-num">
-          <div><b>${pct(AV.ajudou, AV.n)}</b><small>disseram que o treinamento ajudou</small></div>
-          <div><b>${AV.media.toFixed(1).replace('.', ',')} ${EST}</b><small>média das estrelas</small></div>
-        </div>
-        <div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span class="avl-e">${d.e} ${EST}</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f2b51d"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>
-      </div>
-      ${AV.comentarios.length ? `<h4 class="avl-h">Comentários</h4><ul class="dv">${AV.comentarios.slice(0, 8).map((a) => `<li><span>“${esc(a.comentario)}”<small class="avl-q">${esc(a.loja)} · ${a.estrelas} de 5 estrelas · ${a.ajudou ? 'ajudou' : 'não ajudou'}</small></span><small>${relativo(a.t)}</small></li>`).join('')}</ul>` : ''}`);
-  }
+
 
   /* ------------------------------ Páginas da sidebar ------------------------------ */
   const PAGINAS = [
     { id: 'visao', t: 'Visão geral', ic: 'casa', d: (ctx) => `Lojas que se cadastraram ${ctx.periodoTxt}${ctx.f.cidade ? ` em ${esc(ctx.f.cidade)}` : ''}.` },
     { id: 'lojas', t: 'Lojas', ic: 'loja', d: () => 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.' },
-    { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, módulo por módulo, e onde ficam pelo caminho.' },
-    { id: 'passos', t: 'Passo a passo', ic: 'lista', d: () => 'Cada passo de cada módulo: quantas lojas viram, onde saem, o que pulam e quanto tempo levam.' },
-    { id: 'assuntos', t: 'Assuntos', ic: 'livro', d: () => `Acerto de primeira por assunto, nas perguntas atuais. Com menos de ${POUCOS} respostas, mostramos "poucos dados".` },
+    { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, onde saem em cada passo e quais assuntos precisam de reforço.' },
     { id: 'perguntas', t: 'Perguntas', ic: 'pergunta', d: () => 'As 19 perguntas com a distribuição completa das respostas. Toque em Editar para mudar a pergunta e as alternativas.' },
   ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
-    { id: 'anotacoes', t: 'Anotações', ic: 'nota', d: () => 'Tudo o que a equipe registrou sobre as dúvidas dos parceiros.' },
-    { id: 'avaliacoes', t: 'Avaliações', ic: 'estrela', d: () => 'O que as lojas acharam do treinamento, respondido antes do certificado.' },
+    { id: 'feedback', t: 'Feedback', ic: 'feedback', d: () => 'O que as lojas acharam do treinamento e o que a equipe registrou, num lugar só.' },
     { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Desempenho e contatos pendentes por cidade.' },
-    { id: 'uso', t: 'Uso', ic: 'grafico', d: () => 'Quando e como o treinamento é usado.' },
+    { id: 'uso', t: 'Uso', ic: 'grafico', d: (ctx) => `Como o treinamento é usado ${ctx.periodoTxt}: conversão, ritmo, recursos e aparelhos.` },
     { id: 'exportar', t: 'Exportar', ic: 'baixar', d: () => 'Baixe os dados completos em CSV. Eles são a base para o plano de melhorias.' },
   ]);
-  const SB_SEP = ['anotacoes', 'exportar'];   // divisórias do menu: análises · registros · exportar
-  const paginaAtual = () => { const h = location.hash.replace('#', ''); return PAGINAS.some((p) => p.id === h) ? h : 'visao'; };
+  const SB_SEP = ['feedback', 'exportar'];   // divisórias do menu: análises · registros · exportar
+  // Páginas com abas: a aba vai no endereço (#jornada:passos). Endereços antigos levam à aba certa.
+  const ABAS = { jornada: ['geral', 'passos', 'assuntos'], feedback: ['tudo', 'aval', 'notas'] };
+  const ANTIGAS = { passos: 'jornada:passos', assuntos: 'jornada:assuntos', anotacoes: 'feedback:notas', avaliacoes: 'feedback:aval' };
+  function rota() {
+    const h = location.hash.replace('#', '');
+    const [pg, aba] = (ANTIGAS[h] || h).split(':');
+    if (!PAGINAS.some((p) => p.id === pg)) return { pg: 'visao', aba: null };
+    return { pg, aba: ABAS[pg] ? (ABAS[pg].includes(aba) ? aba : ABAS[pg][0]) : null };
+  }
+  const paginaAtual = () => rota().pg;
 
   /* ------------------------------ Paginação (25 por página) ------------------------------ */
   const POR_PAG = 25;
@@ -981,6 +1031,7 @@
   function novidades(pg, ids) {
     let visto = {};
     try { visto = JSON.parse(localStorage.getItem(K_VISTO)) || {}; } catch (e) { /* sem armazenamento */ }
+    if (!visto.feedback && (visto.anotacoes || visto.avaliacoes)) visto.feedback = (visto.anotacoes || []).concat(visto.avaliacoes || []);
     if (ids[pg]) {
       visto[pg] = [...new Set((visto[pg] || []).concat(ids[pg]))];
       try { localStorage.setItem(K_VISTO, JSON.stringify(visto)); } catch (e) { /* */ }
@@ -991,6 +1042,8 @@
   }
 
   function render() {
+    const h = location.hash.replace('#', '');
+    if (ANTIGAS[h]) { try { history.replaceState(null, '', location.href.split('#')[0] + '#' + ANTIGAS[h]); } catch (e) { /* segue com o endereço antigo: rota() já entende */ } }
     const f = st.filtros;
     const R = (st.R = calcular(st.dados, f));
     const P = (st.P = f.dias ? calcular(st.dados, Object.assign({}, f, { ate: Date.now() - f.dias * DIA })) : null);
@@ -998,8 +1051,7 @@
     const ctx = { R, P, f, periodoTxt: f.dias ? `nos últimos ${f.dias} dias` : 'desde o início' };
     const cont = novidades(pg, {
       lojas: R.lojas.filter((s) => s.contato).map((s) => `${s.p.id}|${s.sit}|${s.ultimo}`),   // volta a avisar se a loja precisar de contato de novo
-      anotacoes: (st.dados.anotacoes || []).filter((a) => R.lojas.some((s) => s.p.id === a.participante_id)).map((a) => a.id),
-      avaliacoes: R.lojas.filter((s) => s.aval).map((s) => s.p.id),
+      feedback: (st.dados.anotacoes || []).filter((a) => R.lojas.some((s) => s.p.id === a.participante_id)).map((a) => a.id).concat(R.lojas.filter((s) => s.aval).map((s) => s.p.id)),
     });
     const cidadesOpc = [...new Set(st.dados.participantes.map((p) => p.cidade))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const atual = PAGINAS.find((p) => p.id === pg);
@@ -1007,7 +1059,7 @@
     root.innerHTML = `
       <div class="painel ${st.menu ? 'menu-on' : ''}">
         <aside class="sb" aria-label="Menu do painel">
-          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><div><b>Painel do Treinamento</b><small>Treinamento Financeiro</small></div></div>
+          <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><b>Painel de Treinamento Financeiro</b></div>
           <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
             <button class="sb-a" data-a="atualizar">${IC.atualizar}<span>Atualizar dados</span></button>
@@ -1062,7 +1114,7 @@
     // [ícone, cor, página, título, detalhe]
     const acoes = [
       SI.contato && ['parado', 'vm', 'lojas', `${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato`, `${[pend('parada') && `${n(pend('parada'))} paradas há ${PARADA_DIAS}+ dias`, pend('naocomecou') && `${n(pend('naocomecou'))} não começaram`, pend('semcert') && `${n(pend('semcert'))} concluíram sem certificado`].filter(Boolean).join(', ')}.`],
-      pior && ['livro', 'vd', 'assuntos', `Reforçar no atendimento: ${esc(pior.tema)}`, `Só ${pct(pior.ok, pior.tot)} acertam de primeira.`],
+      pior && ['livro', 'vd', 'jornada:assuntos', `Reforçar no atendimento: ${esc(pior.tema)}`, `Só ${pct(pior.ok, pior.tot)} acertam de primeira.`],
       CHAT && R.duvidas.sem + R.duvidas.fora >= 5 && ['chat', 'am', 'duvidas', `${n(R.duvidas.sem + R.duvidas.fora)} dúvidas no chat sem resposta`, 'Veja o que o assistente não soube responder.'],
       pa && ['rota', 'az', 'jornada', `Mais lojas param no Módulo ${pa.m}`, `${esc(tituloMod(pa.m))}: ${plural(pa.pararam, 'loja', 'lojas')}.`],
     ].filter(Boolean);
@@ -1089,39 +1141,98 @@
             ${ant}
           </div>
         </div>`, '', 'pulso')}
-        ${card('O que fazer agora?', '', acoes.length ? `<ul class="ac">${acoes.map(([i, c, s, t, d]) => `<li><a href="#${s}" class="ac-i"><span class="ac-ic ${c}">${IC[i]}</span><span class="ac-t"><b>${t}</b><small>${d}</small></span><span class="ac-go">${IC.chevron}</span></a></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nada urgente por aqui.</p>`, 'ac-card', 'lampada')}
-      </div>
-      ${card('Jornada de aprendizado', 'Até onde as lojas chegam. Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R), '', 'grafico')}`;
+        ${card('O que fazer agora?', '', (acoes.length ? `<ul class="ac">${acoes.map(([i, c, s, t, d]) => `<li><a href="#${s}" class="ac-i"><span class="ac-ic ${c}">${IC[i]}</span><span class="ac-t"><b>${t}</b><small>${d}</small></span><span class="ac-go">${IC.chevron}</span></a></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nada urgente por aqui.</p>`) + `<div class="ac-deco" aria-hidden="true">${ALVO3D}</div>`, 'ac-card', 'lampada')}
+      </div>`;
   };
 
-  /* Jornada */
-  PG.jornada = ({ R }) => `
-    ${card('Até onde chegam', '', jornadaVisual(R))}
-    ${card('Por módulo', 'Os 10 módulos, na ordem do treinamento.', `<div class="tb-wrap"><table class="tb"><thead><tr><th>Módulo</th><th class="num">Iniciaram</th><th class="num">Concluíram</th><th>Conclusão</th><th class="num">Pararam aqui</th><th class="num">Tempo mediano</th><th>Passo onde mais saem</th></tr></thead>
-      <tbody>${R.modulos.map((x) => `<tr><td><b>M${x.m}</b> ${esc(x.titulo)}</td><td class="num">${n(x.ini)}</td><td class="num">${n(x.fim)}</td>
-        <td>${x.taxa == null ? '—' : `<span class="inl"><i style="width:${Math.round(x.taxa * 100)}%"></i></span>${pct(x.fim, x.ini)}`}</td>
-        <td class="num">${x.pararam ? `<b class="ct">${n(x.pararam)}</b>` : '<span class="mut">0</span>'}</td><td class="num">${dur(x.tempo)}</td>
-        <td>${x.passoSai ? `${esc(tituloPasso(x.m, x.passoSai.p))} <small class="mut">(${n(x.passoSai.c)})</small>` : '<span class="mut">—</span>'}</td></tr>`).join('')}</tbody></table></div>`)}
-    ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R))}`;
+  /* Jornada: abas Visão geral · Passo a passo · Assuntos */
+  const tabs = (base, itens, atual) => `<nav class="tabs" aria-label="Seções">${itens.map(([id, t, ic, c]) => `<a href="#${base}:${id}" class="${id === atual ? 'on' : ''}" ${id === atual ? 'aria-current="page"' : ''}>${IC[ic]}<span>${t}</span>${c != null ? `<em>${n(c)}</em>` : ''}</a>`).join('')}</nav>`;
+  const JORNADA = {};
+  PG.jornada = (ctx) => {
+    const aba = rota().aba;
+    return `${tabs('jornada', [['geral', 'Visão geral', 'rota'], ['passos', 'Passo a passo', 'lista'], ['assuntos', 'Assuntos', 'livro']], aba)}${JORNADA[aba](ctx)}`;
+  };
 
-  /* Passo a passo */
+  // Os 10 módulos em linhas: conclusão, quem parou e onde mais saem
+  function modulosVisual(R) {
+    return `<ul class="md">${R.modulos.map((x) => {
+      const v = x.taxa == null ? null : Math.round(x.taxa * 100);
+      return `<li class="md-i">
+        <span class="md-n">M${x.m}</span>
+        <div class="md-t"><b>${esc(x.titulo)}</b><small>${n(x.ini)} iniciaram · ${n(x.fim)} concluíram</small></div>
+        <div class="md-bar"><span class="md-tr"><i style="width:${v || 0}%"></i></span><b>${v == null ? '—' : v + '%'}</b></div>
+        <div class="md-x">${x.pararam ? `<span class="badge bi bad">${IC.parado}${plural(x.pararam, 'parou aqui', 'pararam aqui')}</span>` : '<span class="badge bi ok">' + IC.ok + 'Ninguém parado</span>'}${x.passoSai ? `<small>Saem mais em: ${esc(tituloPasso(x.m, x.passoSai.p))}</small>` : ''}</div>
+        <span class="tp">${IC.tempo}${dur(x.tempo)}</span>
+        <a class="go" href="#jornada:passos" data-modulo="${x.m}" aria-label="Ver os passos do Módulo ${x.m}">${IC.seta}</a>
+      </li>`;
+    }).join('')}</ul>`;
+  }
+
+  JORNADA.geral = ({ R }) => `
+    ${card('Até onde chegam', 'Passe o mouse ou toque em cada etapa para ver os detalhes.', jornadaVisual(R), '', 'grafico')}
+    ${card('Onde param', 'Módulos em que lojas em andamento pararam e ainda não voltaram.', paradasVisual(R), '', 'alerta')}
+    ${card('Por módulo', 'Os 10 módulos, na ordem do treinamento. Toque na seta para ver o passo a passo.', modulosVisual(R), '', 'livro')}`;
+
+  // Passo a passo
+  const TIPO_IC = { Pergunta: 'pergunta', Clique: 'clique', Leitura: 'livro' };
   TABELAS.passos = () => {
     const rows = st.R.passos.filter((x) => !st.fModulo || x.m === +st.fModulo);
-    const mxSai = Math.max(1, ...rows.map((x) => x.sairam));
+    const mxSai = Math.max(1, ...rows.map((x) => x.sairam)), mxVi = Math.max(1, ...rows.map((x) => x.viram));
     const { itens, ctrl } = paginar('passos', rows);
-    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Módulo</th><th>Passo</th><th>Tipo</th><th class="num">Viram</th><th>Saíram aqui</th><th class="num">Pularam</th><th class="num">Tempo mediano</th></tr></thead>
-      <tbody>${itens.map((x) => `<tr><td>M${x.m}</td><td><small class="mut">${x.p}.</small> ${esc(x.titulo)}</td><td><span class="tag ${x.tipo === 'Pergunta' ? '' : 'cinza'}">${x.tipo}</span></td>
-        <td class="num">${n(x.viram)}</td>
-        <td>${x.sairam ? `<span class="inl o"><i style="width:${(x.sairam / mxSai) * 100}%"></i></span><b class="ct">${n(x.sairam)}</b> <small class="mut">${pct(x.sairam, x.viram)}</small>` : '<span class="mut">0</span>'}</td>
-        <td class="num">${x.pulos ? n(x.pulos) : '<span class="mut">0</span>'}</td>
-        <td class="num">${x.amostra >= 3 ? dur(x.tempo) : '<span class="mut">poucos dados</span>'}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhum passo com esse filtro.</p>';
+    return itens.length ? `<div class="tb-wrap"><table class="tb tb-passos"><thead><tr><th>Passo</th><th>Tipo</th><th>Viram</th><th>Saíram aqui</th><th class="num">Pularam</th><th class="num">Tempo mediano</th></tr></thead>
+      <tbody>${itens.map((x) => `<tr class="${x.sairam && x.sairam === mxSai ? 'is-top' : ''}">
+        <td><span class="ps-n">M${x.m}·${x.p}</span> ${esc(x.titulo)}</td>
+        <td><span class="ps-tipo">${IC[TIPO_IC[x.tipo]] || ''}${x.tipo}</span></td>
+        <td><span class="ps-vi"><span class="md-tr"><i style="width:${(x.viram / mxVi) * 100}%"></i></span>${n(x.viram)}</span></td>
+        <td>${x.sairam ? `<span class="badge bi bad">${IC.sair}${n(x.sairam)} · ${pct(x.sairam, x.viram)}</span>` : '<span class="mut">0</span>'}</td>
+        <td class="num">${x.pulos ? `<span class="badge warn">${n(x.pulos)}</span>` : '<span class="mut">0</span>'}</td>
+        <td class="num">${x.amostra >= 3 ? `<span class="tp">${dur(x.tempo)}${IC.tempo}</span>` : '<span class="mut">poucos dados</span>'}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhum passo com esse filtro.</p>';
   };
-  PG.passos = () => card('', '', `
-    <div class="tb-top"><label class="sel"><span>Módulo</span><select data-loc="fModulo"><option value="">Todos os módulos</option>${MODS.map((m) => `<option value="${m.n}" ${+st.fModulo === m.n ? 'selected' : ''}>M${m.n} · ${esc(m.titulo)}</option>`).join('')}</select></label></div>
-    <div id="t-passos">${TABELAS.passos()}</div>`);
+  // Retenção dentro de um módulo: quantas lojas viram cada passo
+  function retencao(m) {
+    const rows = st.R.passos.filter((x) => x.m === m);
+    const mx = Math.max(1, ...rows.map((x) => x.viram));
+    return `<div class="rt">${rows.map((x) => `<div class="rt-c ${x.sairam ? 'sai' : ''}" ${tipAttr(`<b>Passo ${x.p}: ${esc(x.titulo)}</b><br>${plural(x.viram, 'loja viu', 'lojas viram')}${x.sairam ? `<br>${plural(x.sairam, 'saiu', 'saíram')} aqui` : ''}`)}>
+      <b>${n(x.viram)}</b><span class="rt-b"><i style="height:${Math.max(3, (x.viram / mx) * 100)}%"></i></span><small>${x.p}</small></div>`).join('')}</div>`;
+  }
+  JORNADA.passos = () => {
+    const m = +st.fModulo || 0;
+    return `
+      <div class="chips" role="group" aria-label="Módulo"><button type="button" class="${m ? '' : 'on'}" data-fmod="">Todos</button>${MODS.map((x) => `<button type="button" class="${m === x.n ? 'on' : ''}" data-fmod="${x.n}" title="${esc(x.titulo)}">M${x.n}</button>`).join('')}</div>
+      ${m ? card(`Retenção no Módulo ${m}`, `${esc(tituloMod(m))}. Quantas lojas viram cada passo; em vermelho, onde alguém saiu.`, retencao(m), '', 'grafico') : ''}
+      ${card(m ? `Passos do Módulo ${m}` : 'Todos os passos', 'Quantas lojas viram cada passo, onde saem, o que pulam e quanto tempo levam. A linha destacada é onde mais saem.', `<div id="t-passos">${TABELAS.passos()}</div>`, '', 'lista')}`;
+  };
 
-  /* Assuntos */
-  PG.assuntos = ({ R }) => card('', '', assuntosVisual(R));
+  // Assuntos: acerto de primeira por tema
+  JORNADA.assuntos = ({ R }) => {
+    if (!R.assuntos.length) return card('', '', '<p class="empty">Ninguém respondeu as perguntas ainda.</p>');
+    const ok = R.assuntos.reduce((t, x) => t + x.ok, 0), tot = R.assuntos.reduce((t, x) => t + x.tot, 0);
+    const reforcar = R.assuntos.filter((t) => nivel(t.taxa, t.tot) === 'ruim').length;
+    const pior = R.perguntas.filter((q) => q.tot >= POUCOS).sort((a, b) => a.taxa - b.taxa)[0];
+    return `
+      <div class="kpis k3">
+        ${kpi('ok', 'Acerto de primeira', pct(ok, tot), `${plural(tot, 'resposta', 'respostas')} nas perguntas atuais`, '', 'Respostas certas na primeira tentativa, somando todos os assuntos.')}
+        ${kpi('alerta', 'Assuntos para reforçar', n(reforcar), `de ${plural(R.assuntos.length, 'assunto', 'assuntos')}, com acerto abaixo de 60%`, '', `Só conta assunto com ${POUCOS} respostas ou mais.`, reforcar ? 'vm' : '')}
+        ${kpi('pergunta', 'Pergunta mais errada', pior ? pct(pior.ok, pior.tot) : '—', pior ? esc(pior.q.length > 70 ? pior.q.slice(0, 68) + '…' : pior.q) : 'Ainda com poucas respostas', '', 'Pergunta com o menor acerto de primeira entre as que têm respostas suficientes.', pior ? 'am' : '', '#perguntas')}
+      </div>
+      <div class="asg">${R.assuntos.map((t) => {
+        const nv = nivel(t.taxa, t.tot);
+        return `<details class="as-c nv-${nv}">
+          <summary>
+            ${anel(t.tot ? t.taxa : null, 'de acerto')}
+            <span class="as-ct"><b>${esc(t.tema)}</b><em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em><small>${plural(t.perguntas.length, 'pergunta', 'perguntas')} · ${plural(t.tot, 'resposta', 'respostas')}</small></span>
+            <span class="as-ch">${IC.abaixo}</span>
+          </summary>
+          <ul class="as-q">${t.perguntas.map((q) => `
+            <li>
+              <div><small>${esc(q.onde)}</small><b>${esc(q.q)}</b>
+                ${q.erroComum ? `<span class="as-err">Erro mais comum: “${esc(q.erroComum.t)}” (${pct(q.erroComum.n, q.tot)})</span>` : ''}</div>
+              <b class="as-qv">${q.tot ? pct(q.ok, q.tot) : '—'}<small>${plural(q.tot, 'resposta', 'respostas')}</small></b>
+            </li>`).join('')}</ul>
+        </details>`;
+      }).join('')}</div>`;
+  };
+
 
   /* Perguntas: distribuição completa por alternativa */
   PG.perguntas = ({ R }) => {
@@ -1195,51 +1306,60 @@
       ${SI.contato && st.status !== 'contato' ? `<div class="dica"><span class="dica-ic">${IC.lampada}</span><p><b>Dica:</b> ${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato. Depois de falar com a loja, registre em <b>Contato feito</b>.</p><button type="button" class="btn" data-status="contato">Ver só essas${IC.seta}</button></div>` : ''}`;
   };
 
-  /* Anotações */
-  TABELAS.anotacoes = () => {
-    const lojaDe = new Map(st.R.lojas.map((s) => [s.p.id, s]));
+  /* Feedback: avaliações das lojas + anotações da equipe, num feed só */
+  TABELAS.feedback = () => {
+    const aba = rota().aba, lojaDe = new Map(st.R.lojas.map((s) => [s.p.id, s]));
     const b = st.buscaNota.trim().toLowerCase();
-    const rows = (st.dados.anotacoes || []).filter((a) => lojaDe.has(a.participante_id))
-      .filter((a) => (!st.fNotaTema || a.assunto === st.fNotaTema) && (!st.fNotaAutor || a.autor === st.fNotaAutor) && (!b || (a.texto + ' ' + lojaDe.get(a.participante_id).p.loja).toLowerCase().includes(b)))
-      .sort((x, y) => +new Date(y.criado_em) - +new Date(x.criado_em));
-    const { itens, ctrl } = paginar('anotacoes', rows);
-    return itens.length ? `<ul class="nt-l">${itens.map((a) => { const s = lojaDe.get(a.participante_id); return `
-      <li class="nt-i">
-        <div class="nt-h"><button class="lnk loja" data-ficha="${esc(s.p.id)}">${esc(s.p.loja)}</button><small>${esc(s.p.cidade)}</small><span class="tag">${esc(a.assunto || 'Outro')}</span></div>
-        <p>${esc(a.texto)}</p>
-        <div class="nt-f"><small>${esc(a.autor || 'Equipe')} · ${dataHoraBR(+new Date(a.criado_em))}${a.atualizado_em ? ' · editada' : ''}</small>
-          <span><button class="lnk" data-ficha="${esc(s.p.id)}" data-editar="${esc(a.id)}">Editar</button><button class="lnk del" data-excluir="${esc(a.id)}">Excluir</button></span></div>
-      </li>`; }).join('')}</ul>${ctrl}` : `<p class="empty">${(st.dados.anotacoes || []).length ? 'Nenhuma anotação com esse filtro.' : 'Nenhuma anotação ainda. Abra uma loja em "Lojas" para anotar.'}</p>`;
+    let lista = [];
+    if (aba !== 'notas') st.R.lojas.filter((s) => s.aval && (aba !== 'aval' || !st.fAvalCom || s.aval.comentario)).forEach((s) => lista.push({ tipo: 'aval', t: s.aval.t, s, txt: s.aval.comentario || '' }));
+    if (aba !== 'aval') (st.dados.anotacoes || []).filter((a) => lojaDe.has(a.participante_id) && (aba !== 'notas' || ((!st.fNotaTema || a.assunto === st.fNotaTema) && (!st.fNotaAutor || a.autor === st.fNotaAutor))))
+      .forEach((a) => lista.push({ tipo: 'nota', t: +new Date(a.criado_em), s: lojaDe.get(a.participante_id), a, txt: a.texto || '' }));
+    if (b) lista = lista.filter((x) => (x.txt + ' ' + x.s.p.loja + ' ' + x.s.p.cidade).toLowerCase().includes(b));
+    lista.sort((x, y) => y.t - x.t);
+    const { itens, ctrl } = paginar('feedback', lista);
+    if (!itens.length) return `<p class="empty">${b || st.fNotaTema || st.fNotaAutor || st.fAvalCom ? 'Nada encontrado com esses filtros.' : aba === 'notas' ? 'Nenhuma anotação ainda. Abra uma loja em "Lojas" para anotar.' : aba === 'aval' ? 'Nenhuma avaliação ainda.' : 'Nenhuma avaliação ou anotação ainda.'}</p>`;
+    return `<ul class="fb">${itens.map((x) => {
+      const s = x.s, av = x.tipo === 'aval';
+      return `<li class="fb-i ${x.tipo}">
+        <span class="fb-ic">${av ? EST : IC.nota}</span>
+        <div class="fb-c">
+          <div class="fb-h"><button type="button" class="lnk loja" data-ficha="${esc(s.p.id)}">${esc(s.p.loja)}</button><small>${esc(s.p.cidade)}</small>
+            ${av ? `${estrelas(s.aval.estrelas)}<span class="badge bi ${s.aval.ajudou ? 'ok' : 'bad'}">${s.aval.ajudou ? IC.joinha + 'Ajudou' : IC.naojoinha + 'Não ajudou'}</span>` : `<span class="tag">${esc(x.a.assunto || 'Outro')}</span>`}</div>
+          ${x.txt ? `<p>${av ? '“' + esc(x.txt) + '”' : esc(x.txt)}</p>` : '<p class="mut">Sem comentário.</p>'}
+          <div class="fb-f"><small>${av ? 'Avaliação da loja' : esc(x.a.autor || 'Equipe')} · ${dataHoraBR(x.t)}${!av && x.a.atualizado_em ? ' · editada' : ''}</small>
+            ${av ? '' : `<span><button type="button" class="lnk" data-ficha="${esc(s.p.id)}" data-editar="${esc(x.a.id)}">Editar</button><button type="button" class="lnk del" data-excluir="${esc(x.a.id)}">Excluir</button></span>`}</div>
+        </div>
+      </li>`;
+    }).join('')}</ul>${ctrl}`;
   };
-  PG.anotacoes = () => {
-    const todas = st.dados.anotacoes || [];
-    const autores = [...new Set(todas.map((a) => a.autor).filter(Boolean))].sort();
-    const porTema = {}; todas.forEach((a) => { porTema[a.assunto || 'Outro'] = (porTema[a.assunto || 'Outro'] || 0) + 1; });
+  PG.feedback = ({ R }) => {
+    const AV = R.avaliacao, aba = rota().aba;
+    const ids = new Set(R.lojas.map((s) => s.p.id));
+    const notas = (st.dados.anotacoes || []).filter((a) => ids.has(a.participante_id));
+    const autores = [...new Set(notas.map((a) => a.autor).filter(Boolean))].sort();
+    const porTema = {}; notas.forEach((a) => { porTema[a.assunto || 'Outro'] = (porTema[a.assunto || 'Outro'] || 0) + 1; });
+    const mx = Math.max(1, ...AV.dist.map((d) => d.n));
+    const filtros = aba === 'notas'
+      ? `<label class="sel"><span>Assunto</span><select data-loc="fNotaTema"><option value="">Todos</option>${ASSUNTOS_NOTA.map((t) => `<option ${st.fNotaTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+         <label class="sel"><span>Autor</span><select data-loc="fNotaAutor"><option value="">Todos</option>${autores.map((t) => `<option ${st.fNotaAutor === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`
+      : aba === 'aval' ? `<label class="chk"><input type="checkbox" data-loc="fAvalCom" ${st.fAvalCom ? 'checked' : ''}> Só com comentário</label>` : '';
     return `
       ${Notas.semTabela ? '<p class="fx-aviso">Para salvar anotações, aplique no Supabase as migrações de <b>supabase/migrations</b>.</p>' : ''}
-      ${Object.keys(porTema).length ? card('Por assunto', '', barras(Object.entries(porTema).map(([tema, c]) => ({ tema, c })).sort((a, b) => b.c - a.c), { valor: (x) => x.c, rotulo: (x) => x.tema, fmt: (x) => n(x.c) })) : ''}
-      ${card('', '', `
-        <div class="tb-top">
-          <label class="sel"><span>Assunto</span><select data-loc="fNotaTema"><option value="">Todos</option>${ASSUNTOS_NOTA.map((t) => `<option ${st.fNotaTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-          <label class="sel"><span>Autor</span><select data-loc="fNotaAutor"><option value="">Todos</option>${autores.map((t) => `<option ${st.fNotaAutor === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-          <input type="search" class="busca" id="nt-busca" placeholder="Buscar no texto ou na loja" value="${esc(st.buscaNota)}">
-        </div>
-        <div id="t-anotacoes">${TABELAS.anotacoes()}</div>`)}`;
+      <div class="kpis k4">
+        ${kpi('estrela', 'Nota média', AV.n ? AV.media.toFixed(1).replace('.', ',') : '—', AV.n ? estrelas(AV.media) : 'Nenhuma avaliação ainda', '', 'Média das estrelas dadas pelas lojas ao concluir, antes do certificado.', 'am')}
+        ${kpi('joinha', 'Disseram que ajudou', AV.n ? pct(AV.ajudou, AV.n) : '—', AV.n ? `${n(AV.ajudou)} de ${plural(AV.n, 'loja', 'lojas')}` : '', '', 'Lojas que responderam "sim" para "o treinamento ajudou?".', 'hl')}
+        ${kpi('chat', 'Avaliações', n(AV.n), `${n(AV.comentarios.length)} com comentário`, '', 'Avaliações feitas pelas lojas no período e na cidade escolhidos.', '', '#feedback:aval')}
+        ${kpi('nota', 'Anotações da equipe', n(notas.length), autores.length ? `por ${plural(autores.length, 'pessoa', 'pessoas')}` : 'Nenhuma ainda', '', 'Registros da equipe sobre as lojas do período.', '', '#feedback:notas')}
+      </div>
+      <div class="cols">
+        ${card('Notas das lojas', AV.n ? `${plural(AV.n, 'avaliação', 'avaliações')} no período.` : '', AV.n ? `<div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span class="avl-e">${d.e} ${EST}</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f5b301"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>` : '<p class="empty">Nenhuma avaliação ainda.</p>', '', 'estrela')}
+        ${card('Anotações por assunto', 'Sobre o que a equipe mais registra.', Object.keys(porTema).length ? barras(Object.entries(porTema).map(([tema, c]) => ({ tema, c })).sort((a, b) => b.c - a.c), { valor: (x) => x.c, rotulo: (x) => x.tema, fmt: (x) => n(x.c), cor: '#2563eb' }) : '<p class="empty">Nenhuma anotação ainda.</p>', '', 'nota')}
+      </div>
+      ${card('Tudo o que chegou', 'Avaliações das lojas e anotações da equipe, das mais recentes para as mais antigas. Toque no nome da loja para abrir a ficha.', `
+        ${tabs('feedback', [['tudo', 'Tudo', 'lista', AV.n + notas.length], ['aval', 'Avaliações', 'estrela', AV.n], ['notas', 'Anotações', 'nota', notas.length]], aba)}
+        <div class="tb-top">${filtros}<input type="search" class="busca" id="nt-busca" placeholder="Buscar no texto ou na loja" value="${esc(st.buscaNota)}"></div>
+        <div id="t-feedback">${TABELAS.feedback()}</div>`, 'fb-card', 'chat')}`;
   };
-
-  /* Avaliações */
-  TABELAS.avaliacoes = () => {
-    const rows = st.R.lojas.filter((s) => s.aval && (!st.fAvalCom || s.aval.comentario)).sort((a, b) => b.aval.t - a.aval.t);
-    const { itens, ctrl } = paginar('avaliacoes', rows);
-    return itens.length ? `<div class="tb-wrap"><table class="tb"><thead><tr><th>Loja</th><th>Estrelas</th><th>Ajudou?</th><th>Comentário</th><th>Data</th></tr></thead>
-      <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0"><td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
-        <td>${estrelas(s.aval.estrelas)}</td>
-        <td>${s.aval.ajudou ? '<span class="badge ok">Sim</span>' : '<span class="badge bad">Não</span>'}</td>
-        <td class="cm">${s.aval.comentario ? esc(s.aval.comentario) : '<span class="mut">—</span>'}</td><td>${dataHoraBR(s.aval.t)}</td></tr>`).join('')}</tbody></table></div>${ctrl}` : '<p class="empty">Nenhuma avaliação com esse filtro.</p>';
-  };
-  PG.avaliacoes = ({ R }) => `
-    ${avaliacaoCard(Object.assign({}, R.avaliacao, { comentarios: [] }))}
-    ${card('Todas as avaliações', '', `<div class="tb-top"><label class="chk"><input type="checkbox" data-loc="fAvalCom" ${st.fAvalCom ? 'checked' : ''}> Só com comentário</label></div><div id="t-avaliacoes">${TABELAS.avaliacoes()}</div>`)}`;
 
   /* Cidades */
   TABELAS.cidades = () => {
@@ -1256,21 +1376,61 @@
   PG.cidades = ({ R }) => card('', '', `<input type="search" class="busca" id="cid-busca" placeholder="Buscar cidade" value="${esc(st.buscaCid)}"><div id="t-cidades">${TABELAS.cidades()}</div>
     ${R.semCadastro.length ? `<details class="sem"><summary>${plural(R.semCadastro.length, 'cidade ainda sem', 'cidades ainda sem')} nenhuma loja cadastrada</summary><p>${R.semCadastro.map(esc).join(' · ')}</p></details>` : ''}`);
 
-  /* Uso */
-  PG.uso = ({ R }) => {
-    const K = R.kpi;
+  /* Uso: conversão, ritmo, tempo, recursos, saídas, horários e aparelhos */
+  function durLongo(ms) {
+    if (ms == null || !isFinite(ms)) return '—';
+    if (ms < 3600e3) return dur(ms);
+    if (ms < DIA) return `${Math.round(ms / 3600e3)} h`;
+    return `${(ms / DIA).toFixed(1).replace('.', ',')} dias`;
+  }
+  // Faixas em barras verticais curtas (distribuições)
+  function faixas(lista, cor) {
+    const tot = lista.reduce((t, x) => t + x.n, 0), mx = Math.max(1, ...lista.map((x) => x.n));
+    if (!tot) return '<p class="empty">Ainda sem lojas que concluíram.</p>';
+    return `<div class="fx-bars">${lista.map((x) => `<div class="fxb" ${tipAttr(`<b>${x.t}</b><br>${plural(x.n, 'loja', 'lojas')} · ${pct(x.n, tot)}`)}><b>${pct(x.n, tot)}</b><span class="fxb-b"><i style="height:${Math.max(3, (x.n / mx) * 100)}%;background:${cor}"></i></span><small>${x.t}</small></div>`).join('')}</div>`;
+  }
+  // Grupo (aparelho, navegador, idioma): participação e conclusão
+  function grupoBloco(titulo, ic, lista, total) {
+    if (!lista.length) return `<div class="gp"><h4>${IC[ic]}${titulo}</h4><p class="empty">Sem dados.</p></div>`;
+    return `<div class="gp"><h4>${IC[ic]}${titulo}</h4>${lista.slice(0, 6).map((g) => `<div class="gp-r" ${tipAttr(`<b>${esc(g.k)}</b><br>${plural(g.n, 'loja', 'lojas')}${g.com ? `<br>${pct(g.ok, g.com)} de quem começou concluiu` : ''}`)}>
+      <span class="gp-k">${esc(g.k)}</span><span class="md-tr"><i style="width:${(g.n / Math.max(1, total)) * 100}%"></i></span><b>${pct(g.n, total)}</b>
+      <small>${g.com >= POUCOS ? `${pct(g.ok, g.com)} concluem` : 'poucos dados'}</small></div>`).join('')}</div>`;
+  }
+  PG.uso = ({ R, f }) => {
+    const U = R.uso, K = R.kpi, cad = K.cadastradas;
+    const pico = R.serie.reduce((a, x) => (x.acessos > (a ? a.acessos : 0) ? x : a), null);
+    const cel = (() => { let m = null; R.calor.forEach((l, d) => l.forEach((v, h) => { if (v && (!m || v > m.v)) m = { d, h, v }; })); return m; })();
+    const cmp = (r) => {
+      if (r.apos) return '<small class="mut">Liberado só ao concluir: não dá para comparar.</small>';
+      if (r.com < POUCOS || r.sem < POUCOS) return '<small class="mut">Poucos dados para comparar.</small>';
+      const a = r.comOk / r.com, b = r.semOk / r.sem, d = Math.round((a - b) * 100);
+      return `<div class="rc-cmp">
+        <span class="rc-l"><small>Usaram</small><span class="md-tr"><i style="width:${a * 100}%"></i></span><b>${pct(r.comOk, r.com)}</b></span>
+        <span class="rc-l nao"><small>Não usaram</small><span class="md-tr"><i style="width:${b * 100}%"></i></span><b>${pct(r.semOk, r.sem)}</b></span>
+        <em class="rc-d ${d > 0 ? 'bom' : d < 0 ? 'ruim' : ''}">${d > 0 ? '+' : ''}${d} p.p.</em></div>`;
+    };
     return `
       <div class="kpis k4">
-        ${kpi('tempo', 'Tempo para concluir', dur(R.uso.tempoAtivo), `de tela · ${dias(R.uso.tempoCal)}`, '', 'Mediana de quem concluiu: tempo de tela somado e dias entre o primeiro e o último módulo.')}
-        ${kpi('olho', 'Acessos', n(R.uso.acessos), 'vezes que o treinamento foi aberto', '', 'Inclui visitantes que ainda não se cadastraram, quando não há filtro de cidade.')}
-        ${kpi('loja', 'No celular', pct(R.uso.celular, K.cadastradas), 'das cadastradas', '', 'Lojas que fizeram o treinamento pelo celular.')}
-        ${kpi('raio', 'Usaram a narração', pct(R.uso.voz, K.cadastradas), 'das cadastradas', '', 'Lojas que ligaram a narração por voz.')}
+        ${kpi('olho', 'Visitas que viraram cadastro', U.visitantes == null ? '—' : pct(cad, cad + U.visitantes), U.visitantes == null ? 'Sem filtro de cidade para calcular' : `${n(cad)} cadastros de ${plural(cad + U.visitantes, 'visitante', 'visitantes')}`, '', 'Quem abriu o treinamento e chegou a se cadastrar. Visitante sem cadastro não tem cidade, por isso o número some com o filtro de cidade.')}
+        ${kpi('tempo', 'Tempo até começar', durLongo(U.tempoInicio), 'mediana entre o cadastro e o 1º módulo', '', 'Quanto tempo a loja leva, depois de se cadastrar, para abrir o primeiro módulo.')}
+        ${kpi('atualizar', 'Voltaram outro dia', pct(U.voltaram, K.comecaram), `${plural(U.voltaram, 'loja usou', 'lojas usaram')} em 2 dias ou mais`, '', 'Lojas que começaram e tiveram atividade em pelo menos dois dias diferentes.')}
+        ${kpi('aparelho', 'Retomaram em outro aparelho', n(U.retomaram), `${pct(U.retomaram, cad)} das cadastradas`, '', 'Lojas que entraram de novo em outro aparelho e continuaram de onde pararam.', 'hl')}
       </div>
-      ${card('Acessos e conclusões por dia', 'Passe o dedo ou o mouse sobre o gráfico para ver cada dia.', '<div id="linha"></div>')}
+      ${card('Ritmo do período', `Acessos e treinamentos concluídos por dia.${pico && pico.acessos ? ` Pico: <b>${plural(pico.acessos, 'acesso', 'acessos')}</b> em ${dataBR(pico.t)}.` : ''} Passe o dedo ou o mouse sobre o gráfico.`, '<div id="linha"></div>', '', 'pulso')}
       <div class="cols">
-        ${card('Quando acessam', 'Acessos por dia da semana e hora.', graficoCalor(R))}
-        ${card('Perfil', '', `<div class="pf">${perfilBloco('Aparelho', R.perfil.dispositivo, K.cadastradas)}${perfilBloco('Navegador', R.perfil.navegador, K.cadastradas)}${perfilBloco('Dicas mais abertas', R.perfil.dicas, 0, true)}</div>`)}
-      </div>`;
+        ${card('Quanto tempo leva para concluir', 'Lojas que concluíram, por dias corridos e por tempo de tela.', `<div class="fx-2"><div><h4 class="sub">Dias corridos</h4>${faixas(U.faixaDias, '#12a150')}</div><div><h4 class="sub">Tempo de tela</h4>${faixas(U.faixaTela, '#2563eb')}</div></div>`, '', 'tempo')}
+        ${card('Como saem dos módulos', 'Saídas no meio de um módulo, pelo jeito que a loja saiu.', U.saidas.length ? `<ul class="sx">${U.saidas.map((x) => `<li><span class="sx-ic">${IC[x.ic]}</span><div><b>${x.t}</b><small>${x.ms != null ? `ficaram ${dur(x.ms)} no passo antes de sair (mediana)` : ''}</small></div><b class="sx-n">${n(x.n)}<small>${pct(x.n, U.saidasTot)}</small></b></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma saída no meio de um módulo.</p>`, '', 'sair')}
+      </div>
+      ${card('Recursos que ajudam a concluir', `Quanto cada recurso é usado e a conclusão de quem usou × quem não usou (só lojas que começaram). Com menos de ${POUCOS} lojas em um dos lados, não comparamos.`, `<ul class="rc">${U.recursos.map((r) => `<li class="rc-i">
+          <span class="rc-ic">${IC[r.ic]}</span>
+          <div class="rc-t"><b>${r.t}</b><small>${r.usaram ? `${pct(r.usaram, cad)} das lojas usaram (${n(r.usaram)})` : 'Ninguém usou no período'}</small></div>
+          ${r.usaram ? cmp(r) : ''}
+        </li>`).join('')}</ul>`, '', 'raio')}
+      <div class="cols">
+        ${card('Quando acessam', cel ? `Acessos por dia da semana e hora. Mais movimento: <b>${SEMANA[cel.d]}, ${cel.h}h</b>.` : 'Acessos por dia da semana e hora.', graficoCalor(R), '', 'calendario')}
+        ${card('Por onde acessam', 'Participação de cada aparelho, navegador e idioma, e quanto concluem.', `<div class="gps">${grupoBloco('Aparelho', 'aparelho', U.grupos.dispositivo, cad)}${grupoBloco('Navegador', 'olho', U.grupos.navegador, cad)}${grupoBloco('Idioma', 'chat', U.grupos.idioma, cad)}</div>`, '', 'aparelho')}
+      </div>
+      ${f.cidade ? '' : ''}`;
   };
 
   /* Exportar */
@@ -1554,7 +1714,7 @@
     }
   });
   root.addEventListener('input', (e) => {
-    const alvo = { 'lj-busca': ['busca', 'lojas'], 'cid-busca': ['buscaCid', 'cidades'], 'nt-busca': ['buscaNota', 'anotacoes'] }[e.target.id];
+    const alvo = { 'lj-busca': ['busca', 'lojas'], 'cid-busca': ['buscaCid', 'cidades'], 'nt-busca': ['buscaNota', 'feedback'] }[e.target.id];
     if (alvo) { st[alvo[0]] = e.target.value; st.pag[alvo[1]] = 1; redesenhar(alvo[1]); }
   });
   const ACOES = { csv: () => exportarCSV(), 'csv-duvidas': () => exportarDuvidas(), 'csv-plano': () => exportarPlano(), 'csv-perguntas': exportarPerguntas, 'csv-passos': exportarPassos, 'csv-modulos': exportarModulos, 'csv-avaliacoes': exportarAvaliacoes, 'csv-cidades': exportarCidades };
@@ -1568,6 +1728,10 @@
       else if (ACOES[x]) ACOES[x]();
       return;
     }
+    const fm = e.target.closest('[data-fmod]');
+    if (fm) { st.fModulo = fm.dataset.fmod; st.pag.passos = 1; render(); return; }
+    const dm = e.target.closest('[data-modulo]');
+    if (dm) { st.fModulo = dm.dataset.modulo; st.pag.passos = 1; }   // o link segue para #jornada:passos
     const ds = e.target.closest('[data-status]');
     if (ds) { st.status = ds.dataset.status; st.pag = {}; render(); const t = document.getElementById('t-lojas'); if (t) t.scrollIntoView({ block: 'start' }); return; }
     const pb = e.target.closest('[data-pgn] [data-ir]');
@@ -1670,7 +1834,7 @@
     set('.lc-x', { x1: X, x2: X, visibility: 'visible' });
     set('.lc-a', { cx: X, cy: Y(S[i][1]), visibility: 'visible' });
     set('.lc-b', { cx: X, cy: Y(S[i][2]), visibility: 'visible' });
-    mostrarTip(`<b>${new Date(S[i][0]).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</b><br><i class="sw" style="background:${COR.a}"></i>Acessos: ${n(S[i][1])}<br><i class="sw" style="background:${COR.b}"></i>Concluídos: ${n(S[i][2])}`, r.left + X / sx, r.top + Y(Math.max(S[i][1], S[i][2])) / sx);
+    mostrarTip(`<b>${new Date(S[i][0]).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</b><br><i class="sw" style="background:${LINHA.a}"></i>Acessos: ${n(S[i][1])}<br><i class="sw" style="background:${LINHA.b}"></i>Concluídos: ${n(S[i][2])}`, r.left + X / sx, r.top + Y(Math.max(S[i][1], S[i][2])) / sx);
   }
   function limparLinha() { document.querySelectorAll('.lc-x,.lc-a,.lc-b').forEach((el) => el.setAttribute('visibility', 'hidden')); }
 
