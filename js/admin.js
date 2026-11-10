@@ -1020,6 +1020,17 @@
 
   // Badges do sidebar: só o que é novo desde a última vez que a página foi aberta (ids vistos ficam no aparelho)
   const K_VISTO = 'bigou-admin-visto';
+  // Menu lateral recolhido (só no computador); a escolha fica salva no navegador
+  const K_SBMINI = 'bigou-admin-sb-mini';
+  let sbMini = (() => { try { return localStorage.getItem(K_SBMINI) === '1'; } catch (e) { return false; } })();
+  function alternarSb() {
+    sbMini = !sbMini;
+    try { localStorage.setItem(K_SBMINI, sbMini ? '1' : '0'); } catch (e) { /* */ }
+    const pn = document.querySelector('.painel');
+    if (pn) pn.classList.toggle('sb-mini', sbMini);
+    const b = document.querySelector('.sb-tg');
+    if (b) { const t = sbMini ? 'Expandir menu' : 'Recolher menu'; b.setAttribute('aria-expanded', String(!sbMini)); b.setAttribute('aria-label', t); b.title = t; }
+  }
   function novidades(pg, ids) {
     let visto = {};
     try { visto = JSON.parse(localStorage.getItem(K_VISTO)) || {}; } catch (e) { /* sem armazenamento */ }
@@ -1049,13 +1060,14 @@
     const atual = PAGINAS.find((p) => p.id === pg);
 
     root.innerHTML = `
-      <div class="painel ${st.menu ? 'menu-on' : ''}">
+      <div class="painel ${st.menu ? 'menu-on' : ''} ${sbMini ? 'sb-mini' : ''}">
         <aside class="sb" aria-label="Menu do painel">
           <div class="sb-logo"><img src="../assets/bigou-logo.png" alt="Bigou" width="40" height="40"><b>Painel de Treinamento Financeiro</b></div>
-          <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''}>${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
+          <button type="button" class="sb-tg" data-a="sbmini" aria-expanded="${!sbMini}" aria-label="${sbMini ? 'Expandir menu' : 'Recolher menu'}" title="${sbMini ? 'Expandir menu' : 'Recolher menu'}">${IC.chevron}</button>
+          <nav class="sb-nav">${PAGINAS.map((p) => `${SB_SEP.includes(p.id) ? '<hr class="sb-sep">' : ''}<a href="#${p.id}" class="${p.id === pg ? 'on' : ''}" ${p.id === pg ? 'aria-current="page"' : ''} data-sbtip="${p.t}${cont[p.id] ? ` · ${n(cont[p.id])}` : ''}">${IC[p.ic] || ''}<span>${p.t}</span>${cont[p.id] ? `<em class="${p.id === 'lojas' ? 'w' : ''}">${n(cont[p.id])}</em>` : ''}</a>`).join('')}</nav>
           <div class="sb-pe">
-            <button class="sb-a" data-a="atualizar">${IC.atualizar}<span>Atualizar dados</span></button>
-            <button class="sb-a" data-a="sair">${IC.sair}<span>Sair</span></button>
+            <button class="sb-a" data-a="atualizar" data-sbtip="Atualizar dados">${IC.atualizar}<span>Atualizar dados</span></button>
+            <button class="sb-a" data-a="sair" data-sbtip="Sair">${IC.sair}<span>Sair</span></button>
           </div>
           <svg class="sb-onda" viewBox="0 0 248 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 C60 30 120 110 248 40 V120 H0z" fill="#16a34a" opacity=".55"/><path d="M0 95 C80 60 150 120 248 75 V120 H0z" fill="#4ade80" opacity=".5"/></svg>
         </aside>
@@ -1739,6 +1751,8 @@
     }
   });
   document.addEventListener('keydown', (e) => {
+    // Ctrl+B / Cmd+B recolhe ou expande o menu lateral (fora de campos de texto)
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'b' && !e.target.closest('input, textarea, select, [contenteditable]') && matchMedia('(min-width: 1000px)').matches) { e.preventDefault(); alternarSb(); return; }
     if (e.key === 'Escape' && document.querySelector('.fm.open')) { const b = document.querySelector('.fm.open [data-pmenu]'); fecharMenus(); if (b) b.focus(); return; }
     if (e.key === 'Escape' && !fx.hidden) fecharFicha();
   });
@@ -1833,6 +1847,7 @@
       const x = a.dataset.a;
       if (x === 'atualizar') iniciar();
       else if (x === 'sair') { sessao.sair(); telaLogin(); }
+      else if (x === 'sbmini') alternarSb();
       else if (x === 'menu') { st.menu = !st.menu; document.querySelector('.painel').classList.toggle('menu-on', st.menu); }
       else if (ACOES[x]) ACOES[x]();
       return;
@@ -1923,7 +1938,12 @@
     tip.style.top = Math.max(8, y - h - 12 < 8 ? y + 16 : y - h - 12) + 'px';
   }
   const esconderTip = () => { tip.hidden = true; };
+  // Menu recolhido: o nome de cada item aparece ao lado do ícone
+  const tipSb = (el) => { const r = el.getBoundingClientRect(); tip.innerHTML = esc(el.dataset.sbtip); tip.hidden = false; tip.style.left = (r.right + 12) + 'px'; tip.style.top = (r.top + r.height / 2 - tip.offsetHeight / 2) + 'px'; };
+  const sbAtivo = () => sbMini && matchMedia('(min-width: 1000px)').matches;
   root.addEventListener('mousemove', (e) => {
+    const sbEl = e.target.closest('[data-sbtip]');
+    if (sbEl) { if (sbAtivo()) tipSb(sbEl); else esconderTip(); return; }
     const el = e.target.closest('[data-tip]');
     if (el) return mostrarTip(el.dataset.tip, e.clientX, e.clientY);
     const hit = e.target.closest('.lc-hit');
@@ -1931,7 +1951,7 @@
     esconderTip();
     limparLinha();
   });
-  root.addEventListener('focusin', (e) => { const el = e.target.closest('[data-tip]'); if (el) { const r = el.getBoundingClientRect(); mostrarTip(el.dataset.tip, r.left + r.width / 2, r.top); } });
+  root.addEventListener('focusin', (e) => { const sbEl = e.target.closest('[data-sbtip]'); if (sbEl) { if (sbAtivo()) tipSb(sbEl); return; } const el = e.target.closest('[data-tip]'); if (el) { const r = el.getBoundingClientRect(); mostrarTip(el.dataset.tip, r.left + r.width / 2, r.top); } });
   root.addEventListener('focusout', esconderTip);
   root.addEventListener('keydown', (e) => { const row = e.target.closest && !e.target.closest('button') && e.target.closest('.lj-row'); if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(row.dataset.loja); } });
   root.addEventListener('touchstart', (e) => { const hit = e.target.closest('.lc-hit'); if (hit) linhaHover(hit, e.touches[0].clientX); else { const el = e.target.closest('[data-tip]'); if (el) mostrarTip(el.dataset.tip, e.touches[0].clientX, e.touches[0].clientY); else esconderTip(); } }, { passive: true });

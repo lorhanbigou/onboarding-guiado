@@ -1230,3 +1230,36 @@ h4.sub { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--ink3)
 .btn.sm { padding: 5px 10px; font-size: 12.5px; }
 .lj-tb td:first-child { min-width: 200px; }
 .lj-l .lj-ci { flex-wrap: nowrap; white-space: nowrap; }
+
+/* ========== Menu lateral recolhível (computador) ========== */
+.sb-tg { display: none; }
+@media (min-width: 1000px) {
+  .sb { transition: width .25s cubic-bezier(.2,.8,.2,1), padding .25s; }
+  .painel-main { transition: margin-left .25s cubic-bezier(.2,.8,.2,1); }
+  .sb-logo { padding-right: 34px; }
+  .sb-nav a, .sb-a, .sb-logo b { white-space: nowrap; }
+  .sb-logo b { white-space: normal; }
+  .sb-tg {
+    display: grid; place-items: center; position: absolute; top: 28px; right: 10px; z-index: 2;
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.1); color: #e3efe8; cursor: pointer; transition: background .15s, transform .25s;
+  }
+  .sb-tg:hover { background: rgba(255,255,255,.22); color: #fff; }
+  .sb-tg:focus-visible { outline: 2px solid #7ee2a6; outline-offset: 2px; }
+  .sb-tg svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transform: rotate(180deg); transition: transform .25s; }
+
+  .painel.sb-mini .sb { width: 84px; padding-left: 12px; padding-right: 12px; }
+  .painel.sb-mini .painel-main { margin-left: 84px; }
+  .painel.sb-mini .sb-logo { justify-content: center; padding: 0 0 12px; }
+  .painel.sb-mini .sb-logo b, .painel.sb-mini .sb-nav a span, .painel.sb-mini .sb-a span { display: none; }
+  .painel.sb-mini .sb-tg { position: relative; top: auto; right: auto; margin: 0 auto 16px; }
+  .painel.sb-mini .sb-tg svg { transform: none; }
+  .painel.sb-mini .sb-nav a { position: relative; justify-content: center; padding: 12px 0; }
+  .painel.sb-mini .sb-nav em { position: absolute; top: 3px; right: 6px; min-width: 18px; padding: 0 5px; font-size: 10.5px; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px #0d4a2a; }
+  .painel.sb-mini .sb-a { justify-content: center; padding: 10px 0; }
+  .painel.sb-mini .sb-sep { margin: 10px 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .sb, .painel-main, .sb-tg svg { transition: none !important; } }
+@media (min-width: 1000px) {
+  .sb > .sb-tg { position: absolute; top: 28px; right: 10px; }
+  .painel.sb-mini .sb > .sb-tg { position: relative; top: auto; right: auto; }
+}
