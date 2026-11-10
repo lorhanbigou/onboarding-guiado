@@ -1078,7 +1078,7 @@
     else viewHome();
     if (view !== 'modulo') window.scrollTo(0, 0);
     // Assistente de dúvidas: liberado a qualquer momento; some dentro dos módulos guiados e do cadastro
-    if (TREINO.recurso('assistente') && TREINO.Bot) TREINO.Bot.atualizar({ liberado: true, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome() });
+    if (TREINO.recurso('assistente') && TREINO.Bot) TREINO.Bot.atualizar({ liberado: true, visivel: !['modulo', 'cadastro'].includes(view), loja: lojaNome(), tela: view || 'inicio' });
   }
 
   /* ------------------------------ Debug (só com RECURSO_DEBUG, hoje no stage) ------------------------------ */

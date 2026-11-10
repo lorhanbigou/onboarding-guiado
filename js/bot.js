@@ -594,6 +594,7 @@
         confianca: r.confianca,
         resultado: r.tipo === 'resposta' ? (r.intencao.id === 'fora' ? 'fora' : 'respondida') : r.tipo === 'sugestao' ? 'sugestao' : 'sem_resposta',
         opcoes: r.opcoes ? r.opcoes.map((x) => x.id) : undefined,
+        tela: st.tela || null,
       });
     }
     digitando(() => {

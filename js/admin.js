@@ -136,6 +136,8 @@
     clique: sv('<path d="M9 3.5v3M4.2 5.2l2.1 2.1M3 10h3M12 10l8 3.3-3.4 1.4 3.2 3.2-1.9 1.9-3.2-3.2-1.4 3.4z"/>'),
     aparelho: sv('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'),
     feedback: sv('<path d="M4 5.5h16v10.5H9.5L5 20v-4H4z"/><path d="M12 7.6l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/>'),
+    lapis: sv('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
+    funil: sv('<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>'),
     alvo: sv('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>'),
   };
   // Alvo com flecha (ilustração do "O que fazer agora?"): disco inclinado com volume, flecha cravada no centro
@@ -599,6 +601,10 @@
     const dEv = evs.filter((e) => /^duvida/.test(e.tipo) && e.t >= desde && daCidade(e));
     const dPerg = dEv.filter((e) => e.tipo === 'duvida'), dEsc = dEv.filter((e) => e.tipo === 'duvida_escolha'), dFb = dEv.filter((e) => e.tipo === 'duvida_feedback');
     const det = (e) => e.detalhe || {};
+    dPerg.forEach((e) => { const i = idx.get(diaKey(e.t)); if (i != null) serie[i].duvidas = (serie[i].duvidas || 0) + 1; });
+    const naoTema = {}, telasM = new Map();
+    dFb.forEach((e) => { if (!det(e).util && det(e).tema) naoTema[det(e).tema] = (naoTema[det(e).tema] || 0) + 1; });
+    dPerg.forEach((e) => { const t = det(e).tela; if (t) telasM.set(t, (telasM.get(t) || 0) + 1); });
     const temasD = new Map();
     dPerg.filter((e) => det(e).resultado === 'respondida').concat(dEsc).forEach((e) => { const t = det(e).tema; if (t) temasD.set(t, (temasD.get(t) || 0) + 1); });
     const semResp = new Map();
@@ -630,6 +636,7 @@
       semResposta: [...semResp.values()].sort((a, b) => b.n - a.n || b.ultimo - a.ultimo),
       naoAjudou: [...ruins.values()].filter((o) => o.nao > 0).sort((a, b) => b.nao - a.nao || b.nao / b.tot - a.nao / a.tot),
       lista: dPerg.concat(dFb).sort((a, b) => b.t - a.t),
+      naoTema, telas: [...telasM.entries()].sort((a, b) => b[1] - a[1]),
     };
 
     /* ---------- Avaliação do treinamento (Sim/Não + estrelas) ---------- */
@@ -864,7 +871,7 @@
      ===================================================================== */
   const st = {
     dados: null, filtros: { dias: 28, cidade: '' }, R: null, P: null, menu: false,
-    busca: '', status: 'todas', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
+    busca: '', status: '', ordLoja: 'urgencia', pOrd: 'ordem', buscaCid: '', ordem: { k: 'ultimo', dir: -1 },
     pag: {}, fModulo: '', fTema: '', fBaixo: false, editPerg: null, fNotaTema: '', fNotaAutor: '', buscaNota: '', fAvalCom: false,
   };
   // Assistente de dúvidas desligado neste ambiente: a seção do chat some do painel
@@ -958,22 +965,7 @@
     </section>`;
   const card = (titulo, desc, corpo, cls, ic) => `<div class="card ${cls || ''}">${titulo ? `<div class="card-h"><h3>${ic && IC[ic] ? `<span class="card-ic">${IC[ic]}</span>` : ''}${titulo}</h3>${desc ? `<p>${desc}</p>` : ''}</div>` : ''}${corpo}</div>`;
 
-  // Seção "Dúvidas do chat" (só com o assistente ligado)
-  function secDuvidas(R, DV, periodoTxt, f) {
-    return sec('duvidas', 'Dúvidas do chat', `Perguntas feitas no assistente ${periodoTxt}${f.cidade ? ` em ${esc(f.cidade)}` : ''}. O assistente fica disponível a qualquer momento.`, `
-          <div class="kpis k3">
-            ${kpi('olho', 'Perguntas', n(DV.perguntas), `de ${n(DV.lojas)} ${DV.lojas === 1 ? 'loja' : 'lojas'} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
-            ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, DV.perguntas), `${n(DV.sugestao)} com "você quis dizer" · ${n(DV.sem)} sem resposta · ${n(DV.fora)} fora do treinamento`, '', 'Perguntas em que o assistente entendeu o assunto e respondeu direto.')}
-            ${kpi('trofeu', 'Ajudou', pct(DV.uteis, DV.avaliacoes), `de ${n(DV.avaliacoes)} ${DV.avaliacoes === 1 ? 'avaliação' : 'avaliações'} do chat`, '', 'Respostas marcadas como úteis pelo parceiro.')}
-          </div>
-          <div class="cols">
-            ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? barras(DV.temas, { valor: (x) => x.n, rotulo: (x) => x.tema, fmt: (x) => n(x.n) }) : '<p class="empty">Nenhuma pergunta no período.</p>')}
-            ${card('Sem resposta ou fora do treinamento', 'O que o assistente não soube responder. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', DV.semResposta.length ? `<ul class="dv">${DV.semResposta.slice(0, 12).map((x) => `<li><span>“${esc(x.texto)}”${x.fora ? ' <em class="dv-fora">fora do treinamento</em>' : ''}</span><small>${x.n > 1 ? `${n(x.n)}× · ` : ''}${relativo(x.ultimo)}</small></li>`).join('')}</ul>${DV.semResposta.length > 12 ? `<p class="note">E mais ${n(DV.semResposta.length - 12)}. Exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty bom">${IC.ok}Todas as perguntas tiveram resposta.</p>`)}
-          </div>
-          ${DV.naoAjudou.length ? card('Respostas que não ajudaram', 'Marcadas como “não ajudou”. Vale reescrever a resposta ou melhorar a tela do assunto.', `<ul class="dv-r">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')}</small>${o.exemplos.length ? `<span>Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div><b class="dv-n">${IC.naojoinha}${n(o.nao)} de ${n(o.tot)}</b></li>`; }).join('')}</ul>`) : ''}
-          <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
-        `);
-  }
+
 
 
 
@@ -981,8 +973,7 @@
   const PAGINAS = [
     { id: 'visao', t: 'Visão geral', ic: 'casa', d: (ctx) => `Lojas que se cadastraram ${ctx.periodoTxt}${ctx.f.cidade ? ` em ${esc(ctx.f.cidade)}` : ''}.` },
     { id: 'lojas', t: 'Lojas', ic: 'loja', d: () => 'Toque em uma loja para ver o que ela errou, a avaliação e as anotações da equipe.' },
-    { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, onde saem em cada passo e quais assuntos precisam de reforço.' },
-    { id: 'perguntas', t: 'Perguntas', ic: 'pergunta', d: () => 'As 19 perguntas com a distribuição completa das respostas. Toque em Editar para mudar a pergunta e as alternativas.' },
+    { id: 'jornada', t: 'Jornada', ic: 'rota', d: () => 'Até onde as lojas chegam, onde saem, quais assuntos precisam de reforço e como respondem cada pergunta.' },
   ].concat(CHAT ? [{ id: 'duvidas', t: 'Dúvidas do chat', ic: 'chat', d: (ctx) => `Perguntas feitas no assistente ${ctx.periodoTxt}.` }] : [], [
     { id: 'feedback', t: 'Feedback', ic: 'feedback', d: () => 'O que as lojas acharam do treinamento e o que a equipe registrou, num lugar só.' },
     { id: 'cidades', t: 'Cidades', ic: 'cidade', d: () => 'Desempenho e contatos pendentes por cidade.' },
@@ -991,8 +982,8 @@
   ]);
   const SB_SEP = ['feedback', 'exportar'];   // divisórias do menu: análises · registros · exportar
   // Páginas com abas: a aba vai no endereço (#jornada:passos). Endereços antigos levam à aba certa.
-  const ABAS = { jornada: ['geral', 'passos', 'assuntos'], feedback: ['tudo', 'aval', 'notas'] };
-  const ANTIGAS = { passos: 'jornada:passos', assuntos: 'jornada:assuntos', anotacoes: 'feedback:notas', avaliacoes: 'feedback:aval' };
+  const ABAS = { jornada: ['geral', 'passos', 'assuntos', 'perguntas'], feedback: ['tudo', 'aval', 'notas'], lojas: ['contato', 'andamento', 'certificadas', 'todas'] };
+  const ANTIGAS = { perguntas: 'jornada:perguntas', passos: 'jornada:passos', assuntos: 'jornada:assuntos', anotacoes: 'feedback:notas', avaliacoes: 'feedback:aval' };
   function rota() {
     const h = location.hash.replace('#', '');
     const [pg, aba] = (ANTIGAS[h] || h).split(':');
@@ -1142,6 +1133,10 @@
           </div>
         </div>`, '', 'pulso')}
         ${card('O que fazer agora?', '', (acoes.length ? `<ul class="ac">${acoes.map(([i, c, s, t, d]) => `<li><a href="#${s}" class="ac-i"><span class="ac-ic ${c}">${IC[i]}</span><span class="ac-t"><b>${t}</b><small>${d}</small></span><span class="ac-go">${IC.chevron}</span></a></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nada urgente por aqui.</p>`) + `<div class="ac-deco" aria-hidden="true">${ALVO3D}</div>`, 'ac-card', 'lampada')}
+      </div>
+      <div class="cols">
+        ${cardTempo(R.uso)}
+        ${cardSaidas(R.uso)}
       </div>`;
   };
 
@@ -1150,7 +1145,7 @@
   const JORNADA = {};
   PG.jornada = (ctx) => {
     const aba = rota().aba;
-    return `${tabs('jornada', [['geral', 'Visão geral', 'rota'], ['passos', 'Passo a passo', 'lista'], ['assuntos', 'Assuntos', 'livro']], aba)}${JORNADA[aba](ctx)}`;
+    return `${tabs('jornada', [['geral', 'Visão geral', 'rota'], ['passos', 'Passo a passo', 'lista'], ['assuntos', 'Assuntos', 'livro'], ['perguntas', 'Perguntas', 'pergunta']], aba)}${JORNADA[aba](ctx)}`;
   };
 
   // Os 10 módulos em linhas: conclusão, quem parou e onde mais saem
@@ -1213,7 +1208,7 @@
       <div class="kpis k3">
         ${kpi('ok', 'Acerto de primeira', pct(ok, tot), `${plural(tot, 'resposta', 'respostas')} nas perguntas atuais`, '', 'Respostas certas na primeira tentativa, somando todos os assuntos.')}
         ${kpi('alerta', 'Assuntos para reforçar', n(reforcar), `de ${plural(R.assuntos.length, 'assunto', 'assuntos')}, com acerto abaixo de 60%`, '', `Só conta assunto com ${POUCOS} respostas ou mais.`, reforcar ? 'vm' : '')}
-        ${kpi('pergunta', 'Pergunta mais errada', pior ? pct(pior.ok, pior.tot) : '—', pior ? esc(pior.q.length > 70 ? pior.q.slice(0, 68) + '…' : pior.q) : 'Ainda com poucas respostas', '', 'Pergunta com o menor acerto de primeira entre as que têm respostas suficientes.', pior ? 'am' : '', '#perguntas')}
+        ${kpi('pergunta', 'Pergunta mais errada', pior ? pct(pior.ok, pior.tot) : '—', pior ? esc(pior.q.length > 70 ? pior.q.slice(0, 68) + '…' : pior.q) : 'Ainda com poucas respostas', '', 'Pergunta com o menor acerto de primeira entre as que têm respostas suficientes.', pior ? 'am' : '', '#jornada:perguntas')}
       </div>
       <div class="asg">${R.assuntos.map((t) => {
         const nv = nivel(t.taxa, t.tot);
@@ -1235,27 +1230,42 @@
 
 
   /* Perguntas: distribuição completa por alternativa */
-  PG.perguntas = ({ R }) => {
+  /* Jornada › Perguntas: distribuição das respostas e edição */
+  const LETRA = 'ABCDEF';
+  JORNADA.perguntas = ({ R }) => {
     const temasQ = [...new Set(R.perguntas.map((q) => q.tema))];
-    const lista = R.perguntas.filter((q) => (!st.fTema || q.tema === st.fTema) && (!st.fBaixo || (q.taxa != null && q.taxa < 0.6)));
-    const dist = (ops, tot) => `<ul class="pq-ops">${ops.map((o) => `<li class="${o.ok ? 'ok' : ''}"><span class="pq-t">${o.ok ? '<i role="img" aria-label="Correta">${IC.check}</i>' : ''}${esc(o.t)}</span><span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span><b>${n(o.n)}<small>${tot ? pct(o.n, tot) : ''}</small></b></li>`).join('')}</ul>`;
+    let lista = R.perguntas.filter((q) => (!st.fTema || q.tema === st.fTema) && (!st.fBaixo || (q.taxa != null && q.taxa < 0.6)));
+    if (st.pOrd === 'acerto') lista = lista.slice().sort((a, b) => (a.taxa == null) - (b.taxa == null) || a.taxa - b.taxa);
+    const baixo = R.perguntas.filter((q) => q.taxa != null && q.taxa < 0.6).length;
+    const dist = (ops, tot) => {
+      const errMax = Math.max(0, ...ops.filter((o) => !o.ok).map((o) => o.n));
+      return `<ul class="pq-ops">${ops.map((o, i) => `<li class="${o.ok ? 'ok' : errMax && o.n === errMax ? 'err' : ''}">
+        <span class="pq-l">${o.ok ? IC.check : LETRA[i]}</span>
+        <span class="pq-t">${esc(o.t)}${o.ok ? '<small>correta</small>' : errMax && o.n === errMax ? '<small>erro mais comum</small>' : ''}</span>
+        <span class="pq-bar"><i style="width:${tot ? (o.n / tot) * 100 : 0}%"></i></span>
+        <b>${tot ? pct(o.n, tot) : '—'}<small>${n(o.n)}</small></b></li>`).join('')}</ul>`;
+    };
     return `
-      <div class="tb-top">
-        <label class="sel"><span>Assunto</span><select data-loc="fTema"><option value="">Todos</option>${temasQ.map((t) => `<option ${st.fTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
-        <label class="chk"><input type="checkbox" data-loc="fBaixo" ${st.fBaixo ? 'checked' : ''}> Só com acerto abaixo de 60%</label>
+      <div class="pq-flt">
+        <div class="chips" role="group" aria-label="Assunto"><button type="button" class="${st.fTema ? '' : 'on'}" data-ptema="">Todos os assuntos</button>${temasQ.map((t) => `<button type="button" class="${st.fTema === t ? 'on' : ''}" data-ptema="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+        <div class="chips">
+          <button type="button" class="tg ${st.fBaixo ? 'on' : ''}" data-pbaixo="1">${IC.alerta}Acerto abaixo de 60% <em>${n(baixo)}</em></button>
+          <button type="button" class="${st.pOrd !== 'acerto' ? 'on' : ''}" data-pord="ordem">Ordem do treinamento</button>
+          <button type="button" class="${st.pOrd === 'acerto' ? 'on' : ''}" data-pord="acerto">Menor acerto primeiro</button>
+        </div>
       </div>
       ${Perg.semTabela ? '<p class="fx-aviso">Para editar as perguntas, aplique no Supabase a migração <b>20261021120000_perguntas_editaveis.sql</b>.</p>' : ''}
       <div class="pq">${lista.map((q) => { const nv = nivel(q.taxa, q.tot); return st.editPerg === q.id ? formPergunta(q) : `
         <article class="card pq-c nv-${nv}">
-          <header class="pq-h"><span class="pq-id">${q.id}</span><small>${esc(q.onde)} · ${esc(q.tema)}</small><em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em></header>
-          <h3>${esc(q.q)}</h3>
+          <header class="pq-h"><span class="pq-id">${q.id}</span><span class="pq-meta"><small>${esc(q.onde)}</small><span class="tag">${esc(q.tema)}</span></span><em class="nv nv-${nv}">${ROT_NIVEL[nv]}</em></header>
+          <div class="pq-top"><h3>${esc(q.q)}</h3>${anel(q.tot ? q.taxa : null, 'de acerto')}</div>
           ${dist(q.opcoes, q.tot)}
           <footer class="pq-f">
-            <span><b>${q.tot ? pct(q.ok, q.tot) : '—'}</b> acertam de primeira <small>(${plural(q.tot, 'resposta', 'respostas')})</small></span>
-            <span>${q.tentativas ? `<b>${q.tentativas.toFixed(1).replace('.', ',')}</b> tentativas, em média, até acertar` : ''}</span>
+            <span>${IC.ok}${plural(q.tot, 'resposta', 'respostas')} de primeira</span>
+            ${q.tentativas ? `<span>${IC.atualizar}<b>${q.tentativas.toFixed(1).replace('.', ',')}</b> tentativas até acertar</span>` : ''}
           </footer>
-          <div class="pq-ed"><small>${q.editada ? `Editada${q.editada.autor ? ` por ${esc(q.editada.autor)}` : ''}${q.editada.em ? ` em ${dataHoraBR(+new Date(q.editada.em))}` : ''}` : 'Texto original'}</small>${Perg.semTabela ? '' : `<button type="button" class="btn" data-pq="editar" data-id="${esc(q.id)}">Editar</button>`}</div>
-        </article>`; }).join('') || '<p class="empty">Nenhuma pergunta com esse filtro.</p>'}</div>`;
+          <div class="pq-ed"><small>${q.editada ? `${IC.lapis}Editada${q.editada.autor ? ` por ${esc(q.editada.autor)}` : ''}${q.editada.em ? ` em ${dataHoraBR(+new Date(q.editada.em))}` : ''}` : 'Texto original'}</small>${Perg.semTabela ? '' : `<button type="button" class="btn" data-pq="editar" data-id="${esc(q.id)}">${IC.lapis}<span>Editar</span></button>`}</div>
+        </article>`; }).join('') || card('', '', '<p class="empty">Nenhuma pergunta com esse filtro.</p>')}</div>`;
   };
 
   // Edição de uma pergunta. As alternativas ficam na mesma posição: as respostas já dadas
@@ -1283,28 +1293,49 @@
       </form>`;
   }
 
-  PG.duvidas = ({ R, periodoTxt, f }) => secDuvidas(R, R.duvidas, periodoTxt, f);
-
-  /* Lojas */
-  PG.lojas = ({ R }) => {
-    const SI = R.sit;
-    const contagem = { contato: SI.contato, contatadas: SI.contatadas, parada: SI.parada, naocomecou: SI.naocomecou, semcert: SI.semcert, andamento: SI.andamento + SI.recente, certificada: SI.certificada, reincidente: SI.reincidente, notas: R.lojas.filter((x) => x.notas.length).length, todas: R.lojas.length };
-    const K = R.kpi, tot = R.lojas.length, and = SI.andamento + SI.recente;
+  /* Dúvidas do chat */
+  const TELAS = { inicio: 'Início', modulos: 'Lista de módulos', explorar: 'Modo livre', repasses: 'Datas de repasse', revisao: 'O que você aprendeu', certificado: 'Certificado', avaliacao: 'Avaliação', refazer: 'Refazer perguntas' };
+  const RES = { respondida: ['Respondida', 'ok', 'ok'], sugestao: ['Você quis dizer', 'info', 'pergunta'], sem_resposta: ['Sem resposta', 'warn', 'alerta'], fora: ['Fora do treinamento', 'off', 'x'] };
+  PG.duvidas = ({ R }) => {
+    const DV = R.duvidas, P = DV.perguntas;
+    const nomeDe = new Map(st.dados.participantes.map((p) => [p.id, p]));
+    const segs = [['respondida', DV.respondidas, '#12a150'], ['sugestao', DV.sugestao, '#2563eb'], ['sem_resposta', DV.sem, '#f59e0b'], ['fora', DV.fora, '#9aa6a0']];
+    const dias = R.serie.slice(-45), mxD = Math.max(1, ...dias.map((x) => x.duvidas || 0));
+    const mxT = Math.max(1, ...DV.temas.map((x) => x.n));
+    const fb = DV.lista.filter((e) => e.tipo === 'duvida_feedback');
+    const thumb = (e) => { const f = fb.find((x) => x.participante_id === e.participante_id && x.t >= e.t && x.t - e.t < 15 * 60e3 && (x.detalhe || {}).intencao === (e.detalhe || {}).intencao); return f ? (f.detalhe.util ? `<span class="dvr-th ok" title="Ajudou">${IC.joinha}</span>` : `<span class="dvr-th bad" title="Não ajudou">${IC.naojoinha}</span>`) : ''; };
+    const recentes = DV.lista.filter((e) => e.tipo === 'duvida').slice(0, 15);
     return `
       <div class="kpis k4">
-        ${kpi('loja', 'Total de lojas', n(tot), 'Cadastradas no período', '', 'Lojas cadastradas no período e na cidade escolhidos.', '', 'todas')}
-        ${kpi('ok', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, tot)} de conclusão`, kpiBar(tot && K.concluiram / tot), `Lojas que concluíram os ${NMOD} módulos.`, '', '#jornada')}
-        ${kpi('andamento', 'Em andamento', n(and), `${pct(and, tot)} em andamento`, kpiBar(tot && and / tot, 'am'), 'Lojas que começaram e seguem ativas, ou se cadastraram há pouco.', 'am', 'andamento')}
-        ${kpi('critico', 'Precisam de atenção', n(SI.contato), `${pct(SI.contato, tot)} precisam de contato`, kpiBar(tot && SI.contato / tot, 'vm'), `Paradas há ${PARADA_DIAS}+ dias, sem começar há ${SEM_INICIO_DIAS}+ dias ou concluíram sem certificado, e ainda sem contato feito.`, 'vm', 'contato')}
+        ${kpi('chat', 'Perguntas feitas', n(P), `de ${plural(DV.lojas, 'loja', 'lojas')} · ${n(DV.escolhas)} toques em sugestões`, '', 'Perguntas digitadas no chat. Os toques nas perguntas prontas aparecem à parte.')}
+        ${kpi('ok', 'Respondidas de primeira', pct(DV.respondidas, P), `${n(DV.respondidas)} de ${n(P)}`, kpiBar(P && DV.respondidas / P), 'O assistente entendeu o assunto e respondeu direto.')}
+        ${kpi('joinha', 'Ajudou', pct(DV.uteis, DV.avaliacoes), DV.avaliacoes ? `de ${plural(DV.avaliacoes, 'resposta avaliada', 'respostas avaliadas')}` : 'Nenhuma resposta avaliada', '', 'Respostas marcadas como úteis pelo parceiro.', 'hl')}
+        ${kpi('alerta', 'Sem resposta', n(DV.sem + DV.fora), `${n(DV.fora)} fora do treinamento`, '', 'Perguntas que o assistente não soube responder. Veja a lista em "Para melhorar o assistente".', DV.sem + DV.fora ? 'am' : '')}
       </div>
-      ${card('Lista de lojas', 'Veja a situação de cada loja e toque na linha para abrir a ficha.', `
-      <div class="lj-top">
-        <label class="sel"><span>Situação</span><select data-loc="status">${[['contato', 'Precisam de contato'], ['contatadas', 'Contatadas'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['andamento', 'Em andamento'], ['certificada', 'Certificadas'], ['reincidente', 'Certificadas após refazer'], ['notas', 'Com anotações'], ['todas', 'Todas']].map(([k, t]) => `<option value="${k}" ${st.status === k ? 'selected' : ''}>${t} (${n(contagem[k])})</option>`).join('')}</select></label>
-        <div class="lj-act"><input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}"></div>
+      <div class="cols">
+        ${card('Como o assistente respondeu', `${plural(P, 'pergunta', 'perguntas')} no período.`, P ? `
+          <div class="stk" role="img" aria-label="Distribuição das respostas">${segs.filter((x) => x[1]).map(([k, v, c]) => `<i style="flex:${v};background:${c}" ${tipAttr(`<b>${RES[k][0]}</b><br>${plural(v, 'pergunta', 'perguntas')} · ${pct(v, P)}`)}></i>`).join('')}</div>
+          <ul class="stk-l">${segs.map(([k, v, c]) => `<li><i style="background:${c}"></i><span>${RES[k][0]}</span><b>${pct(v, P)}</b><small>${n(v)}</small></li>`).join('')}</ul>` : '<p class="empty">Nenhuma pergunta no período.</p>', '', 'funil')}
+        ${card('Perguntas por dia', dias.length < R.serie.length ? 'Últimos 45 dias do período.' : 'Quantas perguntas chegam a cada dia.', `<div class="dd">${dias.map((x) => `<div class="dd-c" ${tipAttr(`<b>${dataBR(x.t)}</b><br>${plural(x.duvidas || 0, 'pergunta', 'perguntas')}`)}><span class="dd-b"><i style="height:${x.duvidas ? Math.max(6, (x.duvidas / mxD) * 100) : 0}%"></i></span></div>`).join('')}</div><div class="dd-ax"><small>${dias.length ? dataBR(dias[0].t) : ''}</small><small>${dias.length ? dataBR(dias[dias.length - 1].t) : ''}</small></div>`, '', 'grafico')}
       </div>
-      <div id="t-lojas">${TABELAS.lojas()}</div>`, 'lj-card', 'lista')}
-      ${SI.contato && st.status !== 'contato' ? `<div class="dica"><span class="dica-ic">${IC.lampada}</span><p><b>Dica:</b> ${plural(SI.contato, 'loja precisa', 'lojas precisam')} de contato. Depois de falar com a loja, registre em <b>Contato feito</b>.</p><button type="button" class="btn" data-status="contato">Ver só essas${IC.seta}</button></div>` : ''}`;
+      <div class="cols">
+        ${card('Assuntos mais perguntados', 'O que as telas ainda não deixam claro.', DV.temas.length ? `<ul class="rk">${DV.temas.slice(0, 8).map((x, i) => `<li><span class="rk-n">${i + 1}</span><span class="rk-t"><b>${esc(x.tema)}</b><span class="md-tr"><i style="width:${(x.n / mxT) * 100}%"></i></span></span><b class="rk-v">${n(x.n)}<small>${pct(x.n, DV.temas.reduce((t, y) => t + y.n, 0))}</small></b>${DV.naoTema[x.tema] ? `<span class="badge bi bad" title="Respostas marcadas como não úteis">${IC.naojoinha}${n(DV.naoTema[x.tema])}</span>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Nenhuma pergunta respondida no período.</p>', '', 'livro')}
+        ${card('Onde perguntam', 'Telas do treinamento em que as dúvidas foram feitas.', DV.telas.length ? barras(DV.telas.map(([k, v]) => ({ k, v })), { valor: (x) => x.v, rotulo: (x) => TELAS[x.k] || x.k, fmt: (x) => n(x.v), cor: '#12a150' }) : `<p class="empty">${IC.tempo} Esse dado começou a ser registrado agora. As próximas perguntas vão aparecer aqui.</p>`, '', 'cidade')}
+      </div>
+      ${card('Para melhorar o assistente', 'Perguntas que ficaram sem resposta e respostas que não ajudaram. Use para criar respostas novas, ajustar telas ou criar novos treinamentos.', `
+        <div class="dv-csv"><button class="btn ic" data-a="csv-duvidas">${IC.baixar}<span>Exportar dúvidas (CSV)</span></button></div>
+        <div class="mel">
+          <div><h4 class="sub">Sem resposta ou fora do treinamento</h4>${DV.semResposta.length ? `<ul class="mel-l">${DV.semResposta.slice(0, 10).map((x) => `<li><span class="mel-ic ${x.fora ? 'off' : ''}">${x.fora ? IC.x : IC.alerta}</span><div><b>“${esc(x.texto)}”</b><small>${plural(x.n, 'vez', 'vezes')} · ${plural(x.lojas.size, 'loja', 'lojas')} · ${relativo(x.ultimo)}</small></div>${x.fora ? '<em class="dv-fora">fora do treinamento</em>' : ''}</li>`).join('')}</ul>${DV.semResposta.length > 10 ? `<p class="note">E mais ${n(DV.semResposta.length - 10)}. Exporte o CSV para ver todas.</p>` : ''}` : `<p class="empty bom">${IC.ok}Todas as perguntas tiveram resposta.</p>`}</div>
+          <div><h4 class="sub">Respostas que não ajudaram</h4>${DV.naoAjudou.length ? `<ul class="mel-l">${DV.naoAjudou.slice(0, 6).map((o) => { const x = Bot && Bot.porId(o.id); return `<li><span class="mel-ic bad">${IC.naojoinha}</span><div><b>${esc(x ? x.exemplo : o.id)}</b><small>${esc(x ? x.tema : '')} · ${n(o.nao)} de ${n(o.tot)} não ajudou</small>${o.exemplos.length ? `<span class="mel-ex">Perguntaram: ${o.exemplos.map((t) => `“${esc(t)}”`).join(' · ')}</span>` : ''}</div></li>`; }).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma resposta marcada como não útil.</p>`}</div>
+        </div>`, '', 'lampada')}
+      ${card('Conversas recentes', 'As últimas perguntas feitas no chat. Toque no nome da loja para abrir a ficha.', recentes.length ? `<ul class="dvr">${recentes.map((e) => { const d = e.detalhe || {}, p = nomeDe.get(e.participante_id), r = RES[d.resultado] || RES.sem_resposta; return `<li>
+          <span class="dvr-ic">${IC.chat}</span>
+          <div class="dvr-c"><div class="dvr-h">${p && st.R.lojas.some((s) => s.p.id === p.id) ? `<button type="button" class="lnk loja" data-ficha="${esc(p.id)}">${esc(p.loja)}</button>` : `<b>${p ? esc(p.loja) : 'Visitante'}</b>`}<small>${relativo(e.t)}${d.tela ? ` · ${esc(TELAS[d.tela] || d.tela)}` : ''}</small></div>
+            <p>“${esc(d.texto || '')}”</p>
+            <div class="dvr-f"><span class="badge bi ${r[1]}">${IC[r[2]]}${r[0]}</span>${d.tema ? `<span class="tag">${esc(d.tema)}</span>` : ''}${thumb(e)}</div></div>
+        </li>`; }).join('')}</ul>` : '<p class="empty">Nenhuma pergunta no período.</p>', '', 'chat')}`;
   };
+
 
   /* Feedback: avaliações das lojas + anotações da equipe, num feed só */
   TABELAS.feedback = () => {
@@ -1337,7 +1368,8 @@
     const ids = new Set(R.lojas.map((s) => s.p.id));
     const notas = (st.dados.anotacoes || []).filter((a) => ids.has(a.participante_id));
     const autores = [...new Set(notas.map((a) => a.autor).filter(Boolean))].sort();
-    const porTema = {}; notas.forEach((a) => { porTema[a.assunto || 'Outro'] = (porTema[a.assunto || 'Outro'] || 0) + 1; });
+    const ruins = R.lojas.filter((s) => s.aval && (!s.aval.ajudou || (s.aval.estrelas && s.aval.estrelas <= 3))).sort((a, b) => b.aval.t - a.aval.t);
+    const semAval = R.lojas.filter((s) => s.concluiu && !s.aval).length;
     const mx = Math.max(1, ...AV.dist.map((d) => d.n));
     const filtros = aba === 'notas'
       ? `<label class="sel"><span>Assunto</span><select data-loc="fNotaTema"><option value="">Todos</option>${ASSUNTOS_NOTA.map((t) => `<option ${st.fNotaTema === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
@@ -1353,7 +1385,8 @@
       </div>
       <div class="cols">
         ${card('Notas das lojas', AV.n ? `${plural(AV.n, 'avaliação', 'avaliações')} no período.` : '', AV.n ? `<div class="avl-dist">${AV.dist.map((d) => `<div class="avl-r"><span class="avl-e">${d.e} ${EST}</span><span class="hb-track"><i style="width:${(d.n / mx) * 100}%;background:#f5b301"></i></span><b>${n(d.n)}</b></div>`).join('')}</div>` : '<p class="empty">Nenhuma avaliação ainda.</p>', '', 'estrela')}
-        ${card('Anotações por assunto', 'Sobre o que a equipe mais registra.', Object.keys(porTema).length ? barras(Object.entries(porTema).map(([tema, c]) => ({ tema, c })).sort((a, b) => b.c - a.c), { valor: (x) => x.c, rotulo: (x) => x.tema, fmt: (x) => n(x.c), cor: '#2563eb' }) : '<p class="empty">Nenhuma anotação ainda.</p>', '', 'nota')}
+        ${card('Pedem atenção', 'Avaliações com "não ajudou" ou com 3 estrelas ou menos. Vale um contato.', `${ruins.length ? `<ul class="pa">${ruins.slice(0, 5).map((s) => `<li><div class="pa-h"><b>${esc(s.p.loja)}</b><small>${esc(s.p.cidade)} · ${relativo(s.aval.t)}</small></div><div class="pa-m">${estrelas(s.aval.estrelas)}${s.aval.ajudou ? '' : `<span class="badge bi bad">${IC.naojoinha}Não ajudou</span>`}</div>${s.aval.comentario ? `<p>“${esc(s.aval.comentario)}”</p>` : ''}<button type="button" class="btn" data-ficha="${esc(s.p.id)}"><span>Abrir ficha</span>${IC.seta}</button></li>`).join('')}</ul>${ruins.length > 5 ? `<p class="note">E mais ${n(ruins.length - 5)} na aba Avaliações abaixo.</p>` : ''}` : `<p class="empty bom">${IC.ok}Nenhuma avaliação negativa no período.</p>`}
+          ${semAval ? `<div class="pa-sem">${IC.tempo}<span><b>${plural(semAval, 'loja concluiu', 'lojas concluíram')}</b> e ainda não ${semAval === 1 ? 'avaliou' : 'avaliaram'} o treinamento.</span></div>` : ''}`, 'pa-card', 'alerta')}
       </div>
       ${card('Tudo o que chegou', 'Avaliações das lojas e anotações da equipe, das mais recentes para as mais antigas. Toque no nome da loja para abrir a ficha.', `
         ${tabs('feedback', [['tudo', 'Tudo', 'lista', AV.n + notas.length], ['aval', 'Avaliações', 'estrela', AV.n], ['notas', 'Anotações', 'nota', notas.length]], aba)}
@@ -1396,6 +1429,9 @@
       <span class="gp-k">${esc(g.k)}</span><span class="md-tr"><i style="width:${(g.n / Math.max(1, total)) * 100}%"></i></span><b>${pct(g.n, total)}</b>
       <small>${g.com >= POUCOS ? `${pct(g.ok, g.com)} concluem` : 'poucos dados'}</small></div>`).join('')}</div>`;
   }
+  // Cartões da Visão geral: quanto tempo leva e como saem dos módulos
+  const cardTempo = (U) => card('Quanto tempo leva para concluir', 'Lojas que concluíram, por dias corridos e por tempo de tela.', `<div class="fx-2"><div><h4 class="sub">Dias corridos</h4>${faixas(U.faixaDias, '#12a150')}</div><div><h4 class="sub">Tempo de tela</h4>${faixas(U.faixaTela, '#2563eb')}</div></div>`, '', 'tempo');
+  const cardSaidas = (U) => card('Como saem dos módulos', 'Saídas no meio de um módulo, pelo jeito que a loja saiu.', U.saidas.length ? `<ul class="sx">${U.saidas.map((x) => `<li><span class="sx-ic">${IC[x.ic]}</span><div><b>${x.t}</b><small>${x.ms != null ? `ficaram ${dur(x.ms)} no passo antes de sair (mediana)` : ''}</small></div><b class="sx-n">${n(x.n)}<small>${pct(x.n, U.saidasTot)}</small></b></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma saída no meio de um módulo.</p>`, '', 'sair');
   PG.uso = ({ R, f }) => {
     const U = R.uso, K = R.kpi, cad = K.cadastradas;
     const pico = R.serie.reduce((a, x) => (x.acessos > (a ? a.acessos : 0) ? x : a), null);
@@ -1417,10 +1453,6 @@
         ${kpi('aparelho', 'Retomaram em outro aparelho', n(U.retomaram), `${pct(U.retomaram, cad)} das cadastradas`, '', 'Lojas que entraram de novo em outro aparelho e continuaram de onde pararam.', 'hl')}
       </div>
       ${card('Ritmo do período', `Acessos e treinamentos concluídos por dia.${pico && pico.acessos ? ` Pico: <b>${plural(pico.acessos, 'acesso', 'acessos')}</b> em ${dataBR(pico.t)}.` : ''} Passe o dedo ou o mouse sobre o gráfico.`, '<div id="linha"></div>', '', 'pulso')}
-      <div class="cols">
-        ${card('Quanto tempo leva para concluir', 'Lojas que concluíram, por dias corridos e por tempo de tela.', `<div class="fx-2"><div><h4 class="sub">Dias corridos</h4>${faixas(U.faixaDias, '#12a150')}</div><div><h4 class="sub">Tempo de tela</h4>${faixas(U.faixaTela, '#2563eb')}</div></div>`, '', 'tempo')}
-        ${card('Como saem dos módulos', 'Saídas no meio de um módulo, pelo jeito que a loja saiu.', U.saidas.length ? `<ul class="sx">${U.saidas.map((x) => `<li><span class="sx-ic">${IC[x.ic]}</span><div><b>${x.t}</b><small>${x.ms != null ? `ficaram ${dur(x.ms)} no passo antes de sair (mediana)` : ''}</small></div><b class="sx-n">${n(x.n)}<small>${pct(x.n, U.saidasTot)}</small></b></li>`).join('')}</ul>` : `<p class="empty bom">${IC.ok}Nenhuma saída no meio de um módulo.</p>`, '', 'sair')}
-      </div>
       ${card('Recursos que ajudam a concluir', `Quanto cada recurso é usado e a conclusão de quem usou × quem não usou (só lojas que começaram). Com menos de ${POUCOS} lojas em um dos lados, não comparamos.`, `<ul class="rc">${U.recursos.map((r) => `<li class="rc-i">
           <span class="rc-ic">${IC[r.ic]}</span>
           <div class="rc-t"><b>${r.t}</b><small>${r.usaram ? `${pct(r.usaram, cad)} das lojas usaram (${n(r.usaram)})` : 'Ninguém usou no período'}</small></div>
@@ -1458,30 +1490,65 @@
   };
   // Situação sempre com ícone + rótulo (nunca só cor)
   const sitBadge = (sit) => `<span class="badge bi ${SIT[sit][1]}">${IC[SIT[sit][2]]}${SIT[sit][0]}</span>`;
+  /* Lojas: abas por situação e cartões com o que fazer */
+  const ABA_LOJA = { contato: (s) => s.contato, andamento: (s) => s.sit === 'andamento' || s.sit === 'recente', certificadas: (s) => s.sit === 'certificada', todas: () => true };
+  const MAIS_FILTROS = [['', 'Sem filtro extra'], ['parada', 'Paradas'], ['naocomecou', 'Não começaram'], ['semcert', 'Sem certificado'], ['contatadas', 'Contatadas'], ['reincidente', 'Certificadas após refazer'], ['notas', 'Com anotações']];
+  const extra = (s) => !st.status || (st.status === 'contatadas' ? s.contatada : st.status === 'notas' ? s.notas.length > 0 : st.status === 'reincidente' ? s.reincidente : s.sit === st.status);
+  // Aba de Lojas: a do endereço; sem aba no endereço, "Precisam de contato" quando houver
+  const abaLojas = () => (location.hash.includes(':') ? rota().aba : st.R && st.R.sit.contato ? 'contato' : 'todas');
+  const URG = { parada: 0, naocomecou: 1, semcert: 2, andamento: 3, recente: 4, certificada: 5 };
   function linhasLojas() {
-    const b = st.busca.trim().toLowerCase();
-    const filtro = (s) => st.status === 'todas' || (st.status === 'contato' ? s.contato : st.status === 'contatadas' ? s.contatada : st.status === 'notas' ? s.notas.length > 0 : st.status === 'reincidente' ? s.reincidente : st.status === 'andamento' ? s.sit === 'andamento' || s.sit === 'recente' : s.sit === st.status);
-    const rows = st.R.lojas.filter((s) => filtro(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
-    const k = st.ordem.k, d = st.ordem.dir;
-    const val = (s) => (k === 'loja' ? s.p.loja : k === 'prog' ? s.fim.size : k === 'sit' ? SIT[s.sit][0] : k === 'erros' ? s.erros.length : k === 'notas' ? s.notas.length : k === 'tempo' ? s.tempoTotal : k === 'concl' ? s.concluiuEm || 0 : s.ultimo);
-    return rows.sort((a, c) => { const x = val(a), y = val(c); return (typeof x === 'string' ? x.localeCompare(y, 'pt-BR') : x - y) * d; });
+    const b = st.busca.trim().toLowerCase(), aba = ABA_LOJA[abaLojas()] || ABA_LOJA.todas;
+    const rows = st.R.lojas.filter((s) => aba(s) && extra(s) && (!b || s.p.loja.toLowerCase().includes(b) || s.p.cidade.toLowerCase().includes(b)));
+    const o = st.ordLoja;
+    const cmp = o === 'nome' ? (a, c) => a.p.loja.localeCompare(c.p.loja, 'pt-BR')
+      : o === 'prog' ? (a, c) => c.fim.size - a.fim.size || c.ultimo - a.ultimo
+      : o === 'ultimo' ? (a, c) => c.ultimo - a.ultimo
+      : (a, c) => (a.contato === c.contato ? 0 : a.contato ? -1 : 1) || URG[a.sit] - URG[c.sit] || a.ultimo - c.ultimo;
+    return rows.sort(cmp);
   }
-
+  const bolinhas = (s) => `<ol class="dots" aria-label="${s.fim.size} de ${NMOD} módulos concluídos">${MODS.map((m) => `<li class="${s.fim.has(m.n) ? 'ok' : s.ini.has(m.n) ? 'meio' : ''}" title="Módulo ${m.n}: ${esc(m.titulo)}"></li>`).join('')}</ol>`;
   TABELAS.lojas = () => {
     const { itens, ctrl } = paginar('lojas', linhasLojas());
-    const th = (k, t, num) => `<th class="${num ? 'num ' : ''}sort" data-k="${k}" aria-sort="${st.ordem.k === k ? (st.ordem.dir > 0 ? 'ascending' : 'descending') : 'none'}">${t}</th>`;
-    return itens.length ? `<div class="tb-wrap"><table class="tb tb-lojas"><thead><tr>${th('loja', 'Loja')}${th('prog', 'Progresso')}${th('sit', 'Situação')}${th('erros', 'Dúvidas', true)}${th('notas', 'Anotações', true)}${th('tempo', 'Tempo de tela', true)}${th('concl', 'Concluiu em')}${th('ultimo', 'Último acesso')}<th class="ac-col">Ações</th></tr></thead>
-      <tbody>${itens.map((s) => `<tr class="lj-row" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
-        <td><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-c">${esc(s.p.cidade)}</small></td>
-        <td><span class="pg-mini"><i style="width:${(s.fim.size / NMOD) * 100}%"></i></span>${s.fim.size}/${NMOD}</td>
-        <td class="sit">${sitBadge(s.sit)}${s.reincidente ? ' <span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}${s.contatada ? ` <span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}<small>${esc(s.motivo)}</small></td>
-        <td class="num">${s.erros.length ? `<b class="ct">${n(s.erros.length)}</b>` : '<span class="mut">0</span>'}</td>
-        <td class="num">${s.notas.length ? `<span class="nt">${n(s.notas.length)}</span>` : '<span class="mut">—</span>'}</td>
-        <td class="num">${s.tempoTotal ? `<span class="tp">${dur(s.tempoTotal)}${IC.tempo}</span>` : '<span class="mut">—</span>'}</td>
-        <td>${s.concluiuEm ? dataBR(s.concluiuEm) : '<span class="mut">—</span>'}</td>
-        <td title="${dataHoraBR(s.ultimo)}">${relativo(s.ultimo)}</td>
-        <td class="ac-col"><span class="lj-acts">${s.contato ? `<button type="button" class="btn ct-btn" data-contato="${esc(s.p.id)}">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="go" data-ficha="${esc(s.p.id)}" aria-label="Abrir a ficha de ${esc(s.p.loja)}">${IC.seta}</button></span></td></tr>`).join('')}</tbody></table></div>${ctrl}` : `<p class="empty">${st.status === 'contato' ? 'Nenhuma loja precisa de contato agora.' : st.status === 'contatadas' ? 'Nenhum contato registrado.' : 'Nenhuma loja com esse filtro.'}</p>`;
+    if (!itens.length) {
+      const aba = abaLojas();
+      return `<p class="empty ${aba === 'contato' ? 'bom' : ''}">${aba === 'contato' && !st.busca && !st.status ? `${IC.ok}Nenhuma loja precisa de contato agora.` : 'Nenhuma loja com esse filtro.'}</p>`;
+    }
+    return `<div class="lj-g">${itens.map((s) => `
+      <article class="lj-row lj-c ${s.contato ? 'need' : ''} s-${s.sit}" data-loja="${esc(s.p.id)}" tabindex="0" aria-label="Abrir a ficha de ${esc(s.p.loja)}">
+        <header class="lj-ch"><div><b class="lj-n">${esc(s.p.loja)}</b><small class="lj-ci">${IC.cidade}${esc(s.p.cidade)}</small></div>${sitBadge(s.sit)}</header>
+        <div class="lj-pr">${bolinhas(s)}<b>${s.fim.size}/${NMOD}</b></div>
+        <p class="lj-mt">${IC[SIT[s.sit][2]]}<span>${esc(s.motivo)}</span></p>
+        <div class="lj-meta">
+          <span class="${s.erros.length ? 'ct' : ''}" title="Erros na 1ª tentativa">${IC.pergunta}${plural(s.erros.length, 'dúvida', 'dúvidas')}</span>
+          <span title="Anotações da equipe">${IC.nota}${plural(s.notas.length, 'anotação', 'anotações')}</span>
+          <span title="${dataHoraBR(s.ultimo)}">${IC.tempo}${relativo(s.ultimo)}</span>
+          ${s.reincidente ? '<span class="badge warn" title="Só passou de 70% depois de refazer as perguntas que errou">Reincidente</span>' : ''}${s.contatada ? `<span class="badge ok" title="${esc(contatoTxt(s.contatoFeito))}">Contatada</span>` : ''}
+        </div>
+        <footer class="lj-f">${s.contato ? `<button type="button" class="btn ct-btn" data-contato="${esc(s.p.id)}">${IC.ok}<span>Contato feito</span></button>` : ''}<button type="button" class="btn primary" data-ficha="${esc(s.p.id)}"><span>Abrir</span>${IC.seta}</button></footer>
+      </article>`).join('')}</div>${ctrl}`;
   };
+  PG.lojas = ({ R }) => {
+    const SI = R.sit, K = R.kpi, tot = R.lojas.length, and = SI.andamento + SI.recente, aba = abaLojas();
+    const cont = (k) => R.lojas.filter(ABA_LOJA[k]).length;
+    return `
+      <div class="kpis k4">
+        ${kpi('loja', 'Total de lojas', n(tot), 'Cadastradas no período', '', 'Lojas cadastradas no período e na cidade escolhidos.', '', 'todas')}
+        ${kpi('ok', 'Concluíram', n(K.concluiram), `${pct(K.concluiram, tot)} de conclusão`, kpiBar(tot && K.concluiram / tot), `Lojas que concluíram os ${NMOD} módulos.`, '', 'certificadas')}
+        ${kpi('andamento', 'Em andamento', n(and), `${pct(and, tot)} em andamento`, kpiBar(tot && and / tot, 'am'), 'Lojas que começaram e seguem ativas, ou se cadastraram há pouco.', 'am', 'andamento')}
+        ${kpi('critico', 'Precisam de atenção', n(SI.contato), `${pct(SI.contato, tot)} precisam de contato`, kpiBar(tot && SI.contato / tot, 'vm'), `Paradas há ${PARADA_DIAS}+ dias, sem começar há ${SEM_INICIO_DIAS}+ dias ou concluíram sem certificado, e ainda sem contato feito.`, 'vm', 'contato')}
+      </div>
+      ${card('Lista de lojas', aba === 'contato' ? 'Comece por aqui: lojas paradas, que não começaram ou sem certificado, ainda sem contato. Depois de falar com a loja, toque em Contato feito.' : 'Toque numa loja para ver o que ela errou, a avaliação e as anotações.', `
+        ${tabs('lojas', [['contato', 'Precisam de contato', 'critico', cont('contato')], ['andamento', 'Em andamento', 'andamento', cont('andamento')], ['certificadas', 'Certificadas', 'medalha', cont('certificadas')], ['todas', 'Todas', 'lista', tot]], aba)}
+        <div class="lj-top">
+          <input type="search" class="busca" id="lj-busca" placeholder="Buscar loja ou cidade" value="${esc(st.busca)}">
+          <label class="sel"><span>Mais filtros</span><select data-loc="status">${MAIS_FILTROS.map(([k, t]) => `<option value="${k}" ${st.status === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+          <label class="sel"><span>Ordenar</span><select data-loc="ordLoja">${[['urgencia', 'Mais urgentes primeiro'], ['ultimo', 'Último acesso'], ['nome', 'Nome'], ['prog', 'Progresso']].map(([k, t]) => `<option value="${k}" ${st.ordLoja === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        </div>
+        <div class="lj-leg"><span><i class="ok"></i>Módulo concluído</span><span><i class="meio"></i>Começou</span><span><i></i>Não abriu</span></div>
+        <div id="t-lojas">${TABELAS.lojas()}</div>`, 'lj-card', 'lista')}`;
+  };
+
   const desenharLojas = () => redesenhar('lojas');
   const contatoTxt = (a) => `Contato feito em ${dataHoraBR(+new Date(a.criado_em))}${a.autor ? ` por ${a.autor}` : ''}`;
 
@@ -1541,7 +1608,7 @@
           ${contato}
 
           <section class="fx-s">
-            <h3>Progresso</h3>
+            <h3><span class="fx-ic">${IC.rota}</span>Progresso</h3>
             <ol class="fx-dots">${dots}</ol>
             <div class="fx-nums">
               <div><b>${s.fim.size}/${NMOD}</b><small>módulos concluídos</small></div>
@@ -1552,19 +1619,19 @@
           </section>
 
           <section class="fx-s">
-            <h3>Dúvidas nas perguntas <small>${plural(s.erros.length, 'erro', 'erros')} na 1ª tentativa</small></h3>
+            <h3><span class="fx-ic">${IC.pergunta}</span>Dúvidas nas perguntas <small>${plural(s.erros.length, 'erro', 'erros')} na 1ª tentativa</small></h3>
             ${s.erros.length ? `<ul class="fx-erros">${s.erros.sort((a, b) => b.t - a.t).map((x) => `
               <li><span class="tag">${esc(x.tema)}</span>
                 <b>${esc(x.q)}</b>${x.resposta ? `<span>Respondeu: “${esc(semValor(x.resposta))}”</span>` : ''}</li>`).join('')}</ul>` : '<p class="empty">Nenhum erro registrado.</p>'}
           </section>
 
           <section class="fx-s">
-            <h3>Avaliação do treinamento</h3>
+            <h3><span class="fx-ic">${IC.estrela}</span>Avaliação do treinamento</h3>
             ${s.aval ? `<div class="fx-av">${estrelas(s.aval.estrelas)}<span>${s.aval.ajudou ? 'Disse que o treinamento ajudou' : 'Disse que o treinamento não ajudou'}</span></div>${s.aval.comentario ? `<blockquote>“${esc(s.aval.comentario)}”</blockquote>` : ''}` : '<p class="empty">Ainda não avaliou.</p>'}
           </section>
 
           <section class="fx-s">
-            <h3>Anotações da equipe <small>${plural(s.notas.length, 'anotação', 'anotações')}</small></h3>
+            <h3><span class="fx-ic">${IC.nota}</span>Anotações da equipe <small>${plural(s.notas.length, 'anotação', 'anotações')}</small></h3>
             ${Notas.semTabela ? '<p class="fx-aviso">Para salvar anotações, aplique no Supabase as migrações de <b>supabase/migrations</b>.</p>' : ''}
             ${fxEditando ? '' : form(null)}
             ${s.notas.length ? `<ul class="fx-notas">${anot}</ul>` : ''}
@@ -1701,7 +1768,7 @@
   }
 
   /* ------------------------------ Interações ------------------------------ */
-  window.addEventListener('hashchange', () => { if (!st.dados) return; st.menu = false; if (paginaAtual() === 'lojas') { st.status = 'todas'; st.pag.lojas = 1; } render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', () => { if (!st.dados) return; st.menu = false; if (paginaAtual() === 'lojas') st.pag.lojas = 1; render(); window.scrollTo(0, 0); });
   root.addEventListener('change', (e) => {
     const s = e.target.closest('[data-f]');
     if (s) { st.filtros[s.dataset.f] = s.dataset.f === 'dias' ? +s.value : s.value; st.pag = {}; render(); return; }
@@ -1733,7 +1800,9 @@
     const dm = e.target.closest('[data-modulo]');
     if (dm) { st.fModulo = dm.dataset.modulo; st.pag.passos = 1; }   // o link segue para #jornada:passos
     const ds = e.target.closest('[data-status]');
-    if (ds) { st.status = ds.dataset.status; st.pag = {}; render(); const t = document.getElementById('t-lojas'); if (t) t.scrollIntoView({ block: 'start' }); return; }
+    if (ds) { st.status = ''; st.pag.lojas = 1; const h = '#lojas:' + ds.dataset.status; if (location.hash === h) render(); else location.hash = h; return; }
+    const pt = e.target.closest('[data-ptema],[data-pbaixo],[data-pord]');
+    if (pt) { if (pt.dataset.ptema != null) st.fTema = pt.dataset.ptema; else if (pt.dataset.pbaixo) st.fBaixo = !st.fBaixo; else st.pOrd = pt.dataset.pord; const y = scrollY; render(); scrollTo(0, y); return; }
     const pb = e.target.closest('[data-pgn] [data-ir]');
     if (pb) {
       const ch = pb.closest('[data-pgn]').dataset.pgn;
